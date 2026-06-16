@@ -1,0 +1,39 @@
+# Commit Message Lint — Enforce Conventional Commits
+#
+# Allowed prefixes:
+#   feat:, fix:, chore:, docs:, style:, refactor:, test:, perf:, ci:, build:, revert:
+#
+# Examples:
+#   feat(auth): add login page
+#   fix(supabase): handle cookie refresh
+#   chore(root): update dependencies
+#   docs: update contributing guide
+
+name: Commit Lint
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  commitlint:
+    name: Lint Commit Messages
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install commitlint
+        run: npm install -g @commitlint/cli @commitlint/config-conventional
+
+      - name: Lint commits
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to ${{ github.event.pull_request.head.sha || 'HEAD' }}
