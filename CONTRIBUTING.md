@@ -14,12 +14,12 @@ Before you begin, install these on your machine:
   - Prettier (`esbenp.prettier-vscode`)
   - TypeScript Importer (`pmneo.tsimporter`)
 
-## Initial Setup (After Cloning)
+## Quick Start
 
 ```bash
 # 1. Clone the repo
-git clone <repo-url>
-cd shasthyahub-ai
+git clone https://github.com/Mahimrio/ShasthyaHub-AI.git
+cd ShasthyaHub-AI
 
 # 2. Install dependencies
 npm install
@@ -27,7 +27,7 @@ npm install
 # 3. Copy the example env file
 cp .env.example .env.local
 
-# 4. Ask the team lead for the API keys and fill in .env.local
+# 4. Fill in API keys (ask team lead for values)
 
 # 5. Start the dev server
 npm run dev
@@ -37,22 +37,42 @@ Open [http://localhost:3000](http://localhost:3000) — you should see the landi
 
 ## Environment Variables
 
-Ask the team lead for these values. **Never commit `.env.local`** — it is already in `.gitignore`.
+**Never commit `.env.local`** — it is already in `.gitignore`.
 
-```
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-GEMINI_API_KEY=
-GROQ_API_KEY=
-USDA_API_KEY=
+Ask the team lead for these values:
+
+```env
+# Supabase (required)
+NEXT_PUBLIC_SUPABASE_URL=https://jdpfztijnkyzfvyofgri.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
+
+# AI APIs (required)
+GEMINI_API_KEY=your_gemini_key_here
+GROQ_API_KEY=your_groq_key_here
+
+# Nutrition API (optional)
+USDA_API_KEY=your_usda_key_here
+
+# App URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## Project Structure Quick Reference
+### Where to Get API Keys
+
+| Key | Source |
+|-----|--------|
+| Supabase URL | Supabase Dashboard → Settings → API → Project URL |
+| Supabase Anon Key | Supabase Dashboard → Settings → API → anon public |
+| Supabase Service Role | Supabase Dashboard → Settings → API → service_role (keep secret!) |
+| Gemini API Key | [Google AI Studio](https://aistudio.google.com/apikey) |
+| Groq API Key | [console.groq.com](https://console.groq.com/keys) |
+| USDA API Key | [USDA FoodData Central](https://fdc.nal.usda.gov/api-key-signup.html) (optional) |
+
+## Project Structure
 
 ```
-shasthyahub-ai/
+ShasthyaHub-AI/
 ├── app/
 │   ├── (auth)/           → Login, Register (public)
 │   ├── (dashboard)/      → Main app pages (protected)
@@ -69,15 +89,29 @@ shasthyahub-ai/
 │   ├── ai/               → Gemini + Groq wrappers
 │   ├── services/         → Business logic
 │   └── utils.ts          → Helper functions
-└── types/index.ts        → Shared TypeScript types
+├── types/index.ts        → Shared TypeScript types
+└── .github/workflows/    → CI/CD pipeline
 ```
 
-## Branching Strategy
+## Who Works On What
 
-We use **feature branches** off `main`:
+| Member | Area | Files to Focus On |
+|--------|------|-------------------|
+| **Member 1** | Nayan AI Agent | `app/(dashboard)/nayan-ai/`, `app/api/nayan/`, `lib/ai/gemini.ts` |
+| **Member 2** | ScriptGuard Agent | `app/(dashboard)/scriptguard/`, `app/api/scriptguard/`, `lib/services/drug-*` |
+| **Member 3** | GlycoVision Agent | `app/(dashboard)/glycovision/`, `app/api/glycovision/`, `lib/services/calorie.ts` |
+| **Member 4** | Auth & Dashboard | `app/(auth)/`, `lib/supabase/`, `app/(dashboard)/layout.tsx`, `app/api/health/` |
+
+> **Note:** Communicate in the group chat before working on another member's area.
+
+## Git Workflow
+
+### Branching Strategy
+
+Always use **feature branches** off `main`:
 
 ```bash
-# Always start from latest main
+# Start from latest main
 git checkout main
 git pull origin main
 
@@ -91,7 +125,7 @@ git checkout -b feature/rafi/glycovision-chart
 git checkout -b feature/sami/auth-flow
 ```
 
-### Branch Naming Convention
+### Branch Naming
 
 | Prefix | Use Case |
 |--------|----------|
@@ -101,65 +135,74 @@ git checkout -b feature/sami/auth-flow
 | `docs/` | Documentation only |
 | `chore/` | Config, deps, tooling |
 
-Format: `feature/your-name/short-description`
+### Commit Messages
 
-## Commit Message Convention
-
-Use clear, descriptive commits:
+**CI enforces conventional commits.** Use this format:
 
 ```bash
 # Format: <type>(scope): <description>
 git commit -m "feat(nayan-ai): add image upload component"
 git commit -m "fix(supabase): handle cookie refresh on server"
-git commit -m "style(dashboard): fix mobile responsive layout"
+git commit -m "chore(root): update dependencies"
 git commit -m "docs: update contributing guide"
 ```
 
-### Allowed Types
+**Allowed types:** `feat`, `fix`, `chore`, `docs`, `style`, `refactor`, `test`, `perf`, `ci`, `build`, `revert`
 
-| Type | Description |
-|------|-------------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `style` | UI/styling changes |
-| `refactor` | Code restructuring |
-| `docs` | Documentation |
-| `chore` | Config or tooling |
-| `test` | Adding tests |
+### Push & PR
 
-## Pull Request Workflow
+```bash
+# Push your branch
+git push origin feature/your-name/short-description
 
-1. **Push your branch:**
-   ```bash
-   git push origin feature/your-name/short-description
-   ```
+# Open a PR on GitHub targeting main
+# Wait for CI checks to pass
+# Get at least 1 approval
+# Merge
+# Delete your branch
+```
 
-2. **Open a PR on GitHub** targeting `main`
+## CI/CD Pipeline
 
-3. **PR Title** must follow commit convention:
-   ```
-   feat(nayan-ai): add image upload with compression
-   ```
+We use **GitHub Actions** for CI/CD. Every push and PR triggers:
 
-4. **PR Description** should include:
-   - What changed
-   - Why it changed
-   - How to test it
-   - Screenshots (if UI changed)
+### Check Job (runs on every push/PR)
+1. **TypeScript type check** — `npx tsc --noEmit`
+2. **ESLint** — `npm run lint`
+3. **Build** — `npm run build`
 
-5. **Get at least 1 approval** before merging
+### Deploy Preview (runs on PRs only)
+- Deploys a preview URL to Vercel
+- Posts the preview URL as a comment on your PR
+- Only runs after Check job passes
 
-6. **Delete your branch** after merge
+### Deploy Production (runs on push to main)
+- Deploys to production on Vercel
+- Only runs after Check job passes
+
+### Commit Lint
+- Enforces conventional commit format
+- Fails if commit message doesn't match `feat:`, `fix:`, `chore:`, etc.
+
+## Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run type-check   # Run TypeScript type check
+```
 
 ## Code Style Rules
 
 ### TypeScript
 - **No `any` types** — use proper types in `types/index.ts` or inline
-- All functions must have explicit return types for exported functions
+- All exported functions must have explicit return types
 - Use `interface` for object shapes, `type` for unions/intersections
 
 ### React
-- Use **functional components only** (no class components)
+- **Functional components only** (no class components)
 - One component per file
 - File naming: `kebab-case.tsx` (e.g., `image-uploader.tsx`)
 - Export default from every page component
@@ -179,16 +222,16 @@ import { formatDate } from '@/utils';
 - Utility classes only — no custom CSS unless absolutely necessary
 - Responsive: mobile-first (`sm:`, `md:`, `lg:`)
 
-## Who Owns What (Suggested)
+## Before You Push — Checklist
 
-| Team Member | Area | Files to Focus On |
-|-------------|------|-------------------|
-| **Member 1** | Nayan AI Agent | `app/(dashboard)/nayan-ai/`, `app/api/nayan/`, `lib/ai/gemini.ts` |
-| **Member 2** | ScriptGuard Agent | `app/(dashboard)/scriptguard/`, `app/api/scriptguard/`, `lib/services/drug-*` |
-| **Member 3** | GlycoVision Agent | `app/(dashboard)/glycovision/`, `app/api/glycovision/`, `lib/services/calorie.ts` |
-| **Member 4** | Auth & Infrastructure | `app/(auth)/`, `lib/supabase/`, `app/(dashboard)/layout.tsx`, `app/api/health/` |
-
-> **Note:** These are starting assignments. Communicate in the group chat before working on another member's area.
+- [ ] Code compiles: `npm run build` passes with no errors
+- [ ] ESLint passes: `npm run lint` shows no errors
+- [ ] No `console.log` left in production code
+- [ ] No secrets or API keys in code (only in `.env.local`)
+- [ ] Components are properly typed (no `any`)
+- [ ] New files follow naming convention (`kebab-case`)
+- [ ] You pulled latest `main` before pushing
+- [ ] Commit message follows conventional format
 
 ## Common Issues & Fixes
 
@@ -223,14 +266,14 @@ npx shadcn@latest add <component-name>
 # Example: npx shadcn@latest add dropdown-menu
 ```
 
-## Before You Push — Checklist
+## Deployment
 
-- [ ] Code compiles: `npm run build` passes with no errors
-- [ ] No `console.log` left in production code
-- [ ] No secrets or API keys in code (only in `.env.local`)
-- [ ] Components are properly typed (no `any`)
-- [ ] New files follow naming convention (`kebab-case`)
-- [ ] You pulled latest `main` before pushing
+The project auto-deploys to Vercel:
+
+- **Preview deploys** — every PR gets a preview URL
+- **Production deploys** — merging to `main` deploys to production
+
+Production URL: Check the Vercel dashboard or the GitHub deployment status.
 
 ## Communication
 
