@@ -1,5 +1,7 @@
 # ShasthyaHub-AI
 
+[![CI](https://github.com/Mahimrio/ShasthyaHub-AI/actions/workflows/ci.yml/badge.svg)](https://github.com/Mahimrio/ShasthyaHub-AI/actions/workflows/ci.yml)
+
 Multi-agent AI healthcare web app for rural Bangladesh — SciBlitz AI Challenge 2026
 
 ## Team
@@ -116,6 +118,7 @@ shasthyahub-ai/
 - `npm run build` — Build for production
 - `npm run start` — Start production server
 - `npm run lint` — Run ESLint
+- `npm run type-check` — TypeScript type check
 
 ## Deployment
 
