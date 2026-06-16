@@ -92,7 +92,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-version: 'latest'
+          vercel-version: '47.2.2'
           working-directory: ./
 
       - name: Comment PR with preview URL
@@ -134,6 +134,6 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-version: 'latest'
+          vercel-version: '47.2.2'
           vercel-args: --prod
           working-directory: ./
