@@ -1,19 +1,6 @@
 # ============================================================================
 # CI/CD Pipeline for ShasthyaHub-AI
 # ============================================================================
-#
-# Required GitHub Secrets:
-#
-# For build check (use dummy values if real ones aren't set up yet):
-#   NEXT_PUBLIC_SUPABASE_URL    → https://dummy.supabase.co
-#   NEXT_PUBLIC_SUPABASE_ANON_KEY → dummy-anon-key
-#   NEXT_PUBLIC_APP_URL          → http://localhost:3000
-#
-# For Vercel deployment:
-#   VERCEL_TOKEN      → Get from https://vercel.com/account/tokens
-#   VERCEL_ORG_ID     → Run `vercel link` then check .vercel/project.json
-#   VERCEL_PROJECT_ID → Run `vercel link` then check .vercel/project.json
-# ============================================================================
 
 name: CI/CD Pipeline
 
@@ -80,31 +67,40 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build Project
+        run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel (Preview)
         id: deploy
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-version: 'latest'
-          working-directory: ./
+        run: |
+          url=$(vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Comment PR with preview URL
         uses: actions/github-script@v7
         with:
           script: |
-            const vercelOutput = '${{ steps.deploy.outputs.preview-url }}';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: `## 🚀 Vercel Preview Deployed\n\n**Preview URL:** ${vercelOutput}\n\nThis preview will be automatically deleted when the PR is closed.`
+              body: `## 🚀 Vercel Preview Deployed\n\n**Preview URL:** ${{ steps.deploy.outputs.url }}\n\nThis preview will be automatically deleted when the PR is closed.`
             })
 
   # --------------------------------------------------------------------------
@@ -123,17 +119,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel Environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build Project
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
       - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-version: 'latest'
-          vercel-args: --prod
-          working-directory: ./
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
