@@ -46,6 +46,12 @@ All page components and API routes are **placeholder stubs** (`<h1>` or `Respons
 - **Vercel**: API routes get 60s `maxDuration` via `vercel.json`. CI/CD in `.github/workflows/ci.yml` requires `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL` env vars at build time.
 - **CI pipeline order**: `npx tsc --noEmit` → `npm run lint` → `npm run build`. Uses Node.js 20, `npm ci`.
 
+## Git workflow
+
+- **Never push directly to `main`**. Always create a feature branch (e.g. `feature/description`), push there, and let the user merge via PR.
+- Branch naming: `feature/<brief-description>` (kebab-case).
+- Commit format: `type(scope): message` — e.g. `feat(db): add schema, seed data, storage setup, and populate service layer`
+
 ## Commit convention
 
 Conventional commits enforced by commitlint. Allowed types: `feat|fix|docs|style|refactor|test|perf|ci|build|revert|chore`. Max header 100 chars, sentence-case subject. Example: `feat(auth): add login page`
