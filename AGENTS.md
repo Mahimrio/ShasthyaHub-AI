@@ -48,8 +48,9 @@ All page components and API routes are **placeholder stubs** (`<h1>` or `Respons
 
 ## Git workflow
 
-- **Never push directly to `main`**. Always create a feature branch (e.g. `feature/description`), push there, and let the user merge via PR.
-- Branch naming: `feature/<brief-description>` (kebab-case).
+- **Never push directly to `main`**. Always create a feature branch, push there, and let the user merge via PR.
+- Branch naming: `type/<brief-description>` where type matches commit types: `feature/`, `fix/`, `docs/`, `refactor/`, `perf/`, `ci/`, `build/`, `chore/`.
+- If more changes are needed after a commit, create **additional commits on the same branch** (never amend).
 - Commit format: `type(scope): message` — e.g. `feat(db): add schema, seed data, storage setup, and populate service layer`
 
 ## Commit convention
