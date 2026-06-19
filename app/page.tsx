@@ -1,3 +1,9 @@
+import { Hero } from "@/components/landing/hero";
+
 export default function LandingPage() {
-  return <h1>ShasthyaHub-AI - AI Healthcare for Rural Bangladesh</h1>;
+  return (
+    <main className="min-h-screen bg-background">
+      <Hero />
+    </main>
+  );
 }
