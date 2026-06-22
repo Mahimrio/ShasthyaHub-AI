@@ -8,7 +8,7 @@ import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AiThinkingBanner } from '@/components/shared/AiThinkingBanner'
 import { ResultCard } from '@/components/shared/ResultCard'
-import { Badge } from '@/components/ui/badge'
+
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -60,7 +60,7 @@ export default function GlycoVisionPage() {
     setState('idle')
   }, [])
 
-  const handleImageSelect = useCallback((_file: File) => {
+  const handleImageSelect = useCallback((_imageFile: File) => {
     setState('processing')
     setTimeout(() => setState('complete'), 3000)
   }, [])

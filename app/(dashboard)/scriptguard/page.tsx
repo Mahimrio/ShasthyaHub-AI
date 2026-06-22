@@ -52,7 +52,7 @@ export default function ScriptGuardPage() {
     setState('idle')
   }, [])
 
-  const handleImageSelect = useCallback((_file: File) => {
+  const handleImageSelect = useCallback((_imageFile: File) => {
     setState('processing')
     setTimeout(() => setState('complete'), 3000)
   }, [])

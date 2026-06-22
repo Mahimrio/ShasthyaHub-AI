@@ -54,7 +54,7 @@ export default function NayanAIPage() {
     setState('idle')
   }, [])
 
-  const handleImageSelect = useCallback((_file: File) => {
+  const handleImageSelect = useCallback((_imageFile: File) => {
     setState('processing')
     setTimeout(() => setState('complete'), 3000)
   }, [])

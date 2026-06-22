@@ -14,13 +14,22 @@ const LanguageContext = createContext<LanguageContextType>({
   setLang: () => {},
 })
 
+function getInitialLang(): Language {
+  if (typeof window === 'undefined') return 'bn'
+  try {
+    const stored = localStorage.getItem('shasthya_lang') as Language | null
+    return stored || 'bn'
+  } catch {
+    return 'bn'
+  }
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>('bn')
+  const [lang, setLangState] = useState<Language>(getInitialLang)
 
   useEffect(() => {
-    const stored = localStorage.getItem('shasthya_lang') as Language | null
-    if (stored) setLangState(stored)
-  }, [])
+    document.documentElement.lang = lang
+  }, [lang])
 
   const setLang = useCallback((l: Language) => {
     setLangState(l)

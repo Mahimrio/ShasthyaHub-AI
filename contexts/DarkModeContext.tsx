@@ -12,27 +12,28 @@ const DarkModeContext = createContext<DarkModeContextType>({
   toggle: () => {},
 })
 
+function getInitialDark(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    const stored = localStorage.getItem('shasthya_theme')
+    if (stored === 'dark') return true
+    if (stored === 'light') return false
+    return window.matchMedia('(prefers-color-scheme: dark)').matches
+  } catch {
+    return false
+  }
+}
+
 export function DarkModeProvider({ children }: { children: React.ReactNode }) {
-  const [dark, setDark] = useState(false)
-  const [mounted, setMounted] = useState(false)
+  const [dark, setDark] = useState(getInitialDark)
 
   useEffect(() => {
-    setMounted(true)
-    const stored = localStorage.getItem('shasthya_theme')
-    if (stored === 'dark') {
-      setDark(true)
+    if (dark) {
       document.documentElement.classList.add('dark')
-    } else if (stored === 'light') {
-      setDark(false)
-      document.documentElement.classList.remove('dark')
     } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      if (prefersDark) {
-        setDark(true)
-        document.documentElement.classList.add('dark')
-      }
+      document.documentElement.classList.remove('dark')
     }
-  }, [])
+  }, [dark])
 
   const toggle = useCallback(() => {
     setDark((prev) => {
@@ -47,10 +48,6 @@ export function DarkModeProvider({ children }: { children: React.ReactNode }) {
       return next
     })
   }, [])
-
-  if (!mounted) {
-    return <>{children}</>
-  }
 
   return (
     <DarkModeContext.Provider value={{ dark, toggle }}>
