@@ -26,7 +26,7 @@ No test framework exists. No `npm test`.
 
 ## Project state
 
-All page components and API routes are **placeholder stubs** (`<h1>` or `Response.json(...)`). No `middleware.ts` — dashboard routes are unprotected. No custom hooks yet (`hooks/` dir expected by `components.json` but doesn't exist). `next.config.ts` is empty.
+**Feature pages completed**: Nayan AI, ScriptGuard, GlycoVision, Reports dashboard — all with dark mode, BN/EN i18n, skeleton loaders, shared components (ImageUploader, ResultCard, DisclaimerModal, AiThinkingBanner). Responsive dashboard layout with sidebar + bottom nav. Dark mode system active. Auth system complete (login, register, middleware). `hooks/useAuth.ts` exists.
 
 ## Service layer (already populated)
 
@@ -43,7 +43,7 @@ All page components and API routes are **placeholder stubs** (`<h1>` or `Respons
 
 ## Deployment
 
-- **Vercel**: API routes get 60s `maxDuration` via `vercel.json`. CI/CD in `.github/workflows/ci.yml` requires `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_APP_URL` env vars at build time.
+- **Vercel**: API routes get 60s `maxDuration` via `vercel.json`. CI/CD in `.github/workflows/ci.yml` has dummy fallback env vars for `npm run build`; Vercel deploy steps also pass fallback env vars. `lib/supabase/client.ts` returns placeholder values when env vars are missing, allowing static generation to complete.
 - **CI pipeline order**: `npx tsc --noEmit` → `npm run lint` → `npm run build`. Uses Node.js 20, `npm ci`.
 
 ## Git workflow

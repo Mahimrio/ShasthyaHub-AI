@@ -1,7 +1,6 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import type { Language } from '@/types'
 
 interface LanguageContextType {
@@ -31,21 +30,24 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     document.documentElement.lang = lang
   }, [lang])
 
-  const setLang = useCallback((l: Language) => {
+  const setLang = useCallback(async (l: Language) => {
     setLangState(l)
     localStorage.setItem('shasthya_lang', l)
     document.documentElement.lang = l
 
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
       if (user) {
-        supabase
+        await supabase
           .from('profiles')
           .update({ preferred_language: l })
           .eq('id', user.id)
-          .then(() => {})
       }
-    })
+    } catch {
+      // Supabase client not available (e.g. during prerendering)
+    }
   }, [])
 
   return (
