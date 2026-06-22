@@ -2,6 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
+import { LanguageProvider } from '@/contexts/LanguageContext'
+import { DarkModeProvider } from '@/contexts/DarkModeContext'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -18,7 +20,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {children}
+      <DarkModeProvider>
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
+      </DarkModeProvider>
     </QueryClientProvider>
   )
 }

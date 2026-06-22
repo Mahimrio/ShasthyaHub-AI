@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -51,6 +53,28 @@
   --input: 214 32% 91%;
   --ring: 199 89% 48%;
   --radius: 0.75rem;
+}
+
+.dark {
+  --background: 222 47% 6%;
+  --foreground: 210 40% 96%;
+  --card: 222 47% 9%;
+  --card-foreground: 210 40% 96%;
+  --popover: 222 47% 9%;
+  --popover-foreground: 210 40% 96%;
+  --primary: 199 89% 55%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 158 64% 50%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 222 30% 14%;
+  --muted-foreground: 215 16% 70%;
+  --accent: 199 60% 15%;
+  --accent-foreground: 199 89% 75%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 222 30% 18%;
+  --input: 222 30% 18%;
+  --ring: 199 89% 55%;
 }
 
 body {
