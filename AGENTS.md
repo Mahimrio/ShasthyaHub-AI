@@ -43,7 +43,7 @@ No test framework exists. No `npm test`.
 
 ## Deployment
 
-- **Vercel**: API routes get 60s `maxDuration` via `vercel.json`. CI/CD in `.github/workflows/ci.yml` has dummy fallback env vars for `npm run build`; Vercel deploy steps also pass fallback env vars. `lib/supabase/client.ts` returns placeholder values when env vars are missing, allowing static generation to complete.
+- **Vercel**: API routes get 60s `maxDuration` via `vercel.json`. CI/CD in `.github/workflows/ci.yml` has dummy fallback env vars for `npm run build`; Vercel deploy steps also pass fallback env vars.
 - **CI pipeline order**: `npx tsc --noEmit` → `npm run lint` → `npm run build`. Uses Node.js 20, `npm ci`.
 
 ## Git workflow
@@ -63,4 +63,35 @@ Conventional commits enforced by commitlint. Allowed types: `feat|fix|docs|style
 - `components.json` references `hooks` alias but `hooks/` dir doesn't exist.
 - `components.json` references `tailwind.config.ts` but it doesn't exist (Tailwind v4 uses CSS-based config).
 - AI keys required at runtime: `GEMINI_API_KEY`, `GROQ_API_KEY`.
-- Build will fail without at least dummy Supabase env vars.
+
+## ⚠ Critical: Supabase client must NEVER be called during static prerendering
+
+Next.js statically prerenders `○` pages during `next build`. During this phase, client component code runs on the server — `useState` initializers and **hook function bodies are executed**, but `useEffect` and event handlers are not.
+
+`@supabase/ssr`'s `createBrowserClient()` validates env vars immediately when called. If env vars are missing, it throws.
+
+**Rule**: Never call `createClient()` directly in a hook/component function body. Always use dynamic `import()` inside `useEffect` or event handlers.
+
+### Files that follow this pattern (reference):
+- `hooks/useAuth.ts` — `await import('@/lib/supabase/client')` inside `useEffect`
+- `contexts/LanguageContext.tsx` — `await import('@/lib/supabase/client')` inside `setLang()` callback
+
+### Violation that caused the bug (DO NOT RE-INTRODUCE):
+```tsx
+// ❌ HOOK BODY — runs during SSR prerendering, throws!
+const supabase = createClient()
+useEffect(() => { /* ... */ }, [])
+
+// ✅ LAZY — runs only on client after mount
+useEffect(() => {
+  const init = async () => {
+    const { createClient } = await import('@/lib/supabase/client')
+    const supabase = createClient()
+    // ...
+  }
+  init()
+}, [])
+```
+
+### Middleware note:
+`middleware.ts` uses `createServerClient` directly (not lazy) because middleware runs per-request, never during static prerendering.
