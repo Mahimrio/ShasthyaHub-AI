@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const isDashboard =
+    request.nextUrl.pathname === '/' ||
     request.nextUrl.pathname.startsWith('/nayan-ai') ||
     request.nextUrl.pathname.startsWith('/scriptguard') ||
     request.nextUrl.pathname.startsWith('/glycovision') ||
@@ -45,7 +46,7 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthPage && user) {
     const url = request.nextUrl.clone()
-    url.pathname = '/nayan-ai'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 
