@@ -2,12 +2,21 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  // Guard: if Supabase env vars are missing or invalid, don't crash the whole
+  // site with MIDDLEWARE_INVOCATION_FAILED. Pass through and let pages handle
+  // auth gracefully. (createServerClient throws on an invalid URL.)
+  if (!supabaseUrl || !supabaseAnonKey || !/^https?:\/\//.test(supabaseUrl)) {
+    console.warn('[middleware] Supabase env vars missing or invalid — skipping auth')
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         getAll() {
           return request.cookies.getAll()
@@ -20,34 +29,40 @@ export async function middleware(request: NextRequest) {
           )
         },
       },
+    })
+
+    // getUser() validates the session against the Supabase API server-side.
+    // Do NOT replace with getSession() — it doesn't validate and is unsafe for auth.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    const isDashboard =
+      request.nextUrl.pathname === '/' ||
+      request.nextUrl.pathname.startsWith('/nayan-ai') ||
+      request.nextUrl.pathname.startsWith('/scriptguard') ||
+      request.nextUrl.pathname.startsWith('/glycovision') ||
+      request.nextUrl.pathname.startsWith('/reports')
+
+    const isAuthPage =
+      request.nextUrl.pathname === '/login' ||
+      request.nextUrl.pathname === '/register'
+
+    if (isDashboard && !user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/login'
+      return NextResponse.redirect(url)
     }
-  )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  const isDashboard =
-    request.nextUrl.pathname === '/' ||
-    request.nextUrl.pathname.startsWith('/nayan-ai') ||
-    request.nextUrl.pathname.startsWith('/scriptguard') ||
-    request.nextUrl.pathname.startsWith('/glycovision') ||
-    request.nextUrl.pathname.startsWith('/reports')
-
-  const isAuthPage =
-    request.nextUrl.pathname === '/login' ||
-    request.nextUrl.pathname === '/register'
-
-  if (isDashboard && !user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-
-  if (isAuthPage && user) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/'
-    return NextResponse.redirect(url)
+    if (isAuthPage && user) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
+  } catch (error) {
+    // Never let middleware crash the request. Log and pass through so the site
+    // stays up even if the auth backend is temporarily unreachable.
+    console.error('[middleware] Supabase auth check failed:', error)
   }
 
   return supabaseResponse
