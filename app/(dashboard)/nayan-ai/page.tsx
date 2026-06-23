@@ -1,65 +1,78 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Eye, Info, ArrowRight } from 'lucide-react'
+import { AlertTriangle, ChevronDown, Eye, Info, RotateCcw, Search, Smartphone } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useNayanAnalysis } from '@/hooks/useNayanAnalysis'
+import { useNayanHistory } from '@/hooks/useNayanHistory'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
-import { AiThinkingBanner } from '@/components/shared/AiThinkingBanner'
-import { ResultCard } from '@/components/shared/ResultCard'
+import { AnalyzingAnimation } from '@/components/features/nayan-ai/AnalyzingAnimation'
+import { EyeResultCard } from '@/components/features/nayan-ai/EyeResultCard'
+import { severityLabel, severityStyles } from '@/components/features/nayan-ai/severity-styles'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { formatDate } from '@/lib/utils'
 
-type AnalysisState = 'idle' | 'disclaimer' | 'uploading' | 'processing' | 'complete'
-type SeverityLevel = 'Normal' | 'Low' | 'Medium' | 'High' | 'Critical'
+const DISCLAIMER_KEY = 'nayan_disclaimer_seen'
 
-const severityConfig: Record<SeverityLevel, { border: string; bg: string; badge: 'green' | 'low' | 'medium' | 'high' | 'critical'; text: string; dot: string }> = {
-  Normal:   { border: 'border-l-4 border-green-500', bg: 'bg-green-50 dark:bg-green-900/30', badge: 'green', text: 'text-green-800 dark:text-green-200', dot: 'bg-green-500' },
-  Low:      { border: 'border-l-4 border-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/30', badge: 'low', text: 'text-blue-800 dark:text-blue-200', dot: 'bg-blue-500' },
-  Medium:   { border: 'border-l-4 border-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/30', badge: 'medium', text: 'text-yellow-800 dark:text-yellow-200', dot: 'bg-yellow-500' },
-  High:     { border: 'border-l-4 border-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/30', badge: 'high', text: 'text-orange-800 dark:text-orange-200', dot: 'bg-orange-500' },
-  Critical: { border: 'border-l-4 border-red-500', bg: 'bg-red-50 dark:bg-red-900/30', badge: 'critical', text: 'text-red-800 dark:text-red-200', dot: 'bg-red-500' },
-}
+const INSTRUCTIONS: { en: string; bn: string }[] = [
+  {
+    en: 'Hold phone 15–20cm from your eye',
+    bn: 'ফোন চোখ থেকে ১৫–২০ সেমি দূরে ধরুন',
+  },
+  {
+    en: 'Use the front camera in a well-lit room',
+    bn: 'আলো বেশি এমন ঘরে ফ্রন্ট ক্যামেরা ব্যবহার করুন',
+  },
+  {
+    en: 'Keep your eye wide open and look straight at the camera',
+    bn: 'চোখ পুরো খুলে সোজা ক্যামেরার দিকে তাকান',
+  },
+]
 
 export default function NayanAIPage() {
   const { lang } = useLanguage()
-  const [state, setState] = useState<AnalysisState>('disclaimer')
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
+  const { analyze, result, isLoading, isError, error, reset } = useNayanAnalysis()
+  const { history, isLoading: historyLoading } = useNayanHistory()
 
-  const [result] = useState<{
-    severity: SeverityLevel
-    diagnosis: string
-    diagnosisBn: string
-    confidence: number
-    recommendationEn: string
-    recommendationBn: string
-    urgencyDays: number
-    specialist: string
-    details: string
-  } | null>({
-    severity: 'High',
-    diagnosis: 'Suspected Diabetic Retinopathy (NPDR)',
-    diagnosisBn: 'সন্দেহভাজন ডায়াবেটিক রেটিনোপ্যাথি (NPDR)',
-    confidence: 87,
-    recommendationEn: 'Visit an ophthalmologist within 14 days for a dilated eye exam.',
-    recommendationBn: '১৪ দিনের মধ্যে একজন চক্ষু বিশেষজ্ঞের কাছে যান।',
-    urgencyDays: 14,
-    specialist: 'Ophthalmologist / Vitreo-Retinal Surgeon',
-    details: 'Mild non-proliferative diabetic retinopathy with microaneurysms detected. No signs of macular edema currently.',
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  // Lazily read the "seen" flag at mount. SSR-safe: window is undefined during
+  // prerender so it returns false (modal closed), matching the server render.
+  // The modal only renders into a portal when open, so no visible hydration mismatch.
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !localStorage.getItem(DISCLAIMER_KEY)
   })
+  const [instructionsOpen, setInstructionsOpen] = useState(false)
+
+  const handleImageSelect = useCallback((file: File) => {
+    setSelectedFile(file)
+  }, [])
 
   const handleAcceptDisclaimer = useCallback(() => {
+    if (typeof window !== 'undefined') localStorage.setItem(DISCLAIMER_KEY, '1')
     setShowDisclaimer(false)
-    setState('idle')
-  }, [])
+    // If a file is already chosen, kick off the analysis immediately.
+    if (selectedFile) void analyze(selectedFile)
+  }, [selectedFile, analyze])
 
-  const handleImageSelect = useCallback((_imageFile: File) => {
-    setState('processing')
-    setTimeout(() => setState('complete'), 3000)
-  }, [])
+  const handleAnalyzeClick = useCallback(() => {
+    if (!selectedFile) return
+    const seen = typeof window !== 'undefined' && localStorage.getItem(DISCLAIMER_KEY)
+    if (!seen) {
+      setShowDisclaimer(true)
+      return
+    }
+    void analyze(selectedFile)
+  }, [selectedFile, analyze])
 
-  const severity = result ? severityConfig[result.severity] : null
+  const handleReset = useCallback(() => {
+    reset()
+    setSelectedFile(null)
+  }, [reset])
 
   return (
     <>
@@ -69,162 +82,201 @@ export default function NayanAIPage() {
         onAccept={handleAcceptDisclaimer}
       />
 
-      <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
+      {isLoading && <AnalyzingAnimation />}
+
+      <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
         {/* Header */}
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-sky-500 to-cyan-500 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500">
             <Eye className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">
-              {lang === 'bn' ? 'নয়ান AI — চোখের পরীক্ষা' : 'Nayan AI — Eye Screening'}
+            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
+              {lang === 'bn' ? '🧿 নয়ান AI — চোখের রোগ শনাক্তকরণ' : '🧿 NayanAI — Eye Disease Detection'}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+            <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               {lang === 'bn'
-                ? 'ডায়াবেটিক রেটিনোপ্যাথি শনাক্ত করতে আপনার চোখের ছবি আপলোড করুন। AI বিশ্লেষণ করে ফলাফল দেবে।'
-                : 'Upload a clear photo of your eye to screen for diabetic retinopathy.'}
+                ? 'AI স্ক্রিনিংয়ের জন্য আপনার চোখের ক্লোজ-আপ ছবি আপলোড করুন'
+                : 'Upload a close-up photo of your eye for AI screening'}
             </p>
           </div>
         </div>
 
-        {/* Upload Section */}
-        {state !== 'complete' && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
+        {/* Instructions panel (collapsible) */}
+        <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800">
+          <button
+            type="button"
+            onClick={() => setInstructionsOpen((o) => !o)}
+            className="flex w-full items-center gap-3 px-5 py-4 text-left"
           >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-900/50">
+              <Smartphone className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            </div>
+            <span className="flex-1 text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {lang === 'bn' ? '📱 ভালো চোখের ছবি তোলার নিয়ম' : '📱 How to take a good eye photo'}
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-gray-400 transition-transform ${
+                instructionsOpen ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
+          {instructionsOpen && (
+            <motion.ol
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className="space-y-2 px-5 pb-4"
+            >
+              {INSTRUCTIONS.map((step, i) => (
+                <li key={i} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-300">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold tabular-nums text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+                    {i + 1}
+                  </span>
+                  {lang === 'bn' ? step.bn : step.en}
+                </li>
+              ))}
+            </motion.ol>
+          )}
+        </div>
+
+        {/* Upload + analyze (hidden while a result is showing) */}
+        {!result && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             <ImageUploader
               onImageSelect={handleImageSelect}
               acceptedTypes="image/*"
-              maxSizeMB={10}
+              maxSizeMB={5}
             />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-              {lang === 'bn'
-                ? 'সরাসরি ছবি তুলতে ক্যামেরা ব্যবহার করুন অথবা গ্যালারি থেকে বেছে নিন'
-                : 'Use your camera to take a photo or choose from gallery'}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Processing */}
-        {state === 'processing' && (
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <AiThinkingBanner />
-            <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 text-center">
-              {lang === 'bn' ? 'সাধারণত ১০-১৫ সেকেন্ড লাগে' : 'Usually takes 10-15 seconds'}
-            </p>
-          </motion.div>
-        )}
-
-        {/* Results */}
-        {state === 'complete' && result && severity && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-4"
-          >
-            {/* Am I in danger? */}
-            <div className={`${severity.border} ${severity.bg} pl-4 pr-5 py-4 rounded-r-xl`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`w-2 h-2 rounded-full ${severity.dot}`} />
-                <Badge variant={severity.badge}>
-                  {result.severity === 'Critical'
-                    ? (lang === 'bn' ? 'গুরুতর' : 'Critical')
-                    : result.severity === 'High'
-                      ? (lang === 'bn' ? 'উচ্চ ঝুঁকি' : 'High Risk')
-                      : result.severity === 'Medium'
-                        ? (lang === 'bn' ? 'মাঝারি ঝুঁকি' : 'Medium Risk')
-                        : result.severity === 'Low'
-                          ? (lang === 'bn' ? 'কম ঝুঁকি' : 'Low Risk')
-                          : (lang === 'bn' ? 'স্বাভাবিক' : 'Normal')}
-                </Badge>
-                <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">{result.confidence}% confidence</span>
-              </div>
-              <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-gray-100 mt-1 leading-tight">
-                {lang === 'bn' ? result.diagnosisBn : result.diagnosis}
-              </h2>
-            </div>
-
-            {/* What to do & How soon */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-sky-100 dark:bg-sky-900/50 rounded-lg flex items-center justify-center shrink-0">
-                  <Info className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                    {lang === 'bn' ? '✅ আপনার করণীয়' : '✅ Recommended Action'}
-                  </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                    {lang === 'bn' ? result.recommendationBn : result.recommendationEn}
-                  </p>
-                  <div className="flex items-center gap-2 mt-3 text-sm">
-                    <span className="text-gray-400 dark:text-gray-500">
-                      {lang === 'bn' ? 'সময়সীমা:' : 'Timeline:'}
-                    </span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">
-                      {lang === 'bn'
-                        ? `${result.urgencyDays} দিনের মধ্যে`
-                        : `Within ${result.urgencyDays} days`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Specialist info */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-emerald-100 dark:bg-emerald-900/50 rounded-lg flex items-center justify-center shrink-0">
-                  <ArrowRight className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 dark:text-gray-200 text-sm">
-                    {lang === 'bn' ? 'কোন ডাক্তার দেখাবেন' : 'Who to See'}
-                  </h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 font-medium">{result.specialist}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Details */}
-            <ResultCard
-              title={lang === 'bn' ? 'বিশদ বিশ্লেষণ' : 'Detailed Analysis'}
+            <Button
+              onClick={handleAnalyzeClick}
+              disabled={!selectedFile || isLoading}
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 py-6 text-base font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                {lang === 'bn'
-                  ? 'ছবিতে মাইক্রোঅ্যানিউরিজম সহ হালকা নন-প্রলিফারেটিভ ডায়াবেটিক রেটিনোপ্যাথি (NPDR) শনাক্ত হয়েছে। বর্তমানে ম্যাকুলার এডিমার কোনো লক্ষণ নেই।'
-                  : result.details}
-              </p>
-            </ResultCard>
+              <Search className="mr-2 h-5 w-5" />
+              {lang === 'bn' ? 'আমার চোখ বিশ্লেষণ করুন' : '🔍 Analyze My Eye'}
+            </Button>
+          </motion.div>
+        )}
 
-            {/* Re-analyze */}
-            <div className="flex gap-3">
-              <Button
-                onClick={() => { setState('idle') }}
-                variant="outline"
-                className="flex-1 rounded-xl"
-              >
+        {/* Error state */}
+        {isError && (
+          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>
+                {lang === 'bn' ? 'বিশ্লেষণ ব্যর্থ হয়েছে' : 'Analysis Failed'}
+              </AlertTitle>
+              <AlertDescription>
+                <p className="mb-3">{error}</p>
+                <Button
+                  onClick={handleAnalyzeClick}
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                >
+                  <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                  {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'Try Again'}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          </motion.div>
+        )}
+
+        {/* Result */}
+        {result && (
+          <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
+            <EyeResultCard result={result} lang={lang} />
+            <div className="mt-4">
+              <Button onClick={handleReset} variant="outline" className="w-full rounded-xl">
                 {lang === 'bn' ? 'নতুন ছবি আপলোড করুন' : 'Upload New Image'}
               </Button>
             </div>
           </motion.div>
         )}
 
-        {/* Bottom disclaimer */}
-        {state !== 'disclaimer' && (
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed text-center">
-            {lang === 'bn'
-              ? 'ShasthyaHub-AI একটি AI স্ক্রিনিং টুল, ক্লিনিকাল রোগ নির্ণয় নয়। স্বাস্থ্য সংক্রান্ত সিদ্ধান্ত নেওয়ার আগে সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
-              : 'ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}
-          </p>
+        {/* Past analyses */}
+        {!result && (
+          <PastAnalyses
+            history={history}
+            isLoading={historyLoading}
+            lang={lang}
+          />
         )}
+
+        {/* Bottom disclaimer */}
+        <p className="text-center text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+          {lang === 'bn'
+            ? 'ShasthyaHub-AI একটি AI স্ক্রিনিং টুল, ক্লিনিকাল রোগ নির্ণয় নয়। স্বাস্থ্য সংক্রান্ত সিদ্ধান্ত নেওয়ার আগে সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
+            : 'ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}
+        </p>
       </div>
     </>
+  )
+}
+
+// --- Past analyses list -----------------------------------------------------
+
+interface PastAnalysesProps {
+  history: ReturnType<typeof useNayanHistory>['history']
+  isLoading: boolean
+  lang: 'en' | 'bn'
+}
+
+function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
+  if (isLoading) {
+    return (
+      <div className="space-y-2">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-14 animate-pulse rounded-xl border border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+          />
+        ))}
+      </div>
+    )
+  }
+
+  if (history.length === 0) return null
+
+  return (
+    <div>
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <Info className="h-4 w-4 text-gray-400" />
+        {lang === 'bn' ? 'পুরোনো বিশ্লেষণ' : 'Past Analyses'}
+      </h3>
+      <ul className="space-y-2">
+        {history.map((item) => {
+          const style =
+            item.severity && item.severity in severityStyles
+              ? severityStyles[item.severity]
+              : null
+          return (
+            <li
+              key={item.id}
+              className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                  {item.diagnosis ?? (lang === 'bn' ? 'অজানা' : 'Unknown')}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">
+                  {formatDate(item.created_at)}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {style && item.severity && (
+                  <Badge variant={style.badge}>{severityLabel(item.severity, lang)}</Badge>
+                )}
+                {item.confidence_score !== null && (
+                  <span className="text-xs tabular-nums text-gray-400 dark:text-gray-500">
+                    {Math.round(item.confidence_score)}%
+                  </span>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }

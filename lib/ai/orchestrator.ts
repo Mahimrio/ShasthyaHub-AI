@@ -5,10 +5,10 @@ import type { GeminiEyeOutput, GroqEyeOutput } from '@/types';
 /**
  * Nayan AI — two-agent ophthalmic screening pipeline.
  *
- *  Step 1: Gemini 1.5 Pro (Vision)  → raw clinical findings (GeminiEyeOutput)
- *  Step 2: Groq Llama 3.3 70B       → patient-friendly triage report (GroqEyeOutput)
+ *  Step 1: Gemini 2.5 Flash (Vision)  → raw clinical findings (GeminiEyeOutput)
+ *  Step 2: Groq Llama 3.3 70B         → patient-friendly triage report (GroqEyeOutput)
  *
- *  If Groq is unavailable, fall back to Gemini 1.5 Flash (text) with a combined
+ *  If Groq is unavailable, fall back to Gemini 2.5 Flash (text) with a combined
  *  prompt so the user still gets a result instead of a hard failure.
  */
 
@@ -138,7 +138,7 @@ export async function analyzeEyeImage(
   imageBase64: string,
   mimeType: string
 ): Promise<EyeAnalysisResult> {
-  // Step 1 — Vision: Gemini 1.5 Pro
+  // Step 1 — Vision: Gemini 2.5 Flash
   const geminiOutput = await callGeminiVision(
     imageBase64,
     mimeType as 'image/jpeg' | 'image/png' | 'image/webp',

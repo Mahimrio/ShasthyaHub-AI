@@ -1,9 +1,13 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 /**
- * Gemini 1.5 client — Vision + Text pipeline for ShasthyaHub-AI.
+ * Gemini client — Vision + Text pipeline for ShasthyaHub-AI.
  * Initialized lazily so the client is only built when an API key exists,
  * which keeps `next build` prerendering from throwing on a missing key.
+ *
+ * Model versions (as of June 2026):
+ *   - Vision:  gemini-2.5-flash  (gemini-1.5-pro retired)
+ *   - Text:    gemini-2.5-flash  (gemini-1.5-flash retired)
  */
 let genAI: GoogleGenerativeAI | null = null;
 
@@ -56,7 +60,7 @@ export function extractJsonSafely(text: string): object {
 }
 
 /**
- * Run Gemini 1.5 Pro on an image + prompt and return a parsed JSON object.
+ * Run Gemini 2.5 Flash on an image + prompt and return a parsed JSON object.
  * The model is asked to emit JSON only; extractJsonSafely cleans up the rest.
  */
 export async function callGeminiVision(
@@ -65,7 +69,7 @@ export async function callGeminiVision(
   systemPrompt: string
 ): Promise<object> {
   try {
-    const model = getClient().getGenerativeModel({ model: 'gemini-1.5-pro' });
+    const model = getClient().getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent([
       { inlineData: { data: imageBase64, mimeType } },
       { text: systemPrompt },
@@ -79,12 +83,12 @@ export async function callGeminiVision(
 }
 
 /**
- * Run Gemini 1.5 Flash on a text-only prompt and return a parsed JSON object.
+ * Run Gemini 2.5 Flash on a text-only prompt and return a parsed JSON object.
  * Flash is faster and cheaper — used for text triage / fallback paths.
  */
 export async function callGeminiText(prompt: string): Promise<object> {
   try {
-    const model = getClient().getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = getClient().getGenerativeModel({ model: 'gemini-2.5-flash' });
     const result = await model.generateContent(prompt);
     const text = result.response.text();
     return extractJsonSafely(text);

@@ -167,6 +167,33 @@ export interface GroqEyeOutput {
   specialist_needed: string
 }
 
+/**
+ * UI-facing shape of a single Nayan AI analysis — the `data` payload returned
+ * by POST /api/nayan/analyze on success. Kept distinct from the persisted
+ * EyeAnalysis DB row (which also carries raw JSONB + timestamps).
+ */
+export interface NayanResult {
+  id: string
+  diagnosis: string
+  severity: Severity
+  recommendation_en: string
+  recommendation_bn: string
+  urgency_days: number
+  next_steps: string[]
+  specialist_needed: string
+  /** Confidence as an integer percentage 0–100. */
+  confidence_score: number
+}
+
+/** Lightweight projection used by the history list. */
+export interface NayanResultLight {
+  id: string
+  diagnosis: string | null
+  severity: Severity | null
+  created_at: string
+  confidence_score: number | null
+}
+
 export const BANGLADESH_DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria',
   'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', 'Cox\'s Bazar',
