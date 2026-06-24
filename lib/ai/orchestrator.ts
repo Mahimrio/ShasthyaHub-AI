@@ -1,6 +1,15 @@
 import { callGeminiVision, callGeminiText } from './gemini';
 import { callGroq } from './groq';
-import type { GeminiEyeOutput, GroqEyeOutput } from '@/types';
+import type {
+  GeminiEyeOutput,
+  GroqEyeOutput,
+  GeminiMedication,
+  GeminiPrescriptionOutput,
+  PrescriptionAnalysisResult,
+} from '@/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { mapBrandsToGenerics } from '@/lib/services/drug-mapping';
+import { checkDrugInteractions } from '@/lib/services/drug-interaction';
 
 /**
  * Nayan AI — two-agent ophthalmic screening pipeline.
@@ -171,6 +180,144 @@ export async function analyzeEyeImage(
     gemini_raw_output: geminiOutput,
     used_fallback: usedFallback,
   }
+}
+
+// ===========================================================================
+// ScriptGuard — prescription OCR → drug mapping → interaction pipeline
+// ===========================================================================
+
+/**
+ * ScriptGuard — prescription analysis pipeline.
+ *
+ *  Step 1: Gemini 2.5 Flash (Vision)  → OCR the prescription (GeminiPrescriptionOutput)
+ *  Step 2: Drug mapping               → brand→generic via Supabase / Groq / static
+ *  Step 3: Collect generic names
+ *  Step 4: Drug interactions          → OpenFDA evidence + Groq reasoning
+ *  Step 5: Assemble result (interactions + danger flag + raw OCR)
+ */
+
+const GEMINI_SCRIPT_PROMPT = `
+You are a medical OCR specialist. Extract ALL text from this handwritten
+Bangladeshi doctor prescription. Prescriptions typically contain drug names,
+dosages (mg, ml), frequency (BD=twice, TDS=thrice, 1+0+1=morning+noon+night),
+and duration (days). Return ONLY valid JSON:
+{
+  "raw_text": "string (all readable text exactly as written)",
+  "medications": [{
+    "written_text": "string (exactly as handwritten)",
+    "dosage": "string",
+    "frequency": "string",
+    "duration": "string",
+    "instructions": "string (e.g., after meal, with water)"
+  }],
+  "prescriber_qualification": "string|null",
+  "prescription_date": "string|null",
+  "ocr_confidence": 0.85
+}
+For illegible text write [illegible] rather than guessing.
+Do not include any explanatory text outside the JSON object.`;
+
+/**
+ * Narrow Gemini's raw JSON into a well-typed GeminiPrescriptionOutput with safe
+ * defaults. An empty/unreadable prescription still yields a valid (empty) shape
+ * rather than throwing — downstream steps handle an empty drug list gracefully.
+ */
+function coercePrescriptionOutput(raw: unknown): GeminiPrescriptionOutput {
+  const o = (raw ?? {}) as Record<string, unknown>;
+
+  const rawMedications = Array.isArray(o['medications']) ? o['medications'] : [];
+  const medications: GeminiMedication[] = rawMedications
+    .map((m): GeminiMedication | null => {
+      if (typeof m !== 'object' || m === null) return null;
+      const drug = m as Record<string, unknown>;
+      const written =
+        typeof drug['written_text'] === 'string' ? drug['written_text'] : '';
+      if (!written.trim()) return null; // a drug with no written text is useless
+      return {
+        written_text: written,
+        dosage: typeof drug['dosage'] === 'string' ? drug['dosage'] : '',
+        frequency: typeof drug['frequency'] === 'string' ? drug['frequency'] : '',
+        duration: typeof drug['duration'] === 'string' ? drug['duration'] : '',
+        instructions:
+          typeof drug['instructions'] === 'string' ? drug['instructions'] : '',
+      };
+    })
+    .filter((m): m is GeminiMedication => m !== null);
+
+  return {
+    raw_text: typeof o['raw_text'] === 'string' ? o['raw_text'] : '',
+    medications,
+    prescriber_qualification:
+      typeof o['prescriber_qualification'] === 'string' &&
+      o['prescriber_qualification'].trim()
+        ? o['prescriber_qualification']
+        : null,
+    prescription_date:
+      typeof o['prescription_date'] === 'string' && o['prescription_date'].trim()
+        ? o['prescription_date']
+        : null,
+    ocr_confidence:
+      typeof o['ocr_confidence'] === 'number' && Number.isFinite(o['ocr_confidence'])
+        ? Math.min(Math.max(o['ocr_confidence'], 0), 1)
+        : 0,
+  };
+}
+
+/**
+ * Run the full prescription analysis pipeline.
+ *
+ * @param imageBase64 base64-encoded prescription image bytes (no data: prefix)
+ * @param mimeType    one of image/jpeg | image/png | image/webp
+ * @param supabase    server Supabase client (used for bd_drugs lookup)
+ * @returns extracted drugs, interaction warnings, and a danger flag
+ */
+export async function analyzePrescription(
+  imageBase64: string,
+  mimeType: string,
+  supabase: SupabaseClient
+): Promise<PrescriptionAnalysisResult> {
+  // Step 1 — Vision OCR: Gemini 2.5 Flash
+  const rawOutput = await callGeminiVision(
+    imageBase64,
+    mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+    GEMINI_SCRIPT_PROMPT
+  );
+  const geminiOutput = coercePrescriptionOutput(rawOutput);
+
+  // Step 2 — Map each OCR'd drug to brand / generic / class.
+  const extracted_drugs = await mapBrandsToGenerics(
+    geminiOutput.medications,
+    supabase
+  );
+
+  // Step 3 — Collect generic names for interaction screening. Skip entries that
+  // were never truly mapped (empty generic, or generic echoing the raw text —
+  // which is how the unmapped placeholder is shaped) to avoid feeding noise to
+  // OpenFDA/Groq.
+  const genericNames = extracted_drugs
+    .map((d) => d.generic_name.trim())
+    .filter((name, idx) => {
+      if (!name) return false;
+      const written = extracted_drugs[idx]!.written_text.trim().toLowerCase();
+      // Unmapped placeholder → generic_name === written_text.
+      return name.toLowerCase() !== written;
+    });
+
+  // Step 4 — Interaction check (OpenFDA + Groq, with static fallback).
+  const interaction_warnings = await checkDrugInteractions(genericNames);
+
+  // Step 5 — Assemble. The danger flag is recomputed here for safety even
+  // though the service layer also tracks it.
+  const has_dangerous_interactions = interaction_warnings.some(
+    (i) => i.severity === 'Critical' || i.severity === 'Severe'
+  );
+
+  return {
+    extracted_drugs,
+    interaction_warnings,
+    has_dangerous_interactions,
+    gemini_raw: geminiOutput,
+  };
 }
 
 export type { GeminiEyeOutput, GroqEyeOutput }

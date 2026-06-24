@@ -45,6 +45,8 @@ export interface ExtractedMedication {
 export interface DrugInteraction {
   drugs_involved: [string, string]
   severity: 'Mild' | 'Moderate' | 'Severe' | 'Critical'
+  /** Pharmacological basis of the interaction (from the Groq reasoning layer). */
+  mechanism_en?: string
   risk_en: string
   risk_bn: string
   recommendation_en: string
@@ -165,6 +167,48 @@ export interface GroqEyeOutput {
   urgency_days: number
   next_steps: string[]
   specialist_needed: string
+}
+
+// --- ScriptGuard (prescription) AI output types ---
+
+/**
+ * A single medication as read off the prescription by Gemini OCR — before any
+ * brand→generic mapping has been applied. Contains only what is literally
+ * written on the paper.
+ */
+export interface GeminiMedication {
+  written_text: string
+  dosage: string
+  frequency: string
+  duration: string
+  instructions: string
+}
+
+/** Parsed JSON returned by Gemini from the prescription OCR prompt. */
+export interface GeminiPrescriptionOutput {
+  raw_text: string
+  medications: GeminiMedication[]
+  prescriber_qualification: string | null
+  prescription_date: string | null
+  ocr_confidence: number
+}
+
+/** Parsed JSON returned by Groq from the drug-interaction reasoning prompt. */
+export interface GroqPrescriptionInteractionOutput {
+  has_dangerous_interactions: boolean
+  interactions: DrugInteraction[]
+}
+
+/**
+ * Full result of the prescription analysis pipeline — the shape returned by
+ * `analyzePrescription()` and (as the `data` payload) by POST
+ * /api/scriptguard/analyze on success.
+ */
+export interface PrescriptionAnalysisResult {
+  extracted_drugs: ExtractedMedication[]
+  interaction_warnings: DrugInteraction[]
+  has_dangerous_interactions: boolean
+  gemini_raw: GeminiPrescriptionOutput
 }
 
 /**
