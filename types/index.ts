@@ -212,6 +212,24 @@ export interface PrescriptionAnalysisResult {
 }
 
 /**
+ * UI-facing shape of a ScriptGuard analysis — the `data` payload returned
+ * by POST /api/scriptguard/analyze on success. Flattened schedule fields
+ * (not the full MedicationSchedule) so the UI can read them directly.
+ */
+export interface ScriptGuardResult {
+  id: string
+  extracted_drugs: ExtractedMedication[]
+  interaction_warnings: DrugInteraction[]
+  has_dangerous_interactions: boolean
+  gemini_raw: GeminiPrescriptionOutput
+  schedule: Pick<MedicationSchedule, 'morning' | 'afternoon' | 'evening' | 'night'>
+  duration_days: number
+  special_instructions_en: string[]
+  special_instructions_bn: string[]
+  audio_script_bn: string
+}
+
+/**
  * UI-facing shape of a single Nayan AI analysis — the `data` payload returned
  * by POST /api/nayan/analyze on success. Kept distinct from the persisted
  * EyeAnalysis DB row (which also carries raw JSONB + timestamps).
