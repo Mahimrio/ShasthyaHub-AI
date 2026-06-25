@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzePrescription } from '@/lib/ai/orchestrator'
-import type { ApiError, ApiSuccess } from '@/types'
+import { generateMedicationSchedule } from '@/lib/services/schedule'
+import type { ApiError, ApiSuccess, MedicationSchedule } from '@/types'
 
 // Vercel serverless function timeout. The OCR + mapping + interaction pipeline
 // (Gemini + per-drug Groq + OpenFDA + final Groq) can run 20–40s under load.
@@ -25,6 +26,13 @@ type ScriptGuardAnalyzeData = {
   interaction_warnings: Awaited<ReturnType<typeof analyzePrescription>>['interaction_warnings']
   has_dangerous_interactions: boolean
   gemini_raw: Awaited<ReturnType<typeof analyzePrescription>>['gemini_raw']
+  // Flattened schedule fields (from generateMedicationSchedule).
+  schedule: Pick<MedicationSchedule, 'morning' | 'afternoon' | 'evening' | 'night'>
+  duration_days: number
+  special_instructions_en: string[]
+  special_instructions_bn: string[]
+  // Bengali paragraph ready for window.speechSynthesis({ lang: 'bn-BD' }).
+  audio_script_bn: string
 }
 
 type ScriptGuardAnalyzeResponse = ApiSuccess<ScriptGuardAnalyzeData> | ApiError
@@ -112,14 +120,38 @@ export async function POST(
     // (e) Run the OCR + mapping + interaction pipeline.
     const result = await analyzePrescription(base64, file.type, supabase)
 
-    // (f) Insert the completed record into prescription_analyses.
+    // (f) Generate the daily schedule + Bengali audio script. This has its own
+    //     internal fallback (local deterministic parser) so it never breaks the
+    //     request even if Groq is down.
+    const schedule = await generateMedicationSchedule(result.extracted_drugs)
+
+    // (g) Insert the completed record into prescription_analyses. The two
+    //     JSONB schedule columns are split by language:
+    //       - digital_schedule    : English-instruction projection
+    //       - digital_schedule_bn : Bengali-instruction projection + audio script
     const insertPayload = {
       user_id: userId,
       status: 'complete' as const,
       extracted_drugs: result.extracted_drugs,
       interaction_warnings: result.interaction_warnings,
       has_dangerous_interactions: result.has_dangerous_interactions,
-      digital_schedule: null, // schedule generation is a future step
+      digital_schedule: {
+        morning: schedule.morning,
+        afternoon: schedule.afternoon,
+        evening: schedule.evening,
+        night: schedule.night,
+        duration_days: schedule.duration_days,
+        special_instructions_en: schedule.special_instructions_en,
+      },
+      digital_schedule_bn: {
+        morning: schedule.morning,
+        afternoon: schedule.afternoon,
+        evening: schedule.evening,
+        night: schedule.night,
+        duration_days: schedule.duration_days,
+        special_instructions_bn: schedule.special_instructions_bn,
+        audio_script_bn: schedule.audio_script_bn,
+      },
     }
 
     const { data: inserted, error: insertError } = await supabase
@@ -133,13 +165,23 @@ export async function POST(
       // Non-fatal: the analysis succeeded, only persistence failed.
     }
 
-    // (g) Return the result.
+    // (h) Return the result.
     const data: ScriptGuardAnalyzeData = {
       id: inserted?.id ?? crypto.randomUUID(),
       extracted_drugs: result.extracted_drugs,
       interaction_warnings: result.interaction_warnings,
       has_dangerous_interactions: result.has_dangerous_interactions,
       gemini_raw: result.gemini_raw,
+      schedule: {
+        morning: schedule.morning,
+        afternoon: schedule.afternoon,
+        evening: schedule.evening,
+        night: schedule.night,
+      },
+      duration_days: schedule.duration_days,
+      special_instructions_en: schedule.special_instructions_en,
+      special_instructions_bn: schedule.special_instructions_bn,
+      audio_script_bn: schedule.audio_script_bn,
     }
 
     return NextResponse.json<ApiSuccess<ScriptGuardAnalyzeData>>({
