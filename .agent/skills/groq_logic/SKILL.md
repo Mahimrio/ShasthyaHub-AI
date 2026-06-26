@@ -88,7 +88,6 @@ export async function callGroqWithFallback(
     } catch {
       // Last resort: Gemini Flash
       return await callGeminiText(userContent + '\n\nSystem: ' + systemPrompt)
-    systemPrompt)
     }
   }
 }

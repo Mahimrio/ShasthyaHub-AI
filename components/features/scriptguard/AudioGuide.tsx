@@ -1,8 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { motion } from 'framer-motion'
-import { Headphones, Pause, Play, Square, Volume2 } from 'lucide-react'
+import { AlertTriangle, Headphones, Loader2, Pause, Play, Square, Volume2, Wifi } from 'lucide-react'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
@@ -25,6 +26,64 @@ const CHARS_PER_SECOND = 13
 const SLOT_LABELS_BN = ['সকাল', 'দুপুর', 'সন্ধ্যা', 'রাত']
 const SLOT_LABELS_EN = ['Morning', 'Afternoon', 'Evening', 'Night']
 
+/** Max chars per Google Translate TTS request. */
+const TTS_CHUNK_MAX = 200
+
+/**
+ * Split a Bengali script into chunks of ≤ TTS_CHUNK_MAX characters,
+ * preferring to break at sentence boundaries (। . \n).
+ */
+function splitBnChunks(text: string): string[] {
+  if (text.length <= TTS_CHUNK_MAX) return [text]
+  const chunks: string[] = []
+  let remaining = text
+  while (remaining.length > 0) {
+    if (remaining.length <= TTS_CHUNK_MAX) {
+      chunks.push(remaining)
+      break
+    }
+    // Look for a sentence boundary within the limit.
+    let splitAt = -1
+    for (const sep of ['।', '.', '\n']) {
+      const idx = remaining.lastIndexOf(sep, TTS_CHUNK_MAX)
+      if (idx > splitAt) splitAt = idx
+    }
+    if (splitAt <= 0) splitAt = TTS_CHUNK_MAX // force split if no boundary found
+    // Include the separator character in the chunk.
+    chunks.push(remaining.slice(0, splitAt + 1).trim())
+    remaining = remaining.slice(splitAt + 1).trim()
+  }
+  return chunks.filter((c) => c.length > 0)
+}
+
+/**
+ * Build a Google Translate TTS URL for a Bengali text chunk.
+ * Returns an MP3 audio URL — no API key needed.
+ */
+function ttsUrl(text: string): string {
+  const params = new URLSearchParams({
+    q: text,
+    tl: 'bn',
+    client: 'tw-ob',
+    ie: 'UTF-8',
+  })
+  return `https://translate.google.com/translate_tts?${params.toString()}`
+}
+
+/**
+ * Pick the best available Bengali voice. Preference order: bn-BD (Bangladesh),
+ * bn-IN (India), then any voice whose BCP-47 lang starts with "bn".
+ * Returns null when no Bengali voice is installed on this device.
+ */
+function pickBnVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  return (
+    voices.find((v) => v.lang === 'bn-BD') ??
+    voices.find((v) => v.lang === 'bn-IN') ??
+    voices.find((v) => v.lang.toLowerCase().startsWith('bn')) ??
+    null
+  )
+}
+
 /**
  * Find which schedule slot the narration is currently in, based on word index
  * matched against slot keywords. Returns -1 if none found.
@@ -35,7 +94,6 @@ function detectCurrentSlot(
   lang: Language
 ): number {
   const labels = lang === 'bn' ? SLOT_LABELS_BN : SLOT_LABELS_EN
-  // Find each label position in the full text.
   const positions = labels
     .map((label) => text.indexOf(label))
     .map((pos, idx) => ({ pos, idx }))
@@ -50,9 +108,6 @@ function detectCurrentSlot(
 }
 
 // --- SSR-safe feature detection for window.speechSynthesis ------------------
-// useSyncExternalStore avoids the `react-hooks/set-state-in-effect` lint error:
-// the server snapshot returns false (no audio), the client snapshot reads the
-// live `window.speechSynthesis` presence. No setState-in-effect cascade.
 
 const EMPTY_SUBSCRIBE = () => () => {}
 function getSpeechSnapshot(): boolean {
@@ -63,6 +118,9 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
   const [playState, setPlayState] = useState<PlayState>('idle')
   const [progress, setProgress] = useState(0)
   const [currentSlot, setCurrentSlot] = useState<number>(-1)
+  const [bnVoiceAvailable, setBnVoiceAvailable] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [isBuffering, setIsBuffering] = useState(false)
   const supported = useSyncExternalStore(
     EMPTY_SUBSCRIBE,
     getSpeechSnapshot,
@@ -71,21 +129,93 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
 
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const bnVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const startTimeRef = useRef<number>(0)
   const elapsedBeforePauseRef = useRef<number>(0)
 
+  // --- Fallback (Google TTS) state ---
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const chunkIndexRef = useRef(0)
+
+  const labels =
+    lang === 'bn'
+      ? {
+          header: 'ওষুধের নির্দেশনা শুনুন',
+          subtitle: 'বাংলা ভাষায় আপনার ওষুধ গ্রহণের সময়সূচি',
+          play: 'শুনুন',
+          pause: 'থামুন',
+          stop: 'বন্ধ',
+          unsupported:
+            'আপনার ব্রাউজার অডিও সমর্থন করে না। সেরা ফলাফলের জন্য Android-এ Chrome ব্যবহার করুন।',
+          nowReading: 'এখন পড়া হচ্ছে',
+          ended: 'শেষ হয়েছে',
+          errorTitle: 'প্লেব্যাক সমস্যা',
+          errorMessage: 'অডিও চালানো যায়নি। আবার চেষ্টা করুন বা অন্য ব্রাউজার ব্যবহার করুন।',
+          noVoiceTitle: 'অনলাইন অডিও মোড',
+          noVoiceMessage:
+            'এই ডিভাইসে বাংলা ভয়েস নেই — অনলাইন টেক্সট-টু-স্পিচ ব্যবহার করা হচ্ছে। ইন্টারনেট সংযোগ প্রয়োজন।',
+          buffering: 'অডিও লোড হচ্ছে…',
+        }
+      : {
+          header: 'Listen to Your Schedule',
+          subtitle: 'Bengali audio narration of your medication plan',
+          play: 'Play',
+          pause: 'Pause',
+          stop: 'Stop',
+          unsupported:
+            "Your browser doesn't support audio. Use Chrome on Android for best results.",
+          nowReading: 'Now reading',
+          ended: 'Finished',
+          errorTitle: 'Playback Error',
+          errorMessage: 'Could not play the audio. Please try again or use a different browser.',
+          noVoiceTitle: 'Online Audio Mode',
+          noVoiceMessage:
+            'No Bengali voice on this device — using online text-to-speech. Internet connection required.',
+          buffering: 'Loading audio…',
+        }
+  const errorMessage = labels.errorMessage
+
+  // Pre-compute TTS chunks (memoized).
+  const chunks = useMemo(() => splitBnChunks(audioScriptBn), [audioScriptBn])
+
   // Cleanup on unmount.
   useEffect(() => {
+    const audio = audioRef.current
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current)
+      if (audio) {
+        audio.pause()
+        audio.removeAttribute('src')
+      }
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel()
       }
     }
   }, [])
 
+  // Load Bengali voices via getVoices() + voiceschanged.
+  useEffect(() => {
+    if (!supported) return
+    const synth = window.speechSynthesis
+    const loadVoices = () => {
+      const voices = synth.getVoices()
+      if (voices.length === 0) return
+      const bn = pickBnVoice(voices)
+      bnVoiceRef.current = bn
+      setBnVoiceAvailable(bn !== null)
+    }
+    loadVoices()
+    synth.addEventListener('voiceschanged', loadVoices)
+    return () => synth.removeEventListener('voiceschanged', loadVoices)
+  }, [supported])
+
   const totalChars = audioScriptBn.length
   const totalDurationSec = Math.max(totalChars / CHARS_PER_SECOND, 1)
+
+  // Whether we should use Google TTS fallback (no Bengali voice installed).
+  const useFallback = supported && !bnVoiceAvailable
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -93,6 +223,22 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
       intervalRef.current = null
     }
   }, [])
+
+  const stopKeepAlive = useCallback(() => {
+    if (keepAliveRef.current) {
+      clearInterval(keepAliveRef.current)
+      keepAliveRef.current = null
+    }
+  }, [])
+
+  const startKeepAlive = useCallback(() => {
+    stopKeepAlive()
+    keepAliveRef.current = setInterval(() => {
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.resume()
+      }
+    }, 10000)
+  }, [stopKeepAlive])
 
   const startProgressTimer = useCallback(
     (resumeFromMs: number) => {
@@ -116,16 +262,87 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     [clearTimer, totalDurationSec, totalChars, audioScriptBn, lang]
   )
 
+  // --- Play next TTS chunk via <audio> + Google Translate URL ---
+  const playNextChunk = useCallback(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const idx = chunkIndexRef.current
+    if (idx >= chunks.length) {
+      clearTimer()
+      setIsBuffering(false)
+      setPlayState('ended')
+      setProgress(100)
+      setCurrentSlot(-1)
+      return
+    }
+    setIsBuffering(true)
+    const url = ttsUrl(chunks[idx])
+    audio.src = url
+    audio.load()
+    audio.play().catch(() => {
+      clearTimer()
+      setIsBuffering(false)
+      setPlayState('idle')
+      setProgress(0)
+      setCurrentSlot(-1)
+      setError(errorMessage)
+    })
+  }, [chunks, clearTimer, errorMessage])
+
+  // Set up audio element event handlers once.
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const onChunkEnd = () => {
+      // Advance progress proportionally across all chunks.
+      const pct = Math.min(((chunkIndexRef.current + 1) / chunks.length) * 100, 100)
+      setProgress(pct)
+      const spokenChars = Math.floor((pct / 100) * totalChars)
+      setCurrentSlot(detectCurrentSlot(audioScriptBn, spokenChars, lang))
+
+      chunkIndexRef.current += 1
+      playNextChunk()
+    }
+    audio.addEventListener('ended', onChunkEnd)
+    return () => audio.removeEventListener('ended', onChunkEnd)
+  }, [chunks, playNextChunk, totalChars, audioScriptBn, lang])
+
+  // --- Unified handlePlay ---
   const handlePlay = useCallback(() => {
     if (!supported) return
     if (!audioScriptBn) return
 
-    // If resuming from pause, just resume the global synthesis.
+    setError(null)
+
+    // --- Fallback path: Google TTS via <audio> ---
+    if (useFallback) {
+      const audio = audioRef.current
+      if (!audio) return
+
+      if (playState === 'paused') {
+        audio.play().catch(() => setError(errorMessage))
+        startProgressTimer(Date.now() - startTimeRef.current)
+        setPlayState('playing')
+        return
+      }
+
+      // Fresh start.
+      audio.pause()
+      chunkIndexRef.current = 0
+      setProgress(0)
+      setPlayState('playing')
+      startProgressTimer(0)
+      playNextChunk()
+      return
+    }
+
+    // --- Native path: Web Speech API ---
     if (playState === 'paused') {
       window.speechSynthesis.resume()
-      const resumeFromMs =
-        (progress / 100) * totalDurationSec * 1000
+      const resumeFromMs = (progress / 100) * totalDurationSec * 1000
       startProgressTimer(resumeFromMs)
+      startKeepAlive()
       setPlayState('playing')
       return
     }
@@ -136,9 +353,11 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     utterance.lang = 'bn-BD'
     utterance.rate = 0.85
     utterance.pitch = 1.0
+    if (bnVoiceRef.current) utterance.voice = bnVoiceRef.current
 
     utterance.onend = () => {
       clearTimer()
+      stopKeepAlive()
       setPlayState('ended')
       setProgress(100)
       setCurrentSlot(-1)
@@ -146,9 +365,12 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     }
     utterance.onerror = () => {
       clearTimer()
+      stopKeepAlive()
       setPlayState('idle')
       setProgress(0)
       setCurrentSlot(-1)
+      elapsedBeforePauseRef.current = 0
+      setError(errorMessage)
     }
 
     utteranceRef.current = utterance
@@ -157,6 +379,7 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     setProgress(0)
     setPlayState('playing')
     startProgressTimer(0)
+    startKeepAlive()
   }, [
     supported,
     audioScriptBn,
@@ -164,52 +387,54 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     progress,
     totalDurationSec,
     startProgressTimer,
+    startKeepAlive,
+    stopKeepAlive,
     clearTimer,
+    errorMessage,
+    useFallback,
+    playNextChunk,
   ])
 
   const handlePause = useCallback(() => {
     if (!supported || playState !== 'playing') return
+
+    if (useFallback) {
+      const audio = audioRef.current
+      if (audio) audio.pause()
+      clearTimer()
+      elapsedBeforePauseRef.current = Date.now() - startTimeRef.current
+      setPlayState('paused')
+      return
+    }
+
     window.speechSynthesis.pause()
     clearTimer()
-    const elapsedMs = Date.now() - startTimeRef.current
-    elapsedBeforePauseRef.current = elapsedMs
+    stopKeepAlive()
+    elapsedBeforePauseRef.current = Date.now() - startTimeRef.current
     setPlayState('paused')
-  }, [supported, playState, clearTimer])
+  }, [supported, playState, clearTimer, stopKeepAlive, useFallback])
 
   const handleStop = useCallback(() => {
     if (!supported) return
+
+    if (useFallback) {
+      const audio = audioRef.current
+      if (audio) {
+        audio.pause()
+        audio.removeAttribute('src')
+      }
+    }
+
     window.speechSynthesis.cancel()
     clearTimer()
+    stopKeepAlive()
+    setError(null)
     setPlayState('idle')
     setProgress(0)
     setCurrentSlot(-1)
+    chunkIndexRef.current = 0
     elapsedBeforePauseRef.current = 0
-  }, [supported, clearTimer])
-
-  const labels =
-    lang === 'bn'
-      ? {
-          header: 'ওষুধের নির্দেশনা শুনুন',
-          subtitle: 'বাংলা ভাষায় আপনার ওষুধ গ্রহণের সময়সূচি',
-          play: 'শুনুন',
-          pause: 'থামুন',
-          stop: 'বন্ধ',
-          unsupported:
-            'আপনার ব্রাউজার অডিও সমর্থন করে না। সেরা ফলাফলের জন্য Android-এ Chrome ব্যবহার করুন।',
-          nowReading: 'এখন পড়া হচ্ছে',
-          ended: 'শেষ হয়েছে',
-        }
-      : {
-          header: 'Listen to Your Schedule',
-          subtitle: 'Bengali audio narration of your medication plan',
-          play: 'Play',
-          pause: 'Pause',
-          stop: 'Stop',
-          unsupported:
-            "Your browser doesn't support audio. Use Chrome on Android for best results.",
-          nowReading: 'Now reading',
-          ended: 'Finished',
-        }
+  }, [supported, clearTimer, stopKeepAlive, useFallback])
 
   const slotLabels = lang === 'bn' ? SLOT_LABELS_BN : SLOT_LABELS_EN
 
@@ -233,6 +458,9 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
       transition={{ duration: 0.3 }}
       className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
     >
+      {/* Hidden <audio> element for Google TTS fallback. */}
+      <audio ref={audioRef} preload="auto" className="hidden" />
+
       {/* Gradient header */}
       <div className="bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 px-5 py-4 text-white">
         <div className="flex items-center gap-3">
@@ -247,6 +475,32 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
       </div>
 
       <div className="space-y-4 p-5">
+        {/* Playback error */}
+        {error && (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle>{labels.errorTitle}</AlertTitle>
+            <AlertDescription>{labels.errorMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* No Bengali voice — using online TTS (non-blocking, informational) */}
+        {!error && useFallback && (
+          <Alert className="border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
+            <Wifi className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+            <AlertTitle>{labels.noVoiceTitle}</AlertTitle>
+            <AlertDescription>{labels.noVoiceMessage}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Buffering indicator while fetching TTS chunks */}
+        {isBuffering && playState === 'playing' && (
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+            <Loader2 className="h-4 w-4 animate-spin text-teal-500" />
+            <span>{labels.buffering}</span>
+          </div>
+        )}
+
         {/* Current slot indicator */}
         <div className="min-h-[28px]">
           {currentSlot >= 0 && playState === 'playing' ? (
@@ -285,7 +539,7 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Button
             onClick={handlePlay}
-            disabled={playState === 'playing'}
+            disabled={playState === 'playing' || isBuffering}
             className={cn(
               'flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90',
               'min-w-[120px]'
