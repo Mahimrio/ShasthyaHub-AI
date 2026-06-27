@@ -1,9 +1,26 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { EnrichedFoodItem } from '@/types';
+
 export interface FoodItem {
   name: string;
   caloriesPer100g: number;
   protein: number;
   carbs: number;
   fat: number;
+}
+
+export interface NutritionData {
+  calories_per_100g: number;
+  carbs_per_100g: number;
+  protein_per_100g: number;
+  fat_per_100g: number;
+}
+
+export interface GeminiFoodItem {
+  name_en: string;
+  name_bn: string;
+  estimated_grams: number;
+  confidence: number;
 }
 
 export const foodDatabase: FoodItem[] = [
@@ -91,4 +108,223 @@ export function calculateCalories(
     },
     { totalCalories: 0, protein: 0, carbs: 0, fat: 0 }
   );
+}
+
+// --- GlycoVision service layer ---
+
+/**
+ * Normalize a food name for database lookup: lowercase, trim, and optionally
+ * strip common cooking-method qualifiers that interfere with matching.
+ */
+function normalizeFoodName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/**
+ * Generate lookup variants for a food name to improve USDA hit rate.
+ * e.g. "Chicken Curry" → ["chicken curry", "chicken", "curried chicken"]
+ */
+function usdaQueryVariants(name: string): string[] {
+  const n = name.trim().toLowerCase();
+  const variants: string[] = [n];
+
+  // Strip parenthetical descriptions
+  const stripped = n.replace(/\s*\(.*?\)\s*/g, '').trim();
+  if (stripped && stripped !== n) variants.push(stripped);
+
+  // Strip common cooking method suffixes
+  const cookingWords = ['curry', 'fried', 'cooked', 'roasted', 'grilled', 'stir-fried', 'sautéed', 'bhuna', 'bhorta'];
+  for (const word of cookingWords) {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    const without = stripped.replace(regex, '').replace(/\s{2,}/g, ' ').trim();
+    if (without && !variants.includes(without)) variants.push(without);
+  }
+
+  // For curries, also try "curried X"
+  if (/\bcurry\b/i.test(n)) {
+    const base = n.replace(/\s*curry\s*/i, '').trim();
+    if (base) variants.push(`curried ${base}`);
+  }
+
+  // For "X with Y" patterns, try just the first ingredient
+  const withMatch = n.match(/^(.+?)\s+with\s+/i);
+  if (withMatch) variants.push(withMatch[1].trim());
+
+  return [...new Set(variants)]; // deduplicate
+}
+
+/**
+ * Extract nutrient values from USDA foods array with robust key matching.
+ * USDA nutrient names vary: "Energy", "Energy (kcal)", "Energy (Atwater Specific Factors)",
+ * "Carbohydrate, by difference", "Protein", "Total lipid (fat)", etc.
+ */
+function extractUsdaNutrition(
+  foods: { foodNutrients?: { nutrientName?: string; value?: number }[] }[]
+): NutritionData | null {
+  for (const food of foods) {
+    const nutrients = food.foodNutrients ?? [];
+    if (nutrients.length === 0) continue;
+
+    const matchNutrient = (patterns: string[]): number => {
+      for (const n of nutrients) {
+        const name = (n.nutrientName ?? '').toLowerCase();
+        if (patterns.some((p) => name.includes(p))) {
+          return n.value ?? 0;
+        }
+      }
+      return 0;
+    };
+
+    const data: NutritionData = {
+      calories_per_100g: matchNutrient(['energy']),
+      carbs_per_100g: matchNutrient(['carbohydrate', 'by difference']),
+      protein_per_100g: matchNutrient(['protein']),
+      fat_per_100g: matchNutrient(['total lipid', 'fat']),
+    };
+
+    // Reject results where every value is 0 — likely a failed parse
+    if (data.calories_per_100g > 0 || data.carbs_per_100g > 0) {
+      return data;
+    }
+  }
+  return null;
+}
+
+/**
+ * Look up nutrition data for a food item.
+ *
+ * 1. Try the Supabase `bd_food_items` table (name_en / name_bn ILIKE match).
+ * 2. If not found, fall back to the USDA FoodData Central API with multiple
+ *    query strategies (exact → stripped → base ingredient).
+ * 3. If USDA returns a result, cache it in `bd_food_items` for future lookups.
+ * 4. Return `null` for genuinely unknown foods — the caller can ask an LLM.
+ */
+export async function lookupNutrition(
+  foodName: string,
+  supabase: SupabaseClient
+): Promise<NutritionData | null> {
+  const normalized = normalizeFoodName(foodName);
+
+  // Step 1 — Supabase lookup (try exact first, then ILIKE)
+  const { data: exact } = await supabase
+    .from('bd_food_items')
+    .select('calories_per_100g, carbs_per_100g, protein_per_100g, fat_per_100g')
+    .ilike('name_en', normalized)
+    .limit(1)
+    .maybeSingle();
+
+  if (exact) {
+    return {
+      calories_per_100g: Number(exact.calories_per_100g),
+      carbs_per_100g: exact.carbs_per_100g != null ? Number(exact.carbs_per_100g) : 0,
+      protein_per_100g: exact.protein_per_100g != null ? Number(exact.protein_per_100g) : 0,
+      fat_per_100g: exact.fat_per_100g != null ? Number(exact.fat_per_100g) : 0,
+    };
+  }
+
+  const { data: fuzzy } = await supabase
+    .from('bd_food_items')
+    .select('calories_per_100g, carbs_per_100g, protein_per_100g, fat_per_100g')
+    .or(`name_en.ilike.%${normalized}%,name_bn.ilike.%${normalized}%`)
+    .limit(1)
+    .maybeSingle();
+
+  if (fuzzy) {
+    return {
+      calories_per_100g: Number(fuzzy.calories_per_100g),
+      carbs_per_100g: fuzzy.carbs_per_100g != null ? Number(fuzzy.carbs_per_100g) : 0,
+      protein_per_100g: fuzzy.protein_per_100g != null ? Number(fuzzy.protein_per_100g) : 0,
+      fat_per_100g: fuzzy.fat_per_100g != null ? Number(fuzzy.fat_per_100g) : 0,
+    };
+  }
+
+  // Step 2 — USDA FoodData Central API
+  const usdaKey = process.env.USDA_API_KEY;
+  if (!usdaKey) return null;
+
+  const variants = usdaQueryVariants(foodName);
+
+  for (const query of variants) {
+    try {
+      const url = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&api_key=${usdaKey}&pageSize=3&dataType=Foundation,SR Legacy,Branded`;
+      const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+      if (!res.ok) continue;
+
+      const body: { foods?: { foodNutrients?: { nutrientName?: string; value?: number }[] }[] } = await res.json();
+      if (!body.foods || body.foods.length === 0) continue;
+
+      const nutrition = extractUsdaNutrition(body.foods);
+      if (!nutrition) continue;
+
+      // Step 3 — Cache in Supabase (non-blocking, best-effort)
+      try {
+        await supabase.from('bd_food_items').insert({
+          name_en: foodName,
+          name_bn: null,
+          calories_per_100g: nutrition.calories_per_100g,
+          carbs_per_100g: nutrition.carbs_per_100g,
+          protein_per_100g: nutrition.protein_per_100g,
+          fat_per_100g: nutrition.fat_per_100g,
+        });
+      } catch {
+        // Cache miss is non-fatal
+      }
+
+      return nutrition;
+    } catch {
+      continue; // try next variant
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Enrich a list of food items identified by Gemini with per-item nutritional
+ * values. Each item's calories / macros are scaled from per-100g by the
+ * estimated portion weight.
+ *
+ * Lookup chain: Supabase `bd_food_items` → USDA API → Groq LLM estimate.
+ */
+export async function calculateTotalNutrition(
+  foodItems: GeminiFoodItem[],
+  supabase: SupabaseClient
+): Promise<EnrichedFoodItem[]> {
+  const { callGroq } = await import('@/lib/ai/groq');
+
+  const results = await Promise.all(
+    foodItems.map(async (item) => {
+      let nutrition = await lookupNutrition(item.name_en, supabase);
+
+      if (!nutrition) {
+        try {
+          const prompt = `You are a clinical dietitian specializing in South Asian cuisine. Estimate the nutritional values per 100g for the Bangladeshi food item "${item.name_en}". Consider typical Bangladeshi cooking methods (oil用量, coconut milk, ghee). Return ONLY valid JSON with these exact keys: calories_per_100g (integer), carbs_per_100g (number), protein_per_100g (number), fat_per_100g (number).`;
+          const raw = await callGroq(`Estimate per-100g nutrition for Bangladeshi: ${item.name_en}`, prompt);
+          const o = (raw ?? {}) as Record<string, unknown>;
+          nutrition = {
+            calories_per_100g: typeof o['calories_per_100g'] === 'number' ? o['calories_per_100g'] : 0,
+            carbs_per_100g: typeof o['carbs_per_100g'] === 'number' ? o['carbs_per_100g'] : 0,
+            protein_per_100g: typeof o['protein_per_100g'] === 'number' ? o['protein_per_100g'] : 0,
+            fat_per_100g: typeof o['fat_per_100g'] === 'number' ? o['fat_per_100g'] : 0,
+          };
+        } catch {
+          nutrition = { calories_per_100g: 0, carbs_per_100g: 0, protein_per_100g: 0, fat_per_100g: 0 };
+        }
+      }
+
+      const factor = item.estimated_grams / 100;
+      return {
+        name_en: item.name_en,
+        name_bn: item.name_bn,
+        estimated_grams: item.estimated_grams,
+        calories: Math.round(nutrition.calories_per_100g * factor),
+        confidence: item.confidence,
+        carbs_g: Math.round(nutrition.carbs_per_100g * factor * 10) / 10,
+        protein_g: Math.round(nutrition.protein_per_100g * factor * 10) / 10,
+        fat_g: Math.round(nutrition.fat_per_100g * factor * 10) / 10,
+      };
+    })
+  );
+
+  return results;
 }

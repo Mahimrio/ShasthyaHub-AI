@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeEyeImage } from '@/lib/ai/orchestrator'
+import { validateImageFile, fileToBase64, createErrorResponse, ImageValidationError } from '@/lib/utils'
 import type { ApiError, ApiSuccess, EyeAnalysis, Severity } from '@/types'
 
-// Vercel serverless function timeout. The two-agent pipeline (vision + LLM)
-// can take ~20–40s under load; 60s is the max on Vercel Hobby/Pro.
 export const maxDuration = 60
-
-// --- Validation constants ---------------------------------------------------
-
-const ALLOWED_MIME_TYPES: ReadonlySet<string> = new Set([
-  'image/jpeg',
-  'image/png',
-  'image/webp',
-])
-
-const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB — matches storage-setup.sql bucket limit
 
 const STORAGE_BUCKET = 'eye-images'
 
@@ -33,100 +22,48 @@ type NayanAnalyzeData = {
 
 type NayanAnalyzeResponse = ApiSuccess<NayanAnalyzeData> | ApiError
 
-function errorResponse(
-  status: number,
-  error: string,
-  errorBn: string,
-  code: string
-): NextResponse<NayanAnalyzeResponse> {
-  return NextResponse.json<ApiError>(
-    { success: false, error, error_bn: errorBn, code },
-    { status }
-  )
-}
-
-// --- Handler ----------------------------------------------------------------
-
 export async function POST(request: NextRequest): Promise<NextResponse<NayanAnalyzeResponse>> {
-  // (a) Auth — get the authenticated user. 401 if no session.
   let userId: string | undefined
+
   try {
     const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
-      return errorResponse(
-        401,
-        'You must be signed in to analyze an image.',
-        'ছবি বিশ্লেষণ করতে লগইন করুন।',
-        'UNAUTHORIZED'
+      return NextResponse.json<ApiError>(
+        { success: false, error: 'You must be signed in to analyze an image.', error_bn: 'ছবি বিশ্লেষণ করতে লগইন করুন।', code: 'UNAUTHORIZED' },
+        { status: 401 }
       )
     }
     userId = user.id
 
-    // (b) Parse multipart form data, extract the 'image' File.
     const formData = await request.formData()
     const file = formData.get('image')
-
     if (!(file instanceof File)) {
-      return errorResponse(
-        400,
-        'No image was provided. Please upload an eye photo.',
-        'কোনো ছবি পাওয়া যায়নি। একটি চোখের ছবি আপলোড করুন।',
-        'NO_IMAGE'
-      )
+      throw new ImageValidationError('No image was provided. Please upload an eye photo. / কোনো ছবি পাওয়া যায়নি। একটি চোখের ছবি আপলোড করুন।')
     }
 
-    // (c) Validate mime type + size.
-    if (!ALLOWED_MIME_TYPES.has(file.type)) {
-      return errorResponse(
-        400,
-        'Unsupported file type. Please use JPG, PNG, or WebP.',
-        'এই ধরনের ফাইল সমর্থিত নয়। JPG, PNG বা WebP ব্যবহার করুন।',
-        'INVALID_TYPE'
-      )
-    }
+    validateImageFile(file)
+    const { base64, mimeType } = await fileToBase64(file)
 
-    if (file.size > MAX_FILE_BYTES) {
-      return errorResponse(
-        413,
-        'Image is too large. Maximum size is 5 MB.',
-        'ছবিটি অনেক বড়। সর্বোচ্চ আকার ৫ এমবি।',
-        'FILE_TOO_LARGE'
-      )
-    }
-
-    // (d) File → Buffer → base64.
-    const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
-    const base64 = buffer.toString('base64')
-
-    // (e) Upload to Supabase Storage for the audit trail.
-    //     Path: eye-images/{userId}/{timestamp}.jpg  (folder-scoped by RLS)
-    const extension = file.type.split('/')[1] // jpeg → jpg
+    const extension = mimeType.split('/')[1]
     const ext = extension === 'jpeg' ? 'jpg' : extension
     const storagePath = `${userId}/${Date.now()}.${ext}`
 
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
-      .upload(storagePath, buffer, { contentType: file.type, upsert: false })
+      .upload(storagePath, Buffer.from(base64, 'base64'), { contentType: mimeType, upsert: false })
 
     if (uploadError) {
       console.error('[nayan/analyze] storage upload failed:', uploadError.message)
-      // Non-fatal: we can still run analysis on the base64 in memory.
     }
 
-    // (f) Run the two-agent pipeline.
-    const result = await analyzeEyeImage(base64, file.type)
+    const result = await analyzeEyeImage(base64, mimeType)
 
-    // (g) Insert the completed record into eye_analyses.
     const insertPayload = {
       user_id: userId,
       status: 'complete' as const,
       diagnosis: result.diagnosis,
-      confidence_score: Math.round(result.confidence * 100), // store as 0–100
+      confidence_score: Math.round(result.confidence * 100),
       severity: result.severity,
       recommendation_en: result.recommendation_en,
       recommendation_bn: result.recommendation_bn,
@@ -153,10 +90,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
 
     if (insertError || !inserted) {
       console.error('[nayan/analyze] insert failed:', insertError?.message)
-      // Don't fail the whole request — the analysis succeeded, just persistence failed.
     }
 
-    // (h) Delete the uploaded image from storage (privacy — keep nothing on disk).
     if (!uploadError) {
       const { error: deleteError } = await supabase.storage
         .from(STORAGE_BUCKET)
@@ -166,7 +101,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
       }
     }
 
-    // (i) Return the result.
     const data: NayanAnalyzeData = {
       id: inserted?.id ?? crypto.randomUUID(),
       diagnosis: result.diagnosis,
@@ -183,7 +117,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
   } catch (error) {
     console.error('[nayan/analyze] unhandled error:', error)
 
-    // (j) Record the failure if we have a user.
     try {
       if (userId) {
         const supabase = await createClient()
@@ -197,15 +130,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
       console.error('[nayan/analyze] failed to persist error record')
     }
 
-    const message = error instanceof Error ? error.message : 'Unknown error'
-    return errorResponse(
-      500,
-      `We could not analyze the image. ${message}`,
-      'দুঃখিত, ছবি বিশ্লেষণ করা যায়নি। আবার চেষ্টা করুন।',
-      'ANALYSIS_FAILED'
-    )
+    return createErrorResponse(error, 'nayan/analyze')
   }
 }
 
-// Reference the type so it's kept in sync with the DB shape (schema.sql).
 export type { EyeAnalysis }

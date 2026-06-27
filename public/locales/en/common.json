@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "home": "Home",
+    "eye_test": "Eye Test",
+    "prescription": "Prescription",
+    "food": "Food & Nutrition",
+    "reports": "Reports",
+    "logout": "Logout"
+  },
+  "nayan": {
+    "title": "Eye Disease Detection",
+    "upload_prompt": "Upload an image of your eyes",
+    "analyzing": "AI is analyzing your eyes...",
+    "see_doctor": "Consult a doctor immediately",
+    "severity_normal": "Normal",
+    "severity_low": "Low",
+    "severity_medium": "Medium",
+    "severity_high": "High",
+    "severity_critical": "Critical"
+  },
+  "scriptguard": {
+    "title": "Prescription Optimizer",
+    "upload_prompt": "Upload your prescription image",
+    "critical_alert": "Critical drug interaction found!",
+    "listen_schedule": "Listen to Schedule",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "evening": "Evening",
+    "night": "Night"
+  },
+  "glycovision": {
+    "title": "Food Nutrient Analysis",
+    "upload_prompt": "Upload an image of your food",
+    "total_calories": "Total Calories",
+    "risk_green": "✅ Safe",
+    "risk_yellow": "⚠️ Warning",
+    "risk_red": "🚨 High Risk"
+  },
+  "common": {
+    "analyze_btn": "Analyze",
+    "download_pdf": "Download PDF",
+    "disclaimer": "This is an AI screening tool, not a clinical diagnosis. Always seek professional medical advice.",
+    "demo_banner": "— Running in Demo Mode",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try Again"
+  }
+}

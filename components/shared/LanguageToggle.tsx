@@ -7,7 +7,10 @@ export function LanguageToggle() {
   const { lang, setLang } = useLanguage()
 
   return (
-    <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div
+      className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
+      style={{ transition: 'opacity 0.2s ease-in-out' }}
+    >
       <button
         onClick={() => setLang('bn')}
         className={cn(

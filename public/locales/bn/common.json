@@ -1,0 +1,48 @@
+{
+  "nav": {
+    "home": "হোম",
+    "eye_test": "চোখ পরীক্ষা",
+    "prescription": "প্রেসক্রিপশন",
+    "food": "খাদ্য ও পুষ্টি",
+    "reports": "রিপোর্ট",
+    "logout": "লগআউট"
+  },
+  "nayan": {
+    "title": "চোখের রোগ শনাক্তকরণ",
+    "upload_prompt": "আপনার চোখের ছবি আপলোড করুন",
+    "analyzing": "AI আপনার চোখ বিশ্লেষণ করছে...",
+    "see_doctor": "অনতিবিলম্বে ডাক্তারের পরামর্শ নিন",
+    "severity_normal": "স্বাভাবিক",
+    "severity_low": "নিম্ন",
+    "severity_medium": "মাঝারি",
+    "severity_high": "উচ্চ",
+    "severity_critical": "জরুরি"
+  },
+  "scriptguard": {
+    "title": "প্রেসক্রিপশন অপটিমাইজার",
+    "upload_prompt": "প্রেসক্রিপশনের ছবি আপলোড করুন",
+    "critical_alert": "মারাত্মক ওষুধ মিথস্ক্রিয়া পাওয়া গেছে!",
+    "listen_schedule": "সূচি শুনুন",
+    "morning": "সকাল",
+    "afternoon": "দুপুর",
+    "evening": "বিকেল",
+    "night": "রাত"
+  },
+  "glycovision": {
+    "title": "খাদ্য উপাদান বিশ্লেষণ",
+    "upload_prompt": "আপনার খাবারের ছবি আপলোড করুন",
+    "total_calories": "মোট ক্যালোরি",
+    "risk_green": "✅ নিরাপদ",
+    "risk_yellow": "⚠️ সতর্কতামূলক",
+    "risk_red": "🚨 ঝুঁকিপূর্ণ"
+  },
+  "common": {
+    "analyze_btn": "বিশ্লেষণ করুন",
+    "download_pdf": "PDF ডাউনলোড",
+    "disclaimer": "এটি একটি AI স্ক্রিনিং টুল, ক্লিনিক্যাল রোগ নির্ণয় নয়। সর্বদা একজন ডাক্তারের পরামর্শ নিন।",
+    "demo_banner": "— ডেমো মোড ব্যবহার করা হচ্ছে",
+    "loading": "লোড হচ্ছে...",
+    "error": "ত্রুটি ঘটেছে",
+    "retry": "আবার চেষ্টা করুন"
+  }
+}

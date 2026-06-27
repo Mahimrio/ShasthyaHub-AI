@@ -20,22 +20,22 @@ export function DisclaimerModal({ open, onOpenChange, onAccept }: DisclaimerModa
           <DialogTitle>
             {lang === 'bn' ? '⚠️ সতর্কতা' : '⚠️ Medical Disclaimer'}
           </DialogTitle>
-          <DialogDescription className="text-left space-y-3 pt-2">
-            <div>
+          <DialogDescription className="text-left pt-2">
+            <span className="block">
               {lang === 'bn'
                 ? 'এই AI সরঞ্জালটি শুধুমাত্র তথ্যগত উদ্দেশ্যে তৈরি। এটি পেশাদার চিকিৎসকের পরামর্শের বিকল্প নয়।'
                 : 'This AI tool is for informational purposes only. It is NOT a substitute for professional medical advice.'}
-            </div>
-            <div>
+            </span>
+            <span className="block mt-3">
               {lang === 'bn'
                 ? 'সঠিক নির্ণয় ও চিকিৎসার জন্য সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
                 : 'Always consult a qualified doctor for proper diagnosis and treatment.'}
-            </div>
-            <div className="font-medium">
+            </span>
+            <span className="block mt-3 font-medium">
               {lang === 'bn'
                 ? 'চালিয়ে যেতে নিচের বাটনে ক্লিক করুন।'
                 : 'Click below to proceed.'}
-            </div>
+            </span>
           </DialogDescription>
         </DialogHeader>
         <Button onClick={onAccept} className="w-full rounded-xl">

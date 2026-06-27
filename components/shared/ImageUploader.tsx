@@ -61,18 +61,21 @@ export function ImageUploader({ onImageSelect, acceptedTypes = 'image/*', maxSiz
       onDrop={handleDrop}
       onClick={() => !preview && inputRef.current?.click()}
       className={cn(
-        'relative rounded-2xl border-2 border-dashed transition-all cursor-pointer overflow-hidden',
+        'relative rounded-2xl border-2 border-dashed transition-all active:scale-[0.98] duration-100 cursor-pointer overflow-hidden',
+        'touch-manipulation',
         isDragOver
           ? 'border-sky-400 bg-sky-50 dark:bg-sky-900/30'
           : preview
             ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
             : 'border-gray-200 dark:border-gray-700 hover:border-sky-300 dark:hover:border-sky-600 hover:bg-sky-50/50 dark:hover:bg-sky-900/20'
       )}
+      style={{ touchAction: 'manipulation' }}
     >
       <input
         ref={inputRef}
         type="file"
         accept={acceptedTypes}
+        capture="environment"
         onChange={handleChange}
         className="hidden"
       />
@@ -116,5 +119,16 @@ export function ImageUploader({ onImageSelect, acceptedTypes = 'image/*', maxSiz
         </div>
       )}
     </div>
+  )
+}
+
+export function MobileTextInput({ placeholder }: { placeholder: string }) {
+  return (
+    <input
+      type="text"
+      placeholder={placeholder}
+      style={{ fontSize: '16px' }}
+      className="w-full min-h-[46px] px-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 text-base focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+    />
   )
 }
