@@ -20,7 +20,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { createClient } from '@/lib/supabase/client'
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -45,6 +44,7 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setApiError(null)
 
+    const { createClient } = await import('@/lib/supabase/client')
     const supabase = createClient()
     const { error } = await supabase.auth.signInWithPassword({
       email: data.email,

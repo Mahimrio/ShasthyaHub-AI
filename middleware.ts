@@ -1,13 +1,10 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-  // Guard: if Supabase env vars are missing or invalid, don't crash the whole
-  // site with MIDDLEWARE_INVOCATION_FAILED. Pass through and let pages handle
-  // auth gracefully. (createServerClient throws on an invalid URL.)
   if (!supabaseUrl || !supabaseAnonKey || !/^https?:\/\//.test(supabaseUrl)) {
     console.warn('[middleware] Supabase env vars missing or invalid — skipping auth')
     return NextResponse.next({ request })
@@ -31,8 +28,6 @@ export async function proxy(request: NextRequest) {
       },
     })
 
-    // getUser() validates the session against the Supabase API server-side.
-    // Do NOT replace with getSession() — it doesn't validate and is unsafe for auth.
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -60,8 +55,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(url)
     }
   } catch (error) {
-    // Never let middleware crash the request. Log and pass through so the site
-    // stays up even if the auth backend is temporarily unreachable.
     console.error('[middleware] Supabase auth check failed:', error)
   }
 

@@ -14,6 +14,9 @@ export function useAuth() {
   const supabaseRef = useRef<SupabaseClient | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+    let subscription: { unsubscribe: () => void } | null = null
+
     const init = async () => {
       const { createClient } = await import('@/lib/supabase/client')
       supabaseRef.current = createClient()
@@ -22,6 +25,8 @@ export function useAuth() {
       const {
         data: { user },
       } = await supabase.auth.getUser()
+
+      if (cancelled) return
       setUser(user)
 
       if (user) {
@@ -30,42 +35,36 @@ export function useAuth() {
           .select('*')
           .eq('id', user.id)
           .single()
-        setProfile(profile)
+        if (!cancelled) setProfile(profile)
       }
 
-      setIsLoading(false)
+      if (!cancelled) setIsLoading(false)
+
+      const { data: sub } = supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          setUser(session?.user ?? null)
+
+          if (session?.user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single()
+            setProfile(profile)
+          } else {
+            setProfile(null)
+          }
+        }
+      )
+      subscription = sub.subscription
     }
 
     init()
 
     return () => {
+      cancelled = true
+      subscription?.unsubscribe()
       supabaseRef.current = null
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!supabaseRef.current) return
-    const supabase = supabaseRef.current
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null)
-
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
-        setProfile(profile)
-      } else {
-        setProfile(null)
-      }
-    })
-
-    return () => {
-      subscription.unsubscribe()
     }
   }, [])
 
