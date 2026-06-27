@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeEyeImage } from '@/lib/ai/orchestrator'
 import { validateImageFile, fileToBase64, createErrorResponse, ImageValidationError } from '@/lib/utils'
+import { rateLimit } from '@/lib/rate-limit'
 import type { ApiError, ApiSuccess, EyeAnalysis, Severity } from '@/types'
 
 export const maxDuration = 60
@@ -35,6 +36,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
       )
     }
     userId = user.id
+
+    if (!rateLimit(userId)) {
+      return NextResponse.json<ApiError>(
+        {
+          success: false,
+          error: 'Too many requests. Please wait a minute.',
+          error_bn: 'অনেক বেশি অনুরোধ। এক মিনিট অপেক্ষা করুন।',
+          code: 'RATE_LIMITED',
+        },
+        { status: 429 }
+      )
+    }
 
     const formData = await request.formData()
     const file = formData.get('image')
