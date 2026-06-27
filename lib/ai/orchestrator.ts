@@ -1,4 +1,4 @@
-import { callGeminiVision, callGeminiText } from './gemini';
+import { callGeminiVision } from './gemini';
 import { callGroq } from './groq';
 import type {
   GeminiEyeOutput,
@@ -6,10 +6,13 @@ import type {
   GeminiMedication,
   GeminiPrescriptionOutput,
   PrescriptionAnalysisResult,
+  EnrichedFoodItem,
+  RiskLevel,
 } from '@/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { mapBrandsToGenerics } from '@/lib/services/drug-mapping';
 import { checkDrugInteractions } from '@/lib/services/drug-interaction';
+import { calculateTotalNutrition } from '@/lib/services/calorie';
 
 /**
  * Nayan AI — two-agent ophthalmic screening pipeline.
@@ -71,25 +74,6 @@ Output ONLY a JSON object:
   "specialist_needed": "Ophthalmologist|General Physician|None"
 }
 urgency_days: 0 = emergency, 7 = urgent, 30 = soon, 90 = routine, 365 = annual checkup`
-
-const EYE_FLASH_FALLBACK_PROMPT = `
-You are a clinical AI assistant for rural Bangladesh healthcare.
-A vision model already analyzed an eye image and produced these raw findings.
-Generate a patient-friendly triage report in simple language.
-The patient may have low literacy — use simple words only.
-Output ONLY a JSON object with exactly these keys:
-{
-  "diagnosis": "string",
-  "severity": "Normal|Low|Medium|High|Critical",
-  "recommendation_en": "string (simple English, max 3 sentences)",
-  "recommendation_bn": "বাংলা string (সহজ বাংলায়, সর্বোচ্চ ৩ বাক্য)",
-  "urgency_days": "number (0 = emergency, 7 = urgent, 30 = soon, 90 = routine, 365 = annual)",
-  "next_steps": ["string"],
-  "specialist_needed": "Ophthalmologist|General Physician|None",
-  "confidence": "number 0-1"
-}
-Here are the raw vision findings as JSON:
-`
 
 // --- Helpers ----------------------------------------------------------------
 
@@ -154,19 +138,10 @@ export async function analyzeEyeImage(
     EYE_GEMINI_PROMPT
   )
 
-  // Step 2 — Triage: Groq Llama 3.3 70B (with Flash fallback)
-  let groqOutput: GroqEyeOutput
-  let usedFallback = false
-
-  try {
-    const raw = await callGroq(JSON.stringify(geminiOutput), EYE_GROQ_PROMPT)
-    groqOutput = coerceGroqOutput(raw)
-  } catch (groqError) {
-    console.warn('[orchestrator] Groq failed, falling back to Gemini Flash:', groqError)
-    usedFallback = true
-    const raw = await callGeminiText(EYE_FLASH_FALLBACK_PROMPT + JSON.stringify(geminiOutput))
-    groqOutput = coerceGroqOutput(raw)
-  }
+  // Step 2 — Triage: Groq Llama 3.3 70B (with internal Gemini fallback)
+  const raw = await callGroq(JSON.stringify(geminiOutput), EYE_GROQ_PROMPT)
+  const groqOutput = coerceGroqOutput(raw)
+  const usedFallback = (raw as Record<string, unknown>)?.['_fallback_used'] === true
 
   return {
     diagnosis: groqOutput.diagnosis,
@@ -317,6 +292,273 @@ export async function analyzePrescription(
     interaction_warnings,
     has_dangerous_interactions,
     gemini_raw: geminiOutput,
+  };
+}
+
+// ===========================================================================
+// GlycoVision — food photo → nutrition → diabetes risk pipeline
+// ===========================================================================
+
+const FOOD_GEMINI_PROMPT = `
+You are a South Asian clinical dietitian AI. Analyze this meal photo carefully and identify ALL food items visible. Focus on Bangladeshi cuisine.
+
+Common Bangladeshi foods with typical portion gram ranges:
+- Grains: ভাত/rice (200-350g plate), খিচুড়ি/khichuri (250-400g), পোলাও/polao (200-300g), বিরিয়ানি/biryani (250-400g), রুটি/roti (40-60g each), পরোটা/paratha (50-80g each), পুরি/puri (20-30g each), নান/naan (80-120g), মুড়ি/muri (30-50g)
+- Lentils: ডাল/dal (150-250g bowl) — মসুর/masoor (red lentil), মুগ/moog (mung), ছোলা/chola (chickpea)
+- Fish: মাছ/fish — ইলিশ/hilsa (80-120g piece), রুই/rui (80-120g), পাবদা/pabda, টেংরা/tengra, কই/koi — plus ~30-50g oil/gravy
+- Meat: মুরগি/chicken (80-150g), গরু/beef (60-120g), খাসি/mutton (60-120g), ডিম/egg (50-60g each) — plus ~30-50g gravy
+- Vegetables: ভর্তা/bhorta (80-150g), তরকারি/torkari mixed veg (100-200g), শাক/shak leafy greens (80-150g)
+- Snacks: সিঙ্গারা/singara (30-50g each), পিয়াজু/piyaju (20-30g), জিলাপি/jilapi (30-50g), চানাচুর/chanachur (20-40g)
+- Fruits: কলা/banana (100-120g), আম/mango (150-250g), পেঁপে/papaya (100-200g), তরমুজ/watermelon (150-300g)
+- Beverages: চা/tea (150-200ml), দুধ/milk (200ml), লাচ্ছি/lassi (200ml), ডাবের পানি/coconut water (200-300ml)
+
+For mixed dishes (curries, bhorta), estimate each component separately when possible. E.g., fish curry = fish meat (~100g) + oil/gravy (~40g). Be conservative with oil — ~5-15g per curry serving.
+
+Use specific names — not "vegetable curry" but "potato and pea curry" or "eggplant bhorta". List rice and dal as separate items.
+
+Return ONLY valid JSON:
+{
+  "food_items": [
+    {
+      "name_en": "specific food name e.g. 'White Rice (cooked)', 'Red Lentil Dal', 'Hilsa Fish Curry', 'Mustard Oil'",
+      "name_bn": "বাংলা নাম",
+      "estimated_grams": integer,
+      "confidence": 0.0-1.0
+    }
+  ],
+  "meal_type": "Breakfast|Lunch|Dinner|Snack",
+  "plate_fully_visible": boolean,
+  "notes": "string|null (cooking method, visible oil estimate, substitutions)"
+}`;
+
+const RISK_GROQ_PROMPT = `
+You are a senior clinical dietitian specializing in geriatric nutrition and chronic disease management for South Asian patients. Analyze this meal's nutritional data:
+Total Calories: {X} kcal
+Total Carbohydrates: {Y}g
+Total Protein: {P}g
+Total Fat: {F}g
+Glycemic Load estimate: {Z}
+Food items: {ITEMS}
+
+Assess the health risks of this specific meal composition for a Bangladeshi senior citizen managing chronic conditions. Consider typical Bangladeshi diet patterns (white rice staple, oil/ghee in curries, salt in dal and sauces, fried items, lentil-based dishes). Compute glycemic_load based on the carbohydrate quality of the specific foods listed — use glycemic index of 70+ for white rice, 30-40 for lentils, 50-60 for fruits. For hypertension and heart disease, evaluate based on visible oil, ghee, salt-heavy sauces, and fatty meat content.
+
+Return ONLY a valid JSON object matching this exact structure:
+{
+  "glycemic_load": number,
+  "risk_level": "Green|Yellow|Red",
+  "risk_summary_en": "string (2-3 sentences, simple language)",
+  "risk_summary_bn": "বাংলা string (২-৩ বাক্য, সহজ ভাষায়)",
+  "glucose_impact": "Low|Moderate|High|Very High",
+
+  "chronic_disease_risks": [
+    {
+      "disease_en": "Type 2 Diabetes",
+      "disease_bn": "টাইপ-২ ডায়াবেটিস",
+      "status": "Safe|Caution|Danger",
+      "reason_bn": "১-২ বাক্যে ব্যাখ্যা কেন এই খাবারটি ক্ষতিকর বা উপকারী"
+    },
+    {
+      "disease_en": "Hypertension (High Blood Pressure)",
+      "disease_bn": "উচ্চ রক্তচাপ (হাই ব্লাড প্রেসার)",
+      "status": "Safe|Caution|Danger",
+      "reason_bn": "১-২ বাক্যে ব্যাখ্যা"
+    },
+    {
+      "disease_en": "Heart Disease",
+      "disease_bn": "হৃদরোগ",
+      "status": "Safe|Caution|Danger",
+      "reason_bn": "১-২ বাক্যে ব্যাখ্যা"
+    }
+  ],
+
+  "meal_modifications": [
+    {
+      "suggestion_en": "string (specific, actionable)",
+      "suggestion_bn": "বাংলা string",
+      "impact": "High|Medium|Low",
+      "icon": "emoji"
+    }
+  ]
+}
+
+Risk levels: Green=safe (<400 cal, GL<10), Yellow=moderate warning, Red=high risk (>700 cal or GL>20). Chronic disease statuses: Safe=beneficial or neutral, Caution=moderate concern, Danger=clearly harmful for that condition.`;
+
+export interface ChronicDiseaseRisk {
+  disease_en: string
+  disease_bn: string
+  status: 'Safe' | 'Caution' | 'Danger'
+  reason_bn: string
+}
+
+export interface FoodAnalysisResult {
+  identified_items: EnrichedFoodItem[]
+  total_calories: number
+  total_carbs_g: number
+  total_protein_g: number
+  total_fat_g: number
+  glycemic_load: number
+  risk_level: RiskLevel
+  risk_summary_en: string
+  risk_summary_bn: string
+  glucose_impact: 'Low' | 'Moderate' | 'High' | 'Very High'
+  chronic_disease_risks: ChronicDiseaseRisk[]
+  meal_modifications: {
+    suggestion_en: string
+    suggestion_bn: string
+    impact: 'High' | 'Medium' | 'Low'
+    icon: string
+  }[]
+  gemini_raw_output: object
+  used_fallback: boolean
+}
+
+function coerceFoodOutput(raw: unknown): {
+  food_items: { name_en: string; name_bn: string; estimated_grams: number; confidence: number }[]
+  meal_type: string
+  plate_fully_visible: boolean
+  notes: string | null
+} {
+  const o = (raw ?? {}) as Record<string, unknown>;
+  const rawItems = Array.isArray(o['food_items']) ? o['food_items'] : [];
+  const food_items = rawItems.map((item: unknown) => {
+    const i = (item ?? {}) as Record<string, unknown>;
+    return {
+      name_en: typeof i['name_en'] === 'string' ? i['name_en'] : 'Unknown food',
+      name_bn: typeof i['name_bn'] === 'string' ? i['name_bn'] : '',
+      estimated_grams: typeof i['estimated_grams'] === 'number' ? i['estimated_grams'] : 100,
+      confidence: typeof i['confidence'] === 'number' ? Math.min(Math.max(i['confidence'], 0), 1) : 0.5,
+    };
+  });
+  return {
+    food_items,
+    meal_type: typeof o['meal_type'] === 'string' ? o['meal_type'] : 'Meal',
+    plate_fully_visible: typeof o['plate_fully_visible'] === 'boolean' ? o['plate_fully_visible'] : false,
+    notes: typeof o['notes'] === 'string' ? o['notes'] : null,
+  };
+}
+
+function coerceRiskOutput(raw: unknown): {
+  glycemic_load: number
+  risk_level: RiskLevel
+  risk_summary_en: string
+  risk_summary_bn: string
+  glucose_impact: 'Low' | 'Moderate' | 'High' | 'Very High'
+  chronic_disease_risks: ChronicDiseaseRisk[]
+  meal_modifications: { suggestion_en: string; suggestion_bn: string; impact: 'High' | 'Medium' | 'Low'; icon: string }[]
+} {
+  const o = (raw ?? {}) as Record<string, unknown>;
+
+  const validRiskLevels: RiskLevel[] = ['Green', 'Yellow', 'Red'];
+  const riskLevel = validRiskLevels.includes(o['risk_level'] as RiskLevel)
+    ? (o['risk_level'] as RiskLevel)
+    : 'Yellow';
+
+  const validImpacts: ('Low' | 'Moderate' | 'High' | 'Very High')[] = ['Low', 'Moderate', 'High', 'Very High'];
+  const glucoseImpact = validImpacts.includes(o['glucose_impact'] as 'Low' | 'Moderate' | 'High' | 'Very High')
+    ? (o['glucose_impact'] as 'Low' | 'Moderate' | 'High' | 'Very High')
+    : 'Moderate';
+
+  const validStatuses = ['Safe', 'Caution', 'Danger'] as const;
+  const rawRisks = Array.isArray(o['chronic_disease_risks']) ? o['chronic_disease_risks'] : [];
+  const chronic_disease_risks: ChronicDiseaseRisk[] = rawRisks.map((risk: unknown) => {
+    const r = (risk ?? {}) as Record<string, unknown>;
+    const status = r['status'] as string;
+    return {
+      disease_en: typeof r['disease_en'] === 'string' ? r['disease_en'] : '',
+      disease_bn: typeof r['disease_bn'] === 'string' ? r['disease_bn'] : '',
+      status: validStatuses.includes(status as 'Safe' | 'Caution' | 'Danger')
+        ? (status as 'Safe' | 'Caution' | 'Danger')
+        : 'Caution',
+      reason_bn: typeof r['reason_bn'] === 'string' ? r['reason_bn'] : '',
+    };
+  });
+
+  const rawMods = Array.isArray(o['meal_modifications']) ? o['meal_modifications'] : [];
+  const meal_modifications = rawMods.map((mod: unknown) => {
+    const m = (mod ?? {}) as Record<string, unknown>;
+    return {
+      suggestion_en: typeof m['suggestion_en'] === 'string' ? m['suggestion_en'] : '',
+      suggestion_bn: typeof m['suggestion_bn'] === 'string' ? m['suggestion_bn'] : '',
+      impact: (['High', 'Medium', 'Low'] as const).includes(m['impact'] as 'High' | 'Medium' | 'Low')
+        ? (m['impact'] as 'High' | 'Medium' | 'Low')
+        : 'Medium',
+      icon: typeof m['icon'] === 'string' ? m['icon'] : '⚠️',
+    };
+  });
+
+  return {
+    glycemic_load: typeof o['glycemic_load'] === 'number' ? o['glycemic_load'] : 0,
+    risk_level: riskLevel,
+    risk_summary_en: typeof o['risk_summary_en'] === 'string' ? o['risk_summary_en'] : '',
+    risk_summary_bn: typeof o['risk_summary_bn'] === 'string' ? o['risk_summary_bn'] : '',
+    glucose_impact: glucoseImpact,
+    chronic_disease_risks,
+    meal_modifications,
+  };
+}
+
+/**
+ * Analyze a food photo through the two-agent pipeline.
+ *
+ * Step 1: Gemini Vision identifies food items and portions.
+ * Step 2: Local + USDA + Groq lookup enriches items with nutrition data.
+ * Step 3: Groq (or Gemini fallback) produces a diabetes risk assessment.
+ *
+ * @param imageBase64 base64-encoded image bytes (no data: prefix)
+ * @param mimeType    one of image/jpeg | image/png | image/webp
+ * @param supabase    server Supabase client (for bd_food_items lookup)
+ */
+export async function analyzeFood(
+  imageBase64: string,
+  mimeType: string,
+  supabase: SupabaseClient
+): Promise<FoodAnalysisResult> {
+  // Step 1 — Vision: Gemini identifies food items
+  const geminiOutput = await callGeminiVision(
+    imageBase64,
+    mimeType as 'image/jpeg' | 'image/png' | 'image/webp',
+    FOOD_GEMINI_PROMPT
+  );
+  const foodOutput = coerceFoodOutput(geminiOutput);
+
+  // Step 2 — Enrich with nutrition data (Supabase → USDA → Groq chain)
+  const identified_items = await calculateTotalNutrition(foodOutput.food_items, supabase);
+
+  // Step 3 — Aggregate totals
+  const total_calories = identified_items.reduce((s, i) => s + i.calories, 0);
+  const total_carbs_g = Math.round(identified_items.reduce((s, i) => s + i.carbs_g, 0) * 10) / 10;
+  const total_protein_g = Math.round(identified_items.reduce((s, i) => s + i.protein_g, 0) * 10) / 10;
+  const total_fat_g = Math.round(identified_items.reduce((s, i) => s + i.fat_g, 0) * 10) / 10;
+
+  // Step 4 — Risk assessment (Groq with Gemini fallback)
+  const itemsList = identified_items
+    .map((i) => `${i.name_en} (${i.estimated_grams}g, ${i.calories}kcal, ${i.carbs_g}g carbs)`)
+    .join('; ');
+
+  const riskPrompt = RISK_GROQ_PROMPT
+    .replace('{X}', String(total_calories))
+    .replace('{Y}', String(total_carbs_g))
+    .replace('{P}', String(total_protein_g))
+    .replace('{F}', String(total_fat_g))
+    .replace('{Z}', 'see item-level GI below') // Groq will compute from items
+    .replace('{ITEMS}', itemsList);
+
+  const raw = await callGroq(
+    JSON.stringify({ total_calories, total_carbs_g, total_protein_g, total_fat_g, items: identified_items }),
+    riskPrompt
+  );
+  const riskOutput = coerceRiskOutput(raw);
+  const usedFallback = (raw as Record<string, unknown>)?.['_fallback_used'] === true;
+
+  return {
+    identified_items,
+    total_calories,
+    total_carbs_g,
+    total_protein_g,
+    total_fat_g,
+    ...riskOutput,
+    gemini_raw_output: geminiOutput,
+    used_fallback: usedFallback,
   };
 }
 

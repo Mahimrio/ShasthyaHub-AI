@@ -1,79 +1,98 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// Health check should not be cached — we want a live probe on every call.
 export const dynamic = 'force-dynamic'
 
-interface ServiceStatus {
-  status: 'ok' | 'error'
-  latency_ms?: number
-  detail?: string
-}
-
-interface HealthResponse {
-  supabase: ServiceStatus
-  gemini: ServiceStatus
-  groq: ServiceStatus
+interface HealthCheckResponse {
+  supabase: 'ok' | 'error'
+  gemini: 'ok' | 'rate_limited' | 'error'
+  groq: 'ok' | 'error'
   timestamp: string
+  version: string
 }
 
 /**
- * Lightweight liveness/readiness probe.
+ * GET /api/health
  *
- * Each dependency is probed with the cheapest call possible so this stays fast:
- *  - Supabase: `select count` on profiles (authed admin not needed for the count)
- *  - Gemini:   key presence check (no API call — avoids burning quota on every hit)
- *  - Groq:     key presence check
- *
+ * Probes all three external services with real (but minimal) API calls.
  * Returns 200 if everything is ok, 503 if any service is down.
  */
-export async function GET(): Promise<NextResponse<HealthResponse>> {
+export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
   const [supabaseStatus, geminiStatus, groqStatus] = await Promise.all([
     checkSupabase(),
     checkGemini(),
     checkGroq(),
   ])
 
-  const body: HealthResponse = {
+  const body: HealthCheckResponse = {
     supabase: supabaseStatus,
     gemini: geminiStatus,
     groq: groqStatus,
     timestamp: new Date().toISOString(),
+    version: '1.0.0',
   }
 
   const allOk =
-    supabaseStatus.status === 'ok' &&
-    geminiStatus.status === 'ok' &&
-    groqStatus.status === 'ok'
+    body.supabase === 'ok' &&
+    (body.gemini === 'ok' || body.gemini === 'rate_limited') &&
+    body.groq === 'ok'
 
   return NextResponse.json(body, { status: allOk ? 200 : 503 })
 }
 
-async function checkSupabase(): Promise<ServiceStatus> {
-  const start = Date.now()
+// ── Service probes ─────────────────────────────────────────────────────────
+
+async function checkSupabase(): Promise<'ok' | 'error'> {
   try {
     const supabase = await createClient()
-    const { error } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).limit(1)
-    if (error) {
-      return { status: 'error', detail: error.message }
+    const { error } = await supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .limit(1)
+
+    return error ? 'error' : 'ok'
+  } catch {
+    return 'error'
+  }
+}
+
+async function checkGemini(): Promise<'ok' | 'rate_limited' | 'error'> {
+  const apiKey = process.env.GEMINI_API_KEY
+  if (!apiKey) return 'error'
+
+  try {
+    const { GoogleGenerativeAI } = await import('@google/generative-ai')
+    const genAI = new GoogleGenerativeAI(apiKey)
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const result = await model.generateContent('Reply with exactly one word: OK')
+    const text = result.response.text().trim()
+
+    return text ? 'ok' : 'error'
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('rate')) {
+      return 'rate_limited'
     }
-    return { status: 'ok', latency_ms: Date.now() - start }
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error)
-    return { status: 'error', detail }
+    return 'error'
   }
 }
 
-async function checkGemini(): Promise<ServiceStatus> {
-  if (!process.env.GEMINI_API_KEY) {
-    return { status: 'error', detail: 'GEMINI_API_KEY is not set' }
-  }
-  return { status: 'ok' }
-}
+async function checkGroq(): Promise<'ok' | 'error'> {
+  const apiKey = process.env.GROQ_API_KEY
+  if (!apiKey) return 'error'
 
-async function checkGroq(): Promise<ServiceStatus> {
-  if (!process.env.GROQ_API_KEY) {
-    return { status: 'error', detail: 'GROQ_API_KEY is not set' }
+  try {
+    const { default: Groq } = await import('groq-sdk')
+    const groq = new Groq({ apiKey })
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [{ role: 'user', content: 'Reply with exactly one word: OK' }],
+      temperature: 0.1,
+      max_tokens: 10,
+    })
+    const text = completion.choices[0]?.message?.content?.trim()
+    return text ? 'ok' : 'error'
+  } catch {
+    return 'error'
   }
-  return { status: 'ok' }
 }

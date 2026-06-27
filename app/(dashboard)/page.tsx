@@ -1,10 +1,18 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, FileText, Utensils, Activity, ChevronRight } from 'lucide-react'
+import { Eye, FileText, Utensils, ChevronRight, Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+
+interface HealthScoreData {
+  score: number | null
+  eye_score: number | null
+  food_score: number | null
+  rx_score: number | null
+}
 
 const fadeUp = {
   initial: { opacity: 0, y: 20 },
@@ -45,14 +53,30 @@ const features = [
   },
 ]
 
-const recentAnalyses = [
-  { type: 'eye', labelEn: 'Eye Checkup', labelBn: 'চোখের পরীক্ষা', date: 'Today', status: 'Complete' },
-  { type: 'food', labelEn: 'Meal Analysis', labelBn: 'খাদ্য বিশ্লেষণ', date: 'Yesterday', status: 'Complete' },
-]
+function getScoreColor(val: number) {
+  if (val <= 40) return '#EF4444'
+  if (val <= 70) return '#EAB308'
+  return '#10B981'
+}
 
 export default function DashboardHome() {
   const { lang } = useLanguage()
   const { profile } = useAuth()
+
+  const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery<{ success: boolean; data: HealthScoreData }>({
+    queryKey: ['healthScore'],
+    queryFn: async () => {
+      const res = await fetch('/api/reports/health-score')
+      if (!res.ok) throw new Error('Failed to fetch health score')
+      return res.json()
+    },
+    refetchInterval: 30_000,
+    retry: 2,
+    staleTime: 15_000,
+  })
+
+  const hs = healthData?.data
+  const score = hs?.score ?? null
 
   const greeting = lang === 'bn'
     ? `স্বাগতম, ${profile?.name || 'ব্যবহারকারী'} 👋`
@@ -75,27 +99,81 @@ export default function DashboardHome() {
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{tagline}</p>
       </motion.div>
 
-      {/* Health Quick Summary */}
+      {/* Health Score Gauge */}
       <motion.div variants={fadeUp} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            {lang === 'bn' ? 'আজকের স্বাস্থ্য সারাংশ' : 'Today\'s Health Summary'}
-          </h2>
-          <Activity className="h-5 w-5 text-sky-500" />
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { value: '--', labelEn: 'Analyses Done', labelBn: 'বিশ্লেষণ সম্পন্ন' },
-            { value: '--', labelEn: 'Risk Flags', labelBn: 'ঝুঁকির সতর্কতা' },
-            { value: '--', labelEn: 'Drugs Checked', labelBn: 'ওষুধ পরীক্ষিত' },
-            { value: '--', labelEn: 'Meals Logged', labelBn: 'খাবার যোগ করা' },
-          ].map((stat) => (
-            <div key={stat.labelEn} className="text-center">
-              <p className="text-2xl font-bold text-gray-800 dark:text-gray-100">{stat.value}</p>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">{lang === 'bn' ? stat.labelBn : stat.labelEn}</p>
+        {healthLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+          </div>
+        ) : healthError || score === null ? (
+          <div className="text-center py-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              {lang === 'bn' ? 'আপনার প্রথম স্কোর তৈরি করুন 🎯' : 'Get Your First Score 🎯'}
+            </h2>
+            <div className="flex gap-3 justify-center flex-wrap">
+              {features.map((f) => {
+                const Icon = f.icon
+                return (
+                  <Link
+                    key={f.href}
+                    href={f.href}
+                    className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-br ${f.gradient} text-white rounded-xl text-xs font-medium hover:opacity-90 transition-opacity`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {lang === 'bn' ? f.titleBn : f.titleEn}
+                  </Link>
+                )
+              })}
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-6 flex-col sm:flex-row">
+            {/* Gauge */}
+            <div className="relative flex flex-col items-center shrink-0">
+              <svg className="w-28 h-28 transform -rotate-90">
+                <circle cx="56" cy="56" r="44" stroke="#F3F4F6" strokeWidth="8" fill="transparent" className="dark:stroke-gray-700" />
+                <circle
+                  cx="56" cy="56" r="44"
+                  stroke={getScoreColor(score)}
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray="276.46"
+                  strokeDashoffset={276.46 - (276.46 * score) / 100}
+                  className="transition-all duration-1000 ease-out"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-2xl font-extrabold" style={{ color: getScoreColor(score) }}>{score}</span>
+                <span className="text-[9px] text-gray-400 font-medium tracking-wide uppercase mt-0.5">
+                  {lang === 'bn' ? 'স্বাস্থ্য স্কোর' : 'Health Score'}
+                </span>
+              </div>
+            </div>
+
+            {/* Mini cards */}
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                  {lang === 'bn' ? 'চোখ' : 'Eye'}
+                </p>
+                <p className="text-xl font-bold text-sky-600 mt-1">{hs?.eye_score ?? '--'}</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                  {lang === 'bn' ? 'প্রেসক্রিপশন' : 'Prescription'}
+                </p>
+                <p className="text-xl font-bold text-emerald-600 mt-1">{hs?.rx_score ?? '--'}</p>
+              </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+                  {lang === 'bn' ? 'খাদ্য' : 'Food'}
+                </p>
+                <p className="text-xl font-bold text-amber-600 mt-1">{hs?.food_score ?? '--'}</p>
+              </div>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Feature Cards */}
@@ -122,53 +200,6 @@ export default function DashboardHome() {
             </Link>
           )
         })}
-      </motion.div>
-
-      {/* Recent Analyses */}
-      <motion.div variants={fadeUp} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm dark:shadow-none border border-gray-100 dark:border-gray-700 p-5 transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-            {lang === 'bn' ? 'সাম্প্রতিক বিশ্লেষণ' : 'Recent Analyses'}
-          </h2>
-          <Link href="/reports" className="text-xs text-sky-600 dark:text-sky-400 font-medium hover:underline">
-            {lang === 'bn' ? 'সব দেখুন' : 'View All'}
-          </Link>
-        </div>
-
-        {recentAnalyses.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {lang === 'bn' ? 'এখনো কোনো বিশ্লেষণ নেই' : 'No analyses yet'}
-            </p>
-            <p className="text-xs text-gray-300 dark:text-gray-600 mt-1">
-              {lang === 'bn' ? 'উপরে থেকে একটি ফিচার বেছে নিন' : 'Pick a feature above to get started'}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {recentAnalyses.map((item) => (
-              <div
-                key={`${item.type}-${item.date}`}
-                className="flex items-center justify-between py-2 border-b border-gray-50 dark:border-gray-700/50 last:border-0"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-sky-100 dark:bg-sky-900/50 rounded-lg flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {lang === 'bn' ? item.labelBn : item.labelEn}
-                    </p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500">{item.date}</p>
-                  </div>
-                </div>
-                <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                  {item.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </motion.div>
 
       {/* Disclaimers */}

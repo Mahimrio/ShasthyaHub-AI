@@ -1,7 +1,12 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Language } from '@/types'
+
+// Static import — i18n initialises synchronously at module level so
+// useTranslation() always gets a real instance, never the empty fallback {}.
+import '@/lib/i18n'
 
 interface LanguageContextType {
   lang: Language
@@ -25,15 +30,18 @@ function getInitialLang(): Language {
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Language>(getInitialLang)
+  const { i18n } = useTranslation()
 
   useEffect(() => {
     document.documentElement.lang = lang
-  }, [lang])
+    i18n.changeLanguage(lang)
+  }, [lang, i18n])
 
   const setLang = useCallback(async (l: Language) => {
     setLangState(l)
     localStorage.setItem('shasthya_lang', l)
     document.documentElement.lang = l
+    i18n.changeLanguage(l)
 
     try {
       const { createClient } = await import('@/lib/supabase/client')
@@ -48,7 +56,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Supabase client not available (e.g. during prerendering)
     }
-  }, [])
+  }, [i18n])
 
   return (
     <LanguageContext.Provider value={{ lang, setLang }}>

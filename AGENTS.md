@@ -19,7 +19,7 @@ No test framework exists. No `npm test`.
 - **Styling**: Tailwind CSS v4 via `@tailwindcss/postcss` plugin (no `tailwind.config.ts` file exists despite `components.json` referencing it)
 - **UI**: shadcn/ui (new-york style, RSC enabled) — 11 components in `components/ui/`
 - **Auth**: Supabase (cookie-based SSR via `@supabase/ssr`) — clients at `lib/supabase/server.ts` & `client.ts`
-- **AI**: Dual pipeline — Gemini 1.5 Pro (`lib/ai/gemini.ts`) → Groq Llama 3.3 70B (`lib/ai/groq.ts`), orchestrated via `lib/ai/orchestrator.ts`
+- **AI**: Dual pipeline — Gemini 2.5 Flash (`lib/ai/gemini.ts`) → Groq Llama 3.3 70B (`lib/ai/groq.ts`), orchestrated via `lib/ai/orchestrator.ts`
 - **State**: TanStack React Query (installed, no provider set up yet)
 - **i18n**: `next-i18next` installed, **not configured** (no locale files)
 - **PWA**: `next-pwa` installed, **not configured**
@@ -28,14 +28,24 @@ No test framework exists. No `npm test`.
 
 **Feature pages completed**: Nayan AI, ScriptGuard, GlycoVision, Reports dashboard — all with dark mode, BN/EN i18n, skeleton loaders, shared components (ImageUploader, ResultCard, DisclaimerModal, AiThinkingBanner). Responsive dashboard layout with sidebar + bottom nav. Dark mode system active. Auth system complete (login, register, middleware). `hooks/useAuth.ts` exists.
 
-## Service layer (already populated)
+## Service layer
 
 | File | Contents |
 |------|----------|
 | `lib/services/drug-mapping.ts` | 37 brand→generic Bangladeshi drug mappings |
 | `lib/services/drug-interaction.ts` | 28 interactions (major/moderate/minor) |
-| `lib/services/calorie.ts` | 66 Bangladeshi food items with macros |
+| `lib/services/calorie.ts` | 66 Bangladeshi food items + `lookupNutrition()` (Supabase→USDA→Groq lookup chain) + `calculateTotalNutrition()` |
 | `lib/services/schedule.ts` | Med schedule generator |
+
+## Pipeline
+
+| Agent | Vision model | Reasoning model | Key services |
+|-------|-------------|----------------|--------------|
+| Nayan AI (eye) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeEyeImage()` |
+| ScriptGuard (rx) | Gemini 2.5 Flash → | Groq + OpenFDA | `analyzePrescription()`, `mapBrandsToGenerics()`, `checkDrugInteractions()` |
+| GlycoVision (food) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeFood()`, `lookupNutrition()`, `calculateTotalNutrition()` |
+
+All pipelines have Gemini Flash fallback when Groq is unavailable.
 
 ## Database
 

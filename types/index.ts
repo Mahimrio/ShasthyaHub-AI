@@ -96,6 +96,22 @@ export interface EnrichedFoodItem {
   fat_g: number
 }
 
+export interface ChronicDiseaseRisk {
+  disease_en: string
+  disease_bn: string
+  status: 'Safe' | 'Caution' | 'Danger'
+  reason_bn: string
+}
+
+export interface MealModification {
+  suggestion_en: string
+  suggestion_bn: string
+  impact: 'positive' | 'caution'
+  nutrient: string
+  current_value: number
+  suggested_value: number
+}
+
 export interface FoodAnalysis {
   id: string
   user_id: string
@@ -109,9 +125,29 @@ export interface FoodAnalysis {
   risk_level: RiskLevel | null
   risk_summary_en: string | null
   risk_summary_bn: string | null
+  chronic_disease_risks: ChronicDiseaseRisk[] | null
   meal_modifications: Record<string, unknown> | null
   error_message: string | null
   created_at: string
+}
+
+/**
+ * UI-facing shape of a single GlycoVision analysis — the `data` payload
+ * returned by POST /api/glycovision/analyze on success.
+ */
+export interface GlycoVisionResult {
+  id: string
+  identified_items: EnrichedFoodItem[]
+  total_calories: number
+  total_carbs_g: number
+  total_protein_g: number
+  total_fat_g: number
+  glycemic_load: number
+  risk_level: RiskLevel
+  risk_summary_en: string
+  risk_summary_bn: string
+  chronic_disease_risks: ChronicDiseaseRisk[]
+  meal_modifications: MealModification[]
 }
 
 export interface BdDrug {
