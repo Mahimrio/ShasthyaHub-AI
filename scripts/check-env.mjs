@@ -1,7 +1,7 @@
 /**
  * Environment Variable Audit Script
  *
- * Run: npx tsx scripts/check-env.ts
+ * Run: node scripts/check-env.mjs
  *
  * Validates that all required environment variables are set.
  * In CI (process.env.CI === 'true'), uses console.warn instead of
@@ -20,8 +20,8 @@ const requiredPublicVars = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
 ]
 
-function checkEnv(): void {
-  const missing: string[] = []
+function checkEnv() {
+  const missing = []
   const isCI = process.env.CI === 'true'
 
   for (const name of requiredServerVars) {
