@@ -23,18 +23,25 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return
+  const req = event.request
+  if (req.method !== 'GET') return
+
+  const url = new URL(req.url)
+
+  // Only cache same-origin, non-API requests (avoid caching private JSON responses)
+  if (url.origin !== self.location.origin) return
+  if (url.pathname.startsWith('/api/')) return
 
   const url = new URL(event.request.url)
   if (url.pathname.match(/\.hot-update\.(json|js)$/)) return
 
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request)
+    caches.match(req).then((cached) => {
+      const fetchPromise = fetch(req)
         .then((response) => {
           if (response.ok && response.type === 'basic') {
             const clone = response.clone()
-            caches.open(CACHE).then((cache) => cache.put(event.request, clone))
+            caches.open(CACHE).then((cache) => cache.put(req, clone))
           }
           return response
         })
