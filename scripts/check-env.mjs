@@ -4,9 +4,9 @@
  * Run: node scripts/check-env.mjs
  *
  * Validates that all required environment variables are set.
- * In CI (process.env.CI === 'true'), uses console.warn instead of
- * process.exit(1) to avoid breaking GitHub Actions where environment
- * variables may be injected at a different stage.
+ * On CI platforms (Vercel, GitHub Actions), uses console.warn instead of
+ * process.exit(1) to avoid breaking builds where environment variables
+ * may be injected at a different stage.
  */
 
 const requiredServerVars = [
@@ -20,9 +20,18 @@ const requiredPublicVars = [
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
 ]
 
+function isCI() {
+  return (
+    process.env.CI === 'true' ||
+    process.env.CI === '1' ||
+    process.env.VERCEL === '1' ||
+    process.env.VERCEL_ENV !== undefined
+  )
+}
+
 function checkEnv() {
   const missing = []
-  const isCI = process.env.CI === 'true'
+  const ci = isCI()
 
   for (const name of requiredServerVars) {
     if (!process.env[name]) {
@@ -43,7 +52,7 @@ function checkEnv() {
 
   const message = `[check-env] Missing environment variables: ${missing.join(', ')}`
 
-  if (isCI) {
+  if (ci) {
     console.warn(message)
     console.warn('[check-env] CI detected — skipping hard failure. Ensure these are injected at deploy time.')
   } else {
