@@ -51,58 +51,114 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
   const handleDownload = useCallback(async () => {
     setIsDownloading(true)
     try {
-      // Lazy import keeps jspdf out of the main bundle.
-      const { jsPDF } = await import('jspdf')
-      const doc = new jsPDF()
+      const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+        import('jspdf'),
+        import('html2canvas'),
+      ])
 
-      let y = 20
-      doc.setFontSize(18)
-      doc.setFont('helvetica', 'bold')
-      doc.text('NayanAI — Eye Screening Report', 14, y)
-      y += 10
+      const container = document.createElement('div')
+      container.style.position = 'absolute'
+      container.style.left = '-9999px'
+      container.style.top = '-9999px'
+      container.style.width = '790px'
+      container.style.padding = '40px'
+      container.style.backgroundColor = '#FFFFFF'
+      container.style.color = '#111111'
+      container.style.fontFamily = 'sans-serif'
 
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'normal')
-      doc.setTextColor(120)
-      doc.text(`Report ID: ${result.id}`, 14, y)
-      y += 6
-      doc.text(`Date: ${new Date().toLocaleString()}`, 14, y)
-      y += 12
-
-      doc.setDrawColor(220)
-      doc.line(14, y, 196, y)
-      y += 12
-
-      const addField = (label: string, value: string) => {
-        doc.setTextColor(80)
-        doc.setFont('helvetica', 'bold')
-        doc.setFontSize(11)
-        doc.text(label, 14, y)
-        y += 6
-        doc.setFont('helvetica', 'normal')
-        doc.setFontSize(10)
-        doc.setTextColor(40)
-        const lines = doc.splitTextToSize(value, 182)
-        doc.text(lines, 14, y)
-        y += lines.length * 5 + 6
-      }
-
-      addField('Diagnosis', result.diagnosis)
-      addField('Severity', result.severity)
-      addField('Confidence', `${confidence}%`)
-      addField('Recommendation', recommendation)
-      addField(
-        'Urgency',
+      const urgencyText =
         lang === 'bn'
           ? `${result.urgency_days} দিনের মধ্যে ডাক্তার দেখান`
           : `See a doctor within ${result.urgency_days} days`
-      )
-      addField('Specialist needed', result.specialist_needed)
-      if (result.next_steps.length > 0) {
-        addField('Next steps', result.next_steps.map((s, i) => `${i + 1}. ${s}`).join('\n'))
+
+      const nextStepsHtml =
+        result.next_steps.length > 0
+          ? `<div style="margin-bottom: 6px;"><strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'পরবর্তী পদক্ষেপ' : 'Next Steps'
+            }</strong></div>
+             <ol style="margin:0;padding-left:20px;font-size:12px;color:#333;line-height:1.6;">
+               ${result.next_steps.map((s) => `<li>${s}</li>`).join('')}
+             </ol>`
+          : ''
+
+      container.innerHTML = `
+        <div style="border-bottom: 2px solid #2563EB; padding-bottom: 12px; margin-bottom: 24px;">
+          <h1 style="font-size: 26px; color: #2563EB; margin: 0;">ShasthyaHub-AI</h1>
+          <p style="font-size: 12px; color: #6B7280; margin: 4px 0 0 0;">NayanAI — Eye Screening Report</p>
+          <p style="font-size: 10px; color: #9CA3AF; margin: 2px 0 0 0;">ID: ${result.id}</p>
+          <p style="font-size: 10px; color: #9CA3AF; margin: 2px 0 0 0;">Date: ${new Date().toLocaleString()}</p>
+        </div>
+        <div style="margin-bottom: 14px;">
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'রোগ নির্ণয়' : 'Diagnosis'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;">${result.diagnosis}</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'গুরুত্ব' : 'Severity'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;">${severityLabel(result.severity, lang)}</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'নিশ্চয়তা' : 'Confidence'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;">${confidence}%</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'সুপারিশ' : 'Recommendation'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;line-height:1.6;">${recommendation}</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'জরুরিতা' : 'Urgency'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;">${urgencyText}</p>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="font-size:12px;color:#555;">${
+              lang === 'bn' ? 'প্রয়োজনীয় বিশেষজ্ঞ' : 'Specialist Needed'
+            }</strong>
+            <p style="margin:4px 0;font-size:13px;color:#333;">${result.specialist_needed}</p>
+          </div>
+          ${nextStepsHtml}
+        </div>
+        <div style="border-top: 1px solid #E5E7EB; padding-top: 12px; text-align: center;">
+          <p style="font-size: 10px; color: #9CA3AF; line-height: 1.4; margin: 0;">
+            This document is an automated computer-generated analysis result compiled via an AI screening mechanism.
+            It does not constitute a valid clinical diagnosis or substitute professional medical advice.
+            Please share with a certified medical doctor.
+          </p>
+        </div>
+      `
+
+      document.body.appendChild(container)
+
+      const canvas = await html2canvas(container, { scale: 2, useCORS: true })
+      const imgData = canvas.toDataURL('image/png')
+      document.body.removeChild(container)
+
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const imgWidth = 210
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+      let position = 0
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= 297
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= 297
       }
 
-      doc.save(`nayanai-report-${result.id.slice(0, 8)}.pdf`)
+      pdf.save(`nayanai-report-${result.id.slice(0, 8)}.pdf`)
     } catch (err) {
       console.error('[EyeResultCard] PDF download failed', err)
     } finally {

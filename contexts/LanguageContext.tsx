@@ -1,11 +1,9 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useEffect, useCallback, useSyncExternalStore } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Language } from '@/types'
 
-// Static import — i18n initialises synchronously at module level so
-// useTranslation() always gets a real instance, never the empty fallback {}.
 import '@/lib/i18n'
 
 interface LanguageContextType {
@@ -18,18 +16,25 @@ const LanguageContext = createContext<LanguageContextType>({
   setLang: () => {},
 })
 
-function getInitialLang(): Language {
-  if (typeof window === 'undefined') return 'bn'
+function getServerSnapshot(): Language {
+  return 'bn'
+}
+
+function getSnapshot(): Language {
   try {
-    const stored = localStorage.getItem('shasthya_lang') as Language | null
-    return stored || 'bn'
+    return (localStorage.getItem('shasthya_lang') as Language) || 'bn'
   } catch {
     return 'bn'
   }
 }
 
+function subscribe(callback: () => void): () => void {
+  window.addEventListener('storage', callback)
+  return () => window.removeEventListener('storage', callback)
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLangState] = useState<Language>(getInitialLang)
+  const lang = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   const { i18n } = useTranslation()
 
   useEffect(() => {
@@ -38,7 +43,6 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [lang, i18n])
 
   const setLang = useCallback(async (l: Language) => {
-    setLangState(l)
     localStorage.setItem('shasthya_lang', l)
     document.documentElement.lang = l
     i18n.changeLanguage(l)
