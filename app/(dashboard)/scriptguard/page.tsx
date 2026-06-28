@@ -14,7 +14,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useScriptGuardAnalysis } from '@/hooks/useScriptGuardAnalysis'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
-import { AiThinkingBanner } from '@/components/shared/AiThinkingBanner'
+import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { ResultCard } from '@/components/shared/ResultCard'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -70,6 +70,14 @@ export default function ScriptGuardPage() {
       ? result?.special_instructions_bn ?? []
       : result?.special_instructions_en ?? []
 
+  const scriptGuardStages = [
+    { en: '📡 Sending prescription to Vision Engine...', bn: '📡 প্রেসক্রিপশন ভিশন ইঞ্জিনে পাঠানো হচ্ছে...' },
+    { en: '🔍 Extracting medication details...', bn: '🔍 ওষুধের তথ্য বের করা হচ্ছে...' },
+    { en: '⚕️ Checking drug interactions...', bn: '⚕️ ওষুধের মিথস্ক্রিয়া যাচাই করা হচ্ছে...' },
+    { en: '📋 Generating schedule & report...', bn: '📋 সময়সূচি ও রিপোর্ট তৈরি হচ্ছে...' },
+    { en: '✅ Almost done...', bn: '✅ প্রায় শেষ...' },
+  ]
+
   return (
     <>
       <DisclaimerModal
@@ -77,6 +85,17 @@ export default function ScriptGuardPage() {
         onOpenChange={setShowDisclaimer}
         onAccept={handleAcceptDisclaimer}
       />
+
+      {isLoading && (
+        <AnalyzingAnimation
+          stages={scriptGuardStages}
+          icon={
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500">
+              <ClipboardList className="h-10 w-10 text-white" />
+            </div>
+          }
+        />
+      )}
 
       <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
         {/* Header */}
@@ -111,7 +130,7 @@ export default function ScriptGuardPage() {
         )}
 
         {/* Upload + analyze button (hidden once a result is showing) */}
-        {!result && !isLoading && (
+        {!result && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
             <ImageUploader
               onImageSelect={handleImageSelect}
@@ -126,13 +145,6 @@ export default function ScriptGuardPage() {
               <Search className="mr-2 h-5 w-5" />
               {lang === 'bn' ? 'প্রেসক্রিপশন বিশ্লেষণ করুন' : 'Analyze Prescription'}
             </Button>
-          </motion.div>
-        )}
-
-        {/* Loading */}
-        {isLoading && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <AiThinkingBanner />
           </motion.div>
         )}
 
