@@ -103,3 +103,83 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* ── Animated Background Gradient Utility ───────────────────── */
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% auto;
+  animation: gradient-x 4s ease infinite;
+}
+
+@keyframes gradient-bg {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-bg {
+  background-size: 200% 200%;
+  animation: gradient-bg 12s ease-in-out infinite;
+}
+
+/* ── Dynamic Floating Background Blobs ────────────────────── */
+@keyframes float-slow-1 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(40px, -60px) scale(1.1);
+  }
+  66% {
+    transform: translate(-30px, 30px) scale(0.95);
+  }
+}
+
+@keyframes float-slow-2 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  40% {
+    transform: translate(-50px, 40px) scale(1.05);
+  }
+  70% {
+    transform: translate(30px, -40px) scale(0.9);
+  }
+}
+
+@keyframes float-slow-3 {
+  0%, 100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(40px, 50px) scale(0.95);
+  }
+  80% {
+    transform: translate(-40px, -30px) scale(1.08);
+  }
+}
+
+.animate-float-1 {
+  animation: float-slow-1 15s ease-in-out infinite;
+}
+.animate-float-2 {
+  animation: float-slow-2 18s ease-in-out infinite;
+}
+.animate-float-3 {
+  animation: float-slow-3 22s ease-in-out infinite;
+}
+

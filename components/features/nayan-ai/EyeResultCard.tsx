@@ -10,7 +10,6 @@ import {
   Share2,
   Stethoscope,
 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import type { Language, NayanResult } from '@/types'
@@ -30,8 +29,16 @@ const container = {
   },
 }
 const item = {
-  hidden: { opacity: 0, y: 16 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  hidden: { opacity: 0, y: 12 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring' as const,
+      stiffness: 260,
+      damping: 22
+    }
+  },
 }
 
 /** Clamp confidence to a 0–100 integer for the progress meter. */
@@ -189,81 +196,91 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
   }, [result, confidence, lang])
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
-      {/* (a) Severity banner */}
-      <motion.div
-        variants={item}
-        className={`${style.border} ${style.bg} rounded-r-xl px-5 py-4`}
-      >
-        <div className="mb-2 flex items-center gap-2">
-          <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-          <Badge variant={style.badge}>{severityLabel(result.severity, lang)}</Badge>
-          <span className="ml-auto text-xs tabular-nums text-gray-400 dark:text-gray-500">
-            {lang === 'bn' ? `${confidence}% নিশ্চিত` : `${confidence}% confidence`}
-          </span>
-        </div>
+    <motion.div
+      variants={container}
+      initial="hidden"
+      animate="show"
+      className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-6 dark:border-gray-700/60 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 space-y-5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.14),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.18),0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-300 relative overflow-hidden"
+    >
+      {/* Decorative Radial Inner Glow */}
+      <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-gradient-to-br from-sky-400/8 to-transparent blur-2xl dark:from-sky-400/15" />
+      
+      {/* Header section with Severity Badge and Scan ID */}
+      <motion.div variants={item} className="flex items-center justify-between">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${style.bg} ${style.text}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${style.dot} animate-pulse-slow`} />
+          {lang === 'bn' 
+            ? `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'bn')}`
+            : `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'en')}`}
+        </span>
+        <span className="font-mono text-xs text-gray-400 tracking-wider">
+          #SCAN-{result.id.slice(0, 8).toUpperCase()}
+        </span>
+      </motion.div>
 
-        {/* (b) Diagnosis */}
-        <h2 className="mt-1 text-xl font-black leading-tight text-gray-900 dark:text-gray-100 md:text-2xl">
+      {/* Diagnosis Title */}
+      <motion.div variants={item}>
+        <h2 className="text-2xl font-black tracking-tight leading-tight text-gray-900 dark:text-gray-100">
           {result.diagnosis}
         </h2>
       </motion.div>
 
-      {/* (c) Confidence meter */}
-      <motion.div variants={item} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
-            {lang === 'bn' ? 'নিশ্চয়তা স্কোর' : 'Confidence Score'}
-          </span>
-          <span className="text-sm font-bold tabular-nums text-gray-900 dark:text-gray-100">
+      {/* Confidence Meter Section */}
+      <motion.div variants={item} className="space-y-2">
+        <div className="flex items-end justify-between text-[11px] font-bold tracking-wider text-gray-400 dark:text-gray-500">
+          <span>AI CONFIDENCE / নির্ভরযোগ্যতা</span>
+          <span className="text-lg font-black tabular-nums text-gray-900 dark:text-gray-100">
             {confidence}%
           </span>
         </div>
-        <Progress value={confidence} className={`${style.bar} h-2.5`} />
+        <Progress value={confidence} className={`${style.bar} h-2`} />
       </motion.div>
 
-      {/* (d) Recommendation box */}
-      <motion.div variants={item} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-        <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-900/50">
-            <Info className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+      {/* Urgency Alert Card */}
+      <motion.div variants={item}>
+        <div
+          className={`flex items-start gap-3 rounded-xl border p-4 ${style.bg} ${style.border} ${style.text}`}
+        >
+          <CalendarClock className="h-5 w-5 shrink-0 mt-0.5" />
+          <div className="text-sm font-bold leading-snug">
+            <span>
+              See doctor within {result.urgency_days} days / {result.urgency_days} দিনের মধ্যে ডাক্তার দেখান
+            </span>
           </div>
+        </div>
+      </motion.div>
+
+      {/* AI Recommendation / Details Box */}
+      <motion.div
+        variants={item}
+        className="rounded-xl border-l-4 border-sky-500 bg-sky-50/20 p-4 dark:border-sky-500 dark:bg-sky-950/20"
+      >
+        <div className="flex items-start gap-2.5">
+          <Info className="h-4 w-4 text-sky-600 dark:text-sky-400 mt-0.5 shrink-0" />
           <div>
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-              {lang === 'bn' ? '✅ আপনার করণীয়' : '✅ Recommended Action'}
-            </h3>
-            <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-300">
-              {recommendation}
+            <span className="text-[11px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-400">
+              {lang === 'bn' ? 'এআই মতামত / AI Recommendation' : 'AI Recommendation / এআই মতামত'}
+            </span>
+            <p className="mt-1 text-sm font-medium italic leading-relaxed text-gray-700 dark:text-gray-300">
+              &ldquo;{recommendation}&rdquo;
             </p>
           </div>
         </div>
       </motion.div>
 
-      {/* (e) Urgency chip */}
-      <motion.div variants={item}>
-        <div
-          className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium ${style.bg} ${style.text} ${style.border}`}
-        >
-          <CalendarClock className="h-4 w-4" />
-          {lang === 'bn'
-            ? `🗓️ ${result.urgency_days} দিনের মধ্যে ডাক্তার দেখান`
-            : `🗓️ See a doctor within ${result.urgency_days} days`}
-        </div>
-      </motion.div>
-
-      {/* (f) Next steps */}
+      {/* Next steps */}
       {result.next_steps.length > 0 && (
-        <motion.div variants={item} className="rounded-2xl border border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-          <h3 className="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-200">
-            {lang === 'bn' ? 'পরবর্তী পদক্ষেপ' : 'Next Steps'}
+        <motion.div variants={item} className="space-y-2.5">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            {lang === 'bn' ? 'পরবর্তী পদক্ষেপ / Next Steps' : 'Next Steps / পরবর্তী পদক্ষেপ'}
           </h3>
           <ol className="space-y-2">
             {result.next_steps.map((step, i) => (
               <li key={i} className="flex items-start gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-100 text-xs font-bold tabular-nums text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold tabular-nums text-gray-600 dark:bg-gray-800 dark:text-gray-400">
                   {i + 1}
                 </span>
-                <span className="pt-0.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
                   {step}
                 </span>
               </li>
@@ -272,42 +289,45 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
         </motion.div>
       )}
 
-      {/* (g) Specialist badge */}
+      {/* Specialist needed */}
       <motion.div variants={item}>
-        <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-900/20">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/60">
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-100 bg-emerald-50/20 p-4 dark:border-emerald-950/50 dark:bg-emerald-950/20">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/40">
             <Stethoscope className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-              {lang === 'bn' ? 'বিশেষজ্ঞ' : 'Specialist Needed'}
+            <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+              {lang === 'bn' ? 'প্রয়োজনীয় চিকিৎসক / Specialist' : 'Specialist / প্রয়োজনীয় চিকিৎসক'}
             </p>
-            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
               👨‍⚕️ {result.specialist_needed}
             </p>
           </div>
         </div>
       </motion.div>
 
-      {/* (h) Download PDF + Share buttons */}
-      <motion.div variants={item} className="flex flex-col gap-3 sm:flex-row">
+      {/* Download PDF + Share buttons */}
+      <motion.div variants={item} className="flex gap-3 pt-2">
         <Button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="flex-1 rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 text-white hover:opacity-90"
+          className="flex-1 rounded-xl h-11 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:opacity-50"
         >
           {isDownloading ? (
-            <>{lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...'}</>
+            <span className="text-xs">{lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...'}</span>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              {lang === 'bn' ? 'পিডিএফ ডাউনলোড' : 'Download PDF'}
+              <span className="text-xs font-semibold">{lang === 'bn' ? 'রিপোর্ট ডাউনলোড করুন' : 'Download Report'}</span>
             </>
           )}
         </Button>
-        <Button onClick={handleShare} variant="outline" className="flex-1 rounded-xl">
+        <Button
+          onClick={handleShare}
+          className="flex-1 rounded-xl h-11 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+        >
           <Share2 className="mr-2 h-4 w-4" />
-          {shareStatus ?? (lang === 'bn' ? 'শেয়ার করুন' : 'Share')}
+          <span className="text-xs font-semibold">{shareStatus ?? (lang === 'bn' ? 'শেয়ার করুন' : 'Share Data')}</span>
         </Button>
       </motion.div>
 
@@ -315,12 +335,14 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
       {result.severity === 'Normal' && (
         <motion.div
           variants={item}
-          className="flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400"
+          className="flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400 pt-2"
         >
           <CheckCircle2 className="h-4 w-4" />
-          {lang === 'bn'
-            ? 'আপনার চোখে কোনো গুরুতর সমস্যা পাওয়া যায়নি।'
-            : 'No serious eye issues detected.'}
+          <span className="text-xs font-medium">
+            {lang === 'bn'
+              ? 'আপনার চোখে কোনো গুরুতর সমস্যা পাওয়া যায়নি।'
+              : 'No serious eye issues detected.'}
+          </span>
         </motion.div>
       )}
     </motion.div>

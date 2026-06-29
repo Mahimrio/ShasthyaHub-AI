@@ -174,7 +174,17 @@ export default function DemoScriptGuardPage() {
   const demoInteractionLang = showBnInteraction ? 'bn' : 'en'
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
+    <>
+      {/* Dynamic Animated Fixed Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-emerald-950/30 dark:to-teal-950/20 animate-gradient-bg z-0">
+        {/* Ambient Radial Gradient Blobs */}
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-emerald-300/40 dark:bg-emerald-500/20 blur-[140px] animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-teal-300/35 dark:bg-teal-500/20 blur-[140px] animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+      </div>
+
+      <div className="relative min-h-screen z-10">
+        <div className="relative z-10 mx-auto max-w-3xl space-y-6 p-4 md:p-6">
       {/* Demo mode banner */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -272,5 +282,7 @@ export default function DemoScriptGuardPage() {
           : 'Tap Play below to hear the Bengali audio — for best TTS, use Chrome on Android.'}
       </p>
     </div>
+    </div>
+    </>
   )
 }
