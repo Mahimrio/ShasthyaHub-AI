@@ -18,7 +18,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
-import { AiThinkingBanner } from '@/components/shared/AiThinkingBanner'
+import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { ResultCard } from '@/components/shared/ResultCard'
 import FoodItemsList from '@/components/features/glycovision/FoodItemsList'
 import NutritionDonutChart from '@/components/features/glycovision/NutritionDonutChart'
@@ -140,7 +140,15 @@ export default function GlycoVisionPage() {
         riskSummaryEn: d.risk_summary_en ?? '',
         riskSummaryBn: d.risk_summary_bn ?? '',
         chronicDiseaseRisks: d.chronic_disease_risks ?? [],
-        mealModifications: d.meal_modifications ?? [],
+        mealModifications: (d.meal_modifications ?? []).map((m: Record<string, unknown>) => ({
+          suggestion_en: (m.suggestion_en as string) ?? '',
+          suggestion_bn: (m.suggestion_bn as string) ?? '',
+          impact: (m.impact as MealModification['impact']) ?? 'positive',
+          nutrient: (m.nutrient as string) ?? '',
+          current_value: Number(m.current_value ?? 0),
+          suggested_value: Number(m.suggested_value ?? 0),
+          calories_saved: Number(m.calories_saved ?? 0),
+        })),
       })
       setState('complete')
       setResultTab('overview')
@@ -166,6 +174,14 @@ export default function GlycoVisionPage() {
     { key: 'suggestions', labelEn: 'Suggestions', labelBn: 'পরামর্শ', icon: Salad },
   ]
 
+  const glycoStages = [
+    { en: '📡 Sending meal photo to Vision Engine...', bn: '📡 খাবারের ছবি ভিশন ইঞ্জিনে পাঠানো হচ্ছে...' },
+    { en: '🍽️ Identifying food items...', bn: '🍽️ খাদ্য উপাদান চিহ্নিত করা হচ্ছে...' },
+    { en: '🔬 Calculating nutrition values...', bn: '🔬 পুষ্টির মান গণনা করা হচ্ছে...' },
+    { en: '📊 Analyzing health risks...', bn: '📊 স্বাস্থ্য ঝুঁকি বিশ্লেষণ করা হচ্ছে...' },
+    { en: '✅ Almost done...', bn: '✅ প্রায় শেষ...' },
+  ]
+
   return (
     <>
       <DisclaimerModal
@@ -173,6 +189,17 @@ export default function GlycoVisionPage() {
         onOpenChange={setShowDisclaimer}
         onAccept={handleAcceptDisclaimer}
       />
+
+      {state === 'processing' && (
+        <AnalyzingAnimation
+          stages={glycoStages}
+          icon={
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500">
+              <Utensils className="h-10 w-10 text-white" />
+            </div>
+          }
+        />
+      )}
 
       <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
         {/* Header */}
@@ -274,8 +301,7 @@ export default function GlycoVisionPage() {
                     </>
                   )}
 
-                  {/* Processing spinner */}
-                  {state === 'processing' && <AiThinkingBanner />}
+                  {/* Processing state is handled by full-screen AnalyzingAnimation above */}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -431,7 +457,7 @@ export default function GlycoVisionPage() {
                                   key={i}
                                   className={cn(
                                     'rounded-xl border-l-4 p-4',
-                                    mod.impact === 'positive'
+                                    mod.impact === 'positive' || mod.impact === 'High'
                                       ? 'border-l-green-500 bg-green-50 dark:bg-green-950/30'
                                       : 'border-l-amber-500 bg-amber-50 dark:bg-amber-950/30'
                                   )}
@@ -439,11 +465,18 @@ export default function GlycoVisionPage() {
                                   <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     {lang === 'bn' ? mod.suggestion_bn : mod.suggestion_en}
                                   </p>
-                                  <div className="mt-2 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                                    <span className="font-semibold uppercase">{mod.nutrient}</span>
-                                    <span className="line-through">{mod.current_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
-                                    <span className="text-green-600 dark:text-green-400">→ {mod.suggested_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
-                                  </div>
+                                  {mod.nutrient && mod.current_value > 0 && (
+                                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                                      <span className="font-semibold uppercase">{mod.nutrient}</span>
+                                      <span className="line-through">{mod.current_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
+                                      <span className="text-green-600 dark:text-green-400">→ {mod.suggested_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
+                                      {(mod.calories_saved ?? 0) > 0 && (
+                                        <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                                          {lang === 'bn' ? `${mod.calories_saved} kcal সাশ্রয়` : `Save ${mod.calories_saved} kcal`}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                               {/* Static tips when glycemic load is high */}

@@ -106,10 +106,11 @@ export interface ChronicDiseaseRisk {
 export interface MealModification {
   suggestion_en: string
   suggestion_bn: string
-  impact: 'positive' | 'caution'
+  impact: 'positive' | 'caution' | 'High' | 'Medium' | 'Low'
   nutrient: string
   current_value: number
   suggested_value: number
+  calories_saved?: number
 }
 
 export interface FoodAnalysis {

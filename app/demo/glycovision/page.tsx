@@ -102,6 +102,7 @@ const DEMO_MODIFICATIONS: MealModification[] = [
     nutrient: 'Carbs',
     current_value: 71.5,
     suggested_value: 36,
+    calories_saved: 142,
   },
   {
     suggestion_en: 'Use less oil in the fish curry — try steaming instead',
@@ -110,6 +111,7 @@ const DEMO_MODIFICATIONS: MealModification[] = [
     nutrient: 'Fat',
     current_value: 10,
     suggested_value: 5,
+    calories_saved: 45,
   },
   {
     suggestion_en: 'Add a side of fresh salad (shobji) for more fiber',
@@ -118,6 +120,7 @@ const DEMO_MODIFICATIONS: MealModification[] = [
     nutrient: 'Fiber',
     current_value: 0,
     suggested_value: 5,
+    calories_saved: 0,
   },
 ]
 
