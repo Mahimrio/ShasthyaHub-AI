@@ -140,7 +140,15 @@ export default function GlycoVisionPage() {
         riskSummaryEn: d.risk_summary_en ?? '',
         riskSummaryBn: d.risk_summary_bn ?? '',
         chronicDiseaseRisks: d.chronic_disease_risks ?? [],
-        mealModifications: d.meal_modifications ?? [],
+        mealModifications: (d.meal_modifications ?? []).map((m: Record<string, unknown>) => ({
+          suggestion_en: (m.suggestion_en as string) ?? '',
+          suggestion_bn: (m.suggestion_bn as string) ?? '',
+          impact: (m.impact as MealModification['impact']) ?? 'positive',
+          nutrient: (m.nutrient as string) ?? '',
+          current_value: Number(m.current_value ?? 0),
+          suggested_value: Number(m.suggested_value ?? 0),
+          calories_saved: Number(m.calories_saved ?? 0),
+        })),
       })
       setState('complete')
       setResultTab('overview')
@@ -462,7 +470,7 @@ export default function GlycoVisionPage() {
                                       <span className="font-semibold uppercase">{mod.nutrient}</span>
                                       <span className="line-through">{mod.current_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
                                       <span className="text-green-600 dark:text-green-400">→ {mod.suggested_value}{mod.nutrient === 'Calories' ? 'kcal' : 'g'}</span>
-                                      {mod.calories_saved > 0 && (
+                                      {(mod.calories_saved ?? 0) > 0 && (
                                         <span className="rounded-full bg-green-100 px-2 py-0.5 font-medium text-green-700 dark:bg-green-900/40 dark:text-green-300">
                                           {lang === 'bn' ? `${mod.calories_saved} kcal সাশ্রয়` : `Save ${mod.calories_saved} kcal`}
                                         </span>
