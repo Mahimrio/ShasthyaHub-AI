@@ -200,7 +200,7 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
       variants={container}
       initial="hidden"
       animate="show"
-      className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-6 dark:border-gray-700/60 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 space-y-5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.14),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.18),0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-300 relative overflow-hidden"
+      className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-6 dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm space-y-5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.14),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.18),0_8px_24px_rgba(0,0,0,0.5)] transition-all duration-300 relative overflow-hidden"
     >
       {/* Decorative Radial Inner Glow */}
       <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-gradient-to-br from-sky-400/8 to-transparent blur-2xl dark:from-sky-400/15" />
@@ -311,7 +311,8 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
         <Button
           onClick={handleDownload}
           disabled={isDownloading}
-          className="flex-1 rounded-xl h-11 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:opacity-50"
+          variant="outline"
+          className="flex-1 rounded-xl h-11 border-sky-200 text-sky-700 hover:bg-sky-50 hover:text-sky-800 dark:border-sky-800 dark:text-sky-300 dark:hover:bg-sky-950/40 dark:hover:text-sky-200 active:scale-[0.99] transition-all disabled:opacity-50"
         >
           {isDownloading ? (
             <span className="text-xs">{lang === 'bn' ? 'তৈরি হচ্ছে...' : 'Generating...'}</span>
@@ -324,7 +325,8 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
         </Button>
         <Button
           onClick={handleShare}
-          className="flex-1 rounded-xl h-11 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+          variant="ghost"
+          className="flex-1 rounded-xl h-11 text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 active:scale-[0.99] transition-all"
         >
           <Share2 className="mr-2 h-4 w-4" />
           <span className="text-xs font-semibold">{shareStatus ?? (lang === 'bn' ? 'শেয়ার করুন' : 'Share Data')}</span>

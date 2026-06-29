@@ -107,11 +107,11 @@ export default function NayanAIPage() {
       {isLoading && <AnalyzingAnimation />}
 
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-sky-50/30 to-emerald-50/20 dark:from-gray-950 dark:via-sky-950/30 dark:to-emerald-950/20 animate-gradient-bg z-0">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-sky-50/60 via-sky-100/30 to-cyan-50/50 dark:from-gray-950 dark:via-sky-950/30 dark:to-cyan-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-[140px] animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-emerald-300/35 dark:bg-emerald-500/20 blur-[140px] animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/60 dark:bg-sky-500/15 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-cyan-300/50 dark:bg-cyan-500/15 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-blue-200/45 dark:bg-blue-500/10 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">
@@ -140,7 +140,7 @@ export default function NayanAIPage() {
             variants={stepsContainer}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] hover:border-sky-200 transition-all duration-300 dark:border-gray-700/60 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)] dark:hover:border-sky-800/60 md:grid-cols-3"
+            className="grid grid-cols-1 gap-4 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] hover:border-sky-200 transition-all duration-300 dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)] dark:hover:border-sky-800/60 md:grid-cols-3"
           >
             {INSTRUCTIONS.map((item) => (
               <motion.div 
@@ -206,7 +206,7 @@ export default function NayanAIPage() {
                 >
                   <Button
                     onClick={handleReset}
-                    className="w-full rounded-xl h-12 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+                    className="w-full rounded-xl h-12 bg-sky-500 hover:bg-sky-600 active:bg-sky-700 text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
                   >
                     {lang === 'bn' ? 'নতুন ছবি আপলোড করুন' : 'Upload New Image'}
                   </Button>

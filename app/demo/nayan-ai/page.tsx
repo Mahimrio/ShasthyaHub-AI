@@ -67,11 +67,11 @@ export default function DemoNayanAIPage() {
       {state === 'processing' && <AnalyzingAnimation />}
 
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-sky-50/30 to-emerald-50/20 dark:from-gray-950 dark:via-sky-950/30 dark:to-emerald-950/20 animate-gradient-bg z-0">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-sky-50/60 via-sky-100/30 to-cyan-50/50 dark:from-gray-950 dark:via-sky-950/30 dark:to-cyan-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-[140px] animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-emerald-300/35 dark:bg-emerald-500/20 blur-[140px] animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/60 dark:bg-sky-500/15 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-cyan-300/50 dark:bg-cyan-500/15 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-blue-200/45 dark:bg-blue-500/10 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">
@@ -106,7 +106,7 @@ export default function DemoNayanAIPage() {
         {/* Run demo (idle + complete both show the button) */}
         {state !== 'processing' && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="rounded-2xl border-2 border-dashed border-sky-200 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-sky-800/50 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
+            <div className="rounded-2xl border-2 border-dashed border-sky-200 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-sky-800/50 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
               <Eye className="mx-auto mb-3 h-10 w-10 text-sky-400" />
               <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
                 {lang === 'bn'

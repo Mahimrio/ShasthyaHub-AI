@@ -58,3 +58,6 @@ logs/
 
 # Turbo
 .turbo/
+
+# opencode config
+opencode.json
