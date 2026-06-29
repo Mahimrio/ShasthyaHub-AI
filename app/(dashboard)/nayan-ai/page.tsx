@@ -107,11 +107,11 @@ export default function NayanAIPage() {
       {isLoading && <AnalyzingAnimation />}
 
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-violet-50/25 to-indigo-50/20 dark:from-gray-950 dark:via-violet-950/30 dark:to-indigo-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-sky-50/60 via-sky-100/30 to-cyan-50/50 dark:from-gray-950 dark:via-sky-950/30 dark:to-cyan-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-violet-300/35 dark:bg-violet-500/15 blur-[140px] motion-reduce:hidden animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-indigo-300/30 dark:bg-indigo-500/15 blur-[140px] motion-reduce:hidden animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-purple-200/25 dark:bg-purple-500/10 blur-[160px] motion-reduce:hidden animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/60 dark:bg-sky-500/15 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-cyan-300/50 dark:bg-cyan-500/15 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-blue-200/45 dark:bg-blue-500/10 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">

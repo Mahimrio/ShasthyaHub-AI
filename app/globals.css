@@ -116,7 +116,7 @@ body {
 
 .animate-gradient-x {
   background-size: 200% auto;
-  animation: gradient-x 4s ease infinite;
+  animation: gradient-x 3s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

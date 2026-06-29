@@ -424,7 +424,7 @@ export default function DemoGlycoVisionPage() {
             </motion.div>
 
             {/* Run again */}
-            <Button onClick={reset} className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all">
+            <Button onClick={reset} className="w-full rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all">
               <RotateCcw className="mr-2 h-4 w-4" />
               {lang === 'bn' ? 'আবার চালান' : 'Run Again'}
             </Button>

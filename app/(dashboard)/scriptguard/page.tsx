@@ -232,7 +232,7 @@ export default function ScriptGuardPage() {
             {/* Reset */}
             <Button
               onClick={handleReset}
-              className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+              className="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               {lang === 'bn'
