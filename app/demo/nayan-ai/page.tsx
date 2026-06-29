@@ -66,7 +66,16 @@ export default function DemoNayanAIPage() {
 
       {state === 'processing' && <AnalyzingAnimation />}
 
-      <div className="mx-auto min-h-screen max-w-3xl space-y-6 p-4 md:p-6">
+      {/* Dynamic Animated Fixed Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-sky-50/30 to-emerald-50/20 dark:from-gray-950 dark:via-sky-950/30 dark:to-emerald-950/20 animate-gradient-bg z-0">
+        {/* Ambient Radial Gradient Blobs */}
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-[140px] animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-emerald-300/35 dark:bg-emerald-500/20 blur-[140px] animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+      </div>
+
+      <div className="relative min-h-screen z-10">
+        <div className="relative z-10 mx-auto max-w-3xl space-y-6 p-4 md:p-6">
         {/* Demo banner */}
         <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-900/20">
           <span className="text-lg">🎯</span>
@@ -97,7 +106,7 @@ export default function DemoNayanAIPage() {
         {/* Run demo (idle + complete both show the button) */}
         {state !== 'processing' && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <div className="rounded-2xl border-2 border-dashed border-sky-200 bg-sky-50/50 p-8 text-center dark:border-sky-900/50 dark:bg-sky-900/10">
+            <div className="rounded-2xl border-2 border-dashed border-sky-200 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-sky-800/50 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
               <Eye className="mx-auto mb-3 h-10 w-10 text-sky-400" />
               <p className="mb-4 text-sm text-gray-500 dark:text-gray-400">
                 {lang === 'bn'
@@ -106,7 +115,7 @@ export default function DemoNayanAIPage() {
               </p>
               <Button
                 onClick={handleRunClick}
-                className="rounded-xl bg-gradient-to-r from-sky-500 to-emerald-500 px-8 py-5 text-base font-semibold text-white hover:opacity-90"
+                className="rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x px-8 py-5 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
               >
                 <Play className="mr-2 h-5 w-5" />
                 {lang === 'bn' ? 'ডেমো চালান' : 'Run Demo'}
@@ -120,13 +129,14 @@ export default function DemoNayanAIPage() {
           <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }}>
             <EyeResultCard result={DEMO_RESULT} lang={lang} />
             <div className="mt-4">
-              <Button onClick={reset} variant="outline" className="w-full rounded-xl">
+              <Button onClick={reset} className="w-full rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all">
                 <RotateCcw className="mr-2 h-4 w-4" />
                 {lang === 'bn' ? 'আবার চালান' : 'Run Again'}
               </Button>
             </div>
           </motion.div>
         )}
+      </div>
       </div>
     </>
   )

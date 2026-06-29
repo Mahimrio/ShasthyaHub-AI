@@ -119,7 +119,17 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+    <>
+      {/* Dynamic Animated Fixed Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/20 dark:from-gray-950 dark:via-purple-950/30 dark:to-pink-950/20 animate-gradient-bg z-0">
+        {/* Ambient Radial Gradient Blobs */}
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-purple-300/40 dark:bg-purple-500/20 blur-[140px] animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-pink-300/35 dark:bg-pink-500/20 blur-[140px] animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-fuchsia-200/25 dark:bg-fuchsia-600/15 blur-[160px] animate-float-3" />
+      </div>
+
+      <div className="relative min-h-screen z-10">
+        <div className="relative z-10 max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
@@ -175,7 +185,7 @@ export default function ReportsPage() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-10 text-center"
+          className="bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-10 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
         >
           <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="h-6 w-6 text-gray-400 dark:text-gray-500" />
@@ -214,7 +224,7 @@ export default function ReportsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 className={cn(
-                  'bg-white dark:bg-gray-800 rounded-2xl border p-4 flex items-center gap-4 transition-shadow hover:shadow-sm',
+                  'bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border p-4 flex items-center gap-4 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(168,85,247,0.06)] hover:shadow-[0_20px_60px_rgba(168,85,247,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_20px_60px_rgba(168,85,247,0.15),0_8px_24px_rgba(0,0,0,0.5)]',
                   isDangerous
                     ? 'border-red-200 dark:border-red-900/50'
                     : 'border-gray-100 dark:border-gray-700'
@@ -276,5 +286,7 @@ export default function ReportsPage() {
         </div>
       )}
     </div>
+    </div>
+    </>
   )
 }

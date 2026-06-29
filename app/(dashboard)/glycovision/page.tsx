@@ -201,7 +201,16 @@ export default function GlycoVisionPage() {
         />
       )}
 
-      <div className="mx-auto max-w-3xl space-y-6 p-4 md:p-6">
+      {/* Dynamic Animated Fixed Background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-amber-50/30 to-orange-50/20 dark:from-gray-950 dark:via-amber-950/30 dark:to-orange-950/20 animate-gradient-bg z-0">
+        {/* Ambient Radial Gradient Blobs */}
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-amber-300/40 dark:bg-amber-500/20 blur-[140px] animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-orange-300/35 dark:bg-orange-500/20 blur-[140px] animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-yellow-200/25 dark:bg-yellow-600/15 blur-[160px] animate-float-3" />
+      </div>
+
+      <div className="relative min-h-screen z-10">
+        <div className="relative z-10 mx-auto max-w-3xl space-y-6 p-4 md:p-6">
         {/* Header */}
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500">
@@ -513,8 +522,7 @@ export default function GlycoVisionPage() {
                     {/* Re-upload button */}
                     <Button
                       onClick={handleReset}
-                      variant="outline"
-                      className="w-full rounded-xl"
+                      className="w-full rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
                     >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       {lang === 'bn' ? 'নতুন খাবারের ছবি আপলোড করুন' : 'Analyze Another Meal'}
@@ -533,7 +541,7 @@ export default function GlycoVisionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+            <div className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-gray-700/60 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
               <Clock className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                 {lang === 'bn' ? 'খাদ্য বিশ্লেষণের ইতিহাস' : 'Meal Analysis History'}
@@ -573,6 +581,7 @@ export default function GlycoVisionPage() {
               : 'ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}
           </p>
         )}
+      </div>
       </div>
     </>
   )
