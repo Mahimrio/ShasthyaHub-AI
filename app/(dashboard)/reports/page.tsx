@@ -121,11 +121,11 @@ export default function ReportsPage() {
   return (
     <>
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/20 dark:from-gray-950 dark:via-purple-950/30 dark:to-pink-950/20 animate-gradient-bg z-0">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-purple-50/30 to-pink-50/20 dark:from-gray-950 dark:via-purple-950/30 dark:to-pink-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-purple-300/40 dark:bg-purple-500/20 blur-[140px] animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-pink-300/35 dark:bg-pink-500/20 blur-[140px] animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-fuchsia-200/25 dark:bg-fuchsia-600/15 blur-[160px] animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-purple-300/40 dark:bg-purple-500/20 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-pink-300/35 dark:bg-pink-500/20 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-fuchsia-200/25 dark:bg-fuchsia-600/15 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">
@@ -185,7 +185,7 @@ export default function ReportsPage() {
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-10 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
+          className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-10 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
         >
           <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
             <Search className="h-6 w-6 text-gray-400 dark:text-gray-500" />
@@ -224,7 +224,7 @@ export default function ReportsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 className={cn(
-                  'bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border p-4 flex items-center gap-4 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(168,85,247,0.06)] hover:shadow-[0_20px_60px_rgba(168,85,247,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_20px_60px_rgba(168,85,247,0.15),0_8px_24px_rgba(0,0,0,0.5)]',
+                  'bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border p-4 flex items-center gap-4 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(168,85,247,0.06)] hover:shadow-[0_20px_60px_rgba(168,85,247,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_20px_60px_rgba(168,85,247,0.15),0_8px_24px_rgba(0,0,0,0.5)]',
                   isDangerous
                     ? 'border-red-200 dark:border-red-900/50'
                     : 'border-gray-100 dark:border-gray-700'

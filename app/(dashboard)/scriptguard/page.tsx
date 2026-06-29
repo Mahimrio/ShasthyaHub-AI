@@ -98,11 +98,11 @@ export default function ScriptGuardPage() {
       )}
 
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-emerald-950/30 dark:to-teal-950/20 animate-gradient-bg z-0">
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-emerald-50/30 to-teal-50/20 dark:from-gray-950 dark:via-emerald-950/30 dark:to-teal-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-emerald-300/40 dark:bg-emerald-500/20 blur-[140px] animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-teal-300/35 dark:bg-teal-500/20 blur-[140px] animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-emerald-300/40 dark:bg-emerald-500/20 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-teal-300/35 dark:bg-teal-500/20 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">
@@ -128,7 +128,7 @@ export default function ScriptGuardPage() {
 
         {/* Photo tip box */}
         {!result && (
-          <div className="flex items-start gap-3 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-4 dark:border-gray-700/60 dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(16,185,129,0.06)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(16,185,129,0.08)]">
+          <div className="flex items-start gap-3 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-4 dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(16,185,129,0.06)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(16,185,129,0.08)]">
             <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
             <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-200">
               {lang === 'bn'
@@ -232,7 +232,7 @@ export default function ScriptGuardPage() {
             {/* Reset */}
             <Button
               onClick={handleReset}
-              className="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+              className="w-full rounded-xl bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               {lang === 'bn'

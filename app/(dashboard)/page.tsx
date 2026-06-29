@@ -94,13 +94,13 @@ export default function DashboardHome() {
       className="relative min-h-screen z-10"
     >
       {/* Dynamic Animated Fixed Background */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-sky-50/30 to-emerald-50/20 dark:from-gray-950 dark:via-sky-950/30 dark:to-emerald-950/20 animate-gradient-bg z-0" />
+      <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-gray-50 via-sky-50/30 to-emerald-50/20 dark:from-gray-950 dark:via-sky-950/30 dark:to-emerald-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950" />
       
       {/* Ambient Radial Gradient Blobs */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-[140px] animate-float-1" />
-        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-emerald-300/35 dark:bg-emerald-500/20 blur-[140px] animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] animate-float-3" />
+        <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-sky-300/40 dark:bg-sky-500/20 blur-[140px] motion-reduce:hidden animate-float-1" />
+        <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-emerald-300/35 dark:bg-emerald-500/20 blur-[140px] motion-reduce:hidden animate-float-2" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto p-4 md:p-6 space-y-6">
@@ -111,7 +111,7 @@ export default function DashboardHome() {
       </motion.div>
 
       {/* Health Score Gauge */}
-      <motion.div variants={fadeUp} className="bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
+      <motion.div variants={fadeUp} className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
         {healthLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
@@ -193,7 +193,7 @@ export default function DashboardHome() {
           const Icon = feature.icon
           return (
             <Link key={feature.href} href={feature.href}>
-              <div className="bg-white/90 backdrop-blur-sm dark:bg-gradient-to-br dark:from-gray-900/90 dark:to-gray-800/70 rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 group cursor-pointer shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
+              <div className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 group cursor-pointer shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
                 <div className={`w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4`}>
                   <Icon className="h-6 w-6 text-white" />
                 </div>

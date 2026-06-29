@@ -119,6 +119,13 @@ body {
   animation: gradient-x 4s ease infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-gradient-x {
+    animation: none;
+    background-size: 100% auto;
+  }
+}
+
 @keyframes gradient-bg {
   0% {
     background-position: 0% 50%;
@@ -181,5 +188,17 @@ body {
 }
 .animate-float-3 {
   animation: float-slow-3 22s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-gradient-bg {
+    animation: none;
+  }
+  .animate-float-1,
+  .animate-float-2,
+  .animate-float-3 {
+    animation: none;
+    display: none;
+  }
 }
 
