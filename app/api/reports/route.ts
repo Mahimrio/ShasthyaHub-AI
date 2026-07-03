@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
     const offset = (page - 1) * limit
     const paginated = results.slice(offset, offset + limit)
 
-    return NextResponse.json({ data: paginated, page, limit, total: results.length })
+    return NextResponse.json({ success: true, data: paginated, page, limit, total: results.length })
   } catch (error) {
     console.error('[reports] failed to fetch:', error)
     return NextResponse.json<ApiError>(
