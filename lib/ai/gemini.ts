@@ -75,95 +75,15 @@ export function extractJsonSafely(text: string): object {
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-// ── Concurrency limiter ────────────────────────────────────────────────────
-// Free-tier Gemini 2.5 Flash allows ~10 RPM.  This ensures at most 1
-// outstanding request at a time so multiple simultaneous analyses don't all
-// hit the rate limit simultaneously.
-let activeRequests = 0
-const MAX_CONCURRENT = 1
-
-async function withConcurrencyLimit<T>(fn: () => Promise<T>): Promise<T> {
-  for (let i = 0; i < 120; i++) {
-    if (activeRequests < MAX_CONCURRENT) {
-      activeRequests++
-      try {
-        return await fn()
-      } finally {
-        activeRequests--
-      }
-    }
-    await sleep(1000)
-  }
-  throw new GeminiError('Concurrency limit wait timed out.', 503)
-}
-
-// ── Shared retry helper ────────────────────────────────────────────────────
-
-async function attemptWithRetry(
-  modelName: string,
-  callFn: (model: string) => Promise<object>,
-  feature: string,
-  start: number
-): Promise<object> {
-  const delays = [5000, 15000, 30000]
-
-  for (let attempt = 0; attempt <= delays.length; attempt++) {
-    try {
-      return await callFn(modelName)
-    } catch (error) {
-      const elapsed = Date.now() - start
-      console.error(`[Gemini Error] attempt ${attempt + 1}`, {
-        feature,
-        model: modelName,
-        error: error instanceof Error ? error.message : String(error),
-        timestamp: new Date().toISOString(),
-        elapsed_ms: elapsed,
-      })
-
-      const errorMessage = error instanceof Error ? error.message : ''
-      const is429 =
-        errorMessage.includes('429') ||
-        errorMessage.includes('RESOURCE_EXHAUSTED') ||
-        errorMessage.includes('rate')
-      const is503 =
-        errorMessage.includes('503') ||
-        errorMessage.includes('UNAVAILABLE') ||
-        errorMessage.includes('Service Unavailable')
-
-      // Non-retryable errors — throw immediately.
-      if (!is429 && !is503) {
-        if (error instanceof JsonExtractionError) throw error
-        throw new GeminiError(
-          `Analysis failed: ${error instanceof Error ? error.message : String(error)}`,
-          error instanceof GeminiError ? error.statusCode : 500
-        )
-      }
-
-      // Retryable — wait with exponential backoff.
-      if (attempt < delays.length) {
-        const wait = delays[attempt]!
-        console.warn(`[Gemini] ${is429 ? 'Rate limited (429)' : 'Unavailable (503)'}. Waiting ${wait}ms before retry ${attempt + 2}...`)
-        await sleep(wait)
-        continue
-      }
-
-      // All retries exhausted.
-      const statusCode = is429 ? 429 : 503
-      throw new GeminiError(
-        `${is429 ? 'Rate limited' : 'Unavailable'} after ${delays.length + 1} attempts: ${error instanceof Error ? error.message : String(error)}`,
-        statusCode
-      )
-    }
-  }
-
-  throw new GeminiError(`Unexpected: all retries exhausted without result.`, 500)
-}
-
 // ── callGeminiVision with retry ────────────────────────────────────────────
 
 /**
  * Run Gemini on an image + prompt and return a parsed JSON object.
- * Retries with exponential backoff on 429 / 503.
+ *
+ * Retry logic:
+ *   HTTP 429 (rate limit)  → wait 5000ms, retry once with gemini-1.5-flash
+ *   HTTP 503 (unavailable) → wait 3000ms, retry once
+ *   Other errors           → throw GeminiError immediately
  */
 export async function callGeminiVision(
   imageBase64: string,
@@ -173,7 +93,7 @@ export async function callGeminiVision(
   const feature = 'gemini-vision'
   const start = Date.now()
 
-  async function callFn(modelName: string): Promise<object> {
+  async function attempt(modelName: string): Promise<object> {
     const model = getClient().getGenerativeModel({ model: modelName })
     const result = await model.generateContent([
       { inlineData: { data: imageBase64, mimeType } },
@@ -183,26 +103,96 @@ export async function callGeminiVision(
     return extractJsonSafely(text)
   }
 
-  return withConcurrencyLimit(() => attemptWithRetry('gemini-2.5-flash', callFn, feature, start))
+  try {
+    return await attempt('gemini-2.5-flash')
+  } catch (error) {
+    const elapsed = Date.now() - start
+    console.error('[Gemini Error]', {
+      feature,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      elapsed_ms: elapsed,
+    })
+
+    // Check if the SDK extracted an HTTP status from the error.
+    const errorMessage = error instanceof Error ? error.message : ''
+    const is429 =
+      errorMessage.includes('429') ||
+      errorMessage.includes('RESOURCE_EXHAUSTED') ||
+      errorMessage.includes('rate')
+    const is503 =
+      errorMessage.includes('503') ||
+      errorMessage.includes('UNAVAILABLE') ||
+      errorMessage.includes('Service Unavailable')
+
+    if (is429) {
+      console.warn('[Gemini] Rate limited (429). Waiting 5s, retrying with gemini-1.5-flash...')
+      await sleep(5000)
+      try {
+        return await attempt('gemini-1.5-flash')
+      } catch (retryError) {
+        console.error('[Gemini] Retry with gemini-1.5-flash also failed:', retryError)
+        throw new GeminiError(
+          `Vision analysis rate limited: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
+          429
+        )
+      }
+    }
+
+    if (is503) {
+      console.warn('[Gemini] Service unavailable (503). Waiting 3s, retrying...')
+      await sleep(3000)
+      try {
+        return await attempt('gemini-2.5-flash')
+      } catch (retryError) {
+        console.error('[Gemini] Retry after 503 also failed:', retryError)
+        throw new GeminiError(
+          `Vision analysis unavailable: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
+          503
+        )
+      }
+    }
+
+    // Wrap any other Gemini error.
+    if (error instanceof JsonExtractionError) {
+      throw error // re-throw as-is
+    }
+    throw new GeminiError(
+      `Vision analysis failed: ${error instanceof Error ? error.message : String(error)}`,
+      error instanceof GeminiError ? error.statusCode : 500
+    )
+  }
 }
 
-// ── callGeminiText with retry ──────────────────────────────────────────────
+// ── callGeminiText ─────────────────────────────────────────────────────────
 
 /**
  * Run Gemini 2.5 Flash on a text-only prompt and return a parsed JSON object.
  * Used for fallback paths when Groq is unavailable and for the health check.
- * Same retry logic (exponential backoff, concurrency limit) as the vision path.
  */
 export async function callGeminiText(prompt: string): Promise<object> {
   const feature = 'gemini-text'
   const start = Date.now()
 
-  async function callFn(modelName: string): Promise<object> {
-    const model = getClient().getGenerativeModel({ model: modelName })
+  try {
+    const model = getClient().getGenerativeModel({ model: 'gemini-2.5-flash' })
     const result = await model.generateContent(prompt)
     const text = result.response.text()
     return extractJsonSafely(text)
-  }
+  } catch (error) {
+    console.error('[Gemini Error]', {
+      feature,
+      error: error instanceof Error ? error.message : String(error),
+      timestamp: new Date().toISOString(),
+      elapsed_ms: Date.now() - start,
+    })
 
-  return withConcurrencyLimit(() => attemptWithRetry('gemini-2.5-flash', callFn, feature, start))
+    if (error instanceof JsonExtractionError) {
+      throw error
+    }
+    throw new GeminiError(
+      `Text analysis failed: ${error instanceof Error ? error.message : String(error)}`,
+      500
+    )
+  }
 }

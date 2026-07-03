@@ -75,8 +75,9 @@ export const drugInteractions: StaticInteraction[] = [
 
 const GROQ_INTERACTION_PROMPT = `
 You are a clinical pharmacology AI assistant for rural Bangladesh.
-You receive a list of generic drugs prescribed together. Your job is to flag
-dangerous drug-drug interactions for a patient with limited medical literacy.
+You receive a list of generic drugs prescribed together and, where available,
+warnings extracted from the US FDA drug labels. Your job is to flag dangerous
+drug-drug interactions for a patient with limited medical literacy.
 
 Focus especially on: anticoagulants, NSAIDs, SSRIs, sedatives, antibiotics,
 and antihypertensives.
@@ -104,10 +105,81 @@ Rules:
 - All Bengali fields must use simple, layperson-friendly language.
 `;
 
+// --- OpenFDA (tier 1: evidence gathering) -----------------------------------
+
+const OPENFDA_BASE = 'https://api.fda.gov/drug/label.json';
+
 /** Canonical DrugInteraction.severity values. */
 const SEVERITIES = ['Mild', 'Moderate', 'Severe', 'Critical'] as const;
 
-// --- Groq reasoning (tier 1: authoritative assessment) ----------------------
+/** One drug pair, lowercased + sorted so (a,b) and (b,a) dedupe. */
+interface DrugPair {
+  a: string;
+  b: string;
+  key: string;
+}
+
+function makePairs(generics: string[]): DrugPair[] {
+  const pairs: DrugPair[] = [];
+  for (let i = 0; i < generics.length; i++) {
+    for (let j = i + 1; j < generics.length; j++) {
+      const [a, b] = [generics[i]!, generics[j]!].sort();
+      pairs.push({ a: a!, b: b!, key: `${a}__${b}` });
+    }
+  }
+  return pairs;
+}
+
+/**
+ * Query OpenFDA for label warnings mentioning both drugs. A 404 means "no
+ * matching label" — a valid "no interaction found" result, not an error.
+ * Any other failure (5xx, network, malformed JSON) returns null so the pair is
+ * simply skipped without aborting the batch.
+ */
+async function queryOpenFda(pair: DrugPair): Promise<string | null> {
+  const search = `drug_interactions:"${pair.a}"+AND+"${pair.b}"`;
+  const url = `${OPENFDA_BASE}?search=${encodeURIComponent(
+    search
+  ).replace(/%2B/g, '+')}&limit=3`;
+
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      // Serverless route — never let a hung FDA call block the response.
+      next: { revalidate: 0 },
+    });
+
+    if (res.status === 404) return null; // clean: no interaction label found
+    if (!res.ok) {
+      console.warn('[drug-interaction] OpenFDA non-OK %d for %s+%s', res.status, pair.a, pair.b);
+      return null;
+    }
+
+    const json = (await res.json()) as { results?: unknown[] };
+    const results = Array.isArray(json.results) ? json.results : [];
+    if (results.length === 0) return null;
+
+    // Pull any free-text warnings/interactions fields to feed Groq as evidence.
+    const snippets: string[] = [];
+    for (const entry of results) {
+      const obj = entry as Record<string, unknown>;
+      for (const field of ['warnings', 'warnings_and_cautions', 'drug_interactions']) {
+        const val = obj[field];
+        if (Array.isArray(val)) {
+          for (const s of val) if (typeof s === 'string') snippets.push(s);
+        } else if (typeof val === 'string') {
+          snippets.push(val);
+        }
+      }
+    }
+    return snippets.length > 0 ? snippets.join(' | ') : null;
+  } catch (err) {
+    console.warn('[drug-interaction] OpenFDA fetch failed for %s+%s:', pair.a, pair.b, err);
+    return null;
+  }
+}
+
+// --- Groq reasoning (tier 2: authoritative assessment) ----------------------
 
 function isDrugInteractionArray(val: unknown): val is DrugInteraction[] {
   if (!Array.isArray(val)) return false;
@@ -210,22 +282,41 @@ export async function checkDrugInteractions(
   );
   if (generics.length < 2) return [];
 
-  // Tier 1 — Groq assessment (fast, no external API dependencies).
+  const pairs = makePairs(generics);
+
+  // Tier 1 — gather OpenFDA evidence per pair (non-fatal on failure).
+  const evidenceResults = await Promise.allSettled(pairs.map(queryOpenFda));
+  const fdaEvidence: string[] = [];
+  for (let i = 0; i < pairs.length; i++) {
+    const r = evidenceResults[i];
+    if (r?.status === 'fulfilled' && r.value) {
+      fdaEvidence.push(`${pairs[i]!.a} + ${pairs[i]!.b}: ${r.value}`);
+    }
+  }
+
+  // Tier 2 — one Groq call over the whole list + FDA evidence.
   try {
     const drugList = generics.join(', ');
+    const evidenceBlock =
+      fdaEvidence.length > 0
+        ? `\n\nFDA label evidence (use this, but apply clinical judgment):\n${fdaEvidence.join('\n')}`
+        : '\n\n(No FDA label matches were found — rely on your pharmacology knowledge.)';
+
     const raw = await callGroq(
-      `These drugs are prescribed together on a Bangladeshi prescription: ${drugList}.`,
+      `These drugs are prescribed together on a Bangladeshi prescription: ${drugList}.${evidenceBlock}`,
       GROQ_INTERACTION_PROMPT
     );
     const interactions = coerceInteractions(raw);
     if (interactions.length > 0) return interactions;
 
-    // Groq found nothing meaningful — double-check the static list as a safety net.
-    return lookupStaticInteractions(generics);
+    // Groq found nothing meaningful. That's a valid "no interactions" result —
+    // but double-check the static list as a safety net before returning empty.
+    const staticHits = lookupStaticInteractions(generics);
+    return staticHits;
   } catch (err) {
     console.warn('[drug-interaction] Groq failed, using static fallback:', err);
 
-    // Tier 2 — curated static list (only the pairs present in the prescription).
+    // Tier 3 — curated static list (only the pairs present in the prescription).
     return lookupStaticInteractions(generics);
   }
 }

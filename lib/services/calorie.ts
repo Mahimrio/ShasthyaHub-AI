@@ -284,9 +284,7 @@ export async function lookupNutrition(
  * values. Each item's calories / macros are scaled from per-100g by the
  * estimated portion weight.
  *
- * Lookup chain: Supabase `bd_food_items` → Groq batch (all unknowns in 1 call).
- * USDA API is intentionally skipped — it adds latency and rarely matches
- * Bangladeshi cuisine; the static DB + Groq batch is faster and more reliable.
+ * Lookup chain: Supabase `bd_food_items` → USDA API → Groq LLM estimate.
  */
 export async function calculateTotalNutrition(
   foodItems: GeminiFoodItem[],
@@ -294,57 +292,39 @@ export async function calculateTotalNutrition(
 ): Promise<EnrichedFoodItem[]> {
   const { callGroq } = await import('@/lib/ai/groq');
 
-  // Phase 1 — look up every item in Supabase (fast, no external API)
-  const lookupResults = await Promise.all(
-    foodItems.map(async (item) => ({
-      item,
-      nutrition: await lookupNutrition(item.name_en, supabase),
-    }))
-  );
+  const results = await Promise.all(
+    foodItems.map(async (item) => {
+      let nutrition = await lookupNutrition(item.name_en, supabase);
 
-  // Phase 2 — batch-ask Groq for any items Supabase couldn't resolve
-  const unknownItems = lookupResults.filter((r) => !r.nutrition).map((r) => r.item);
-
-  const batchNutrition: Map<string, { calories_per_100g: number; carbs_per_100g: number; protein_per_100g: number; fat_per_100g: number }> = new Map();
-
-  if (unknownItems.length > 0) {
-    const itemNames = unknownItems.map((i) => i.name_en).join('", "');
-    const prompt = `You are a clinical dietitian specializing in South Asian cuisine. Estimate the nutritional values per 100g for each of these Bangladeshi food items: "${itemNames}". Consider typical Bangladeshi cooking methods (oil, ghee, coconut milk, frying). Return ONLY valid JSON — an array of objects, each with these exact keys: name_en (string), calories_per_100g (integer), carbs_per_100g (number), protein_per_100g (number), fat_per_100g (number).`;
-    try {
-      const raw = await callGroq(`Estimate per-100g nutrition for Bangladeshi items: ${itemNames}`, prompt);
-      const arr = Array.isArray(raw) ? raw : ((raw ?? {}) as Record<string, unknown>)['items'] ?? [];
-      if (Array.isArray(arr)) {
-        for (const entry of arr) {
-          const o = (entry ?? {}) as Record<string, unknown>;
-          const name = typeof o['name_en'] === 'string' ? o['name_en'] : '';
-          if (name) {
-            batchNutrition.set(name, {
-              calories_per_100g: typeof o['calories_per_100g'] === 'number' ? o['calories_per_100g'] : 0,
-              carbs_per_100g: typeof o['carbs_per_100g'] === 'number' ? o['carbs_per_100g'] : 0,
-              protein_per_100g: typeof o['protein_per_100g'] === 'number' ? o['protein_per_100g'] : 0,
-              fat_per_100g: typeof o['fat_per_100g'] === 'number' ? o['fat_per_100g'] : 0,
-            });
-          }
+      if (!nutrition) {
+        try {
+          const prompt = `You are a clinical dietitian specializing in South Asian cuisine. Estimate the nutritional values per 100g for the Bangladeshi food item "${item.name_en}". Consider typical Bangladeshi cooking methods (oil用量, coconut milk, ghee). Return ONLY valid JSON with these exact keys: calories_per_100g (integer), carbs_per_100g (number), protein_per_100g (number), fat_per_100g (number).`;
+          const raw = await callGroq(`Estimate per-100g nutrition for Bangladeshi: ${item.name_en}`, prompt);
+          const o = (raw ?? {}) as Record<string, unknown>;
+          nutrition = {
+            calories_per_100g: typeof o['calories_per_100g'] === 'number' ? o['calories_per_100g'] : 0,
+            carbs_per_100g: typeof o['carbs_per_100g'] === 'number' ? o['carbs_per_100g'] : 0,
+            protein_per_100g: typeof o['protein_per_100g'] === 'number' ? o['protein_per_100g'] : 0,
+            fat_per_100g: typeof o['fat_per_100g'] === 'number' ? o['fat_per_100g'] : 0,
+          };
+        } catch {
+          nutrition = { calories_per_100g: 0, carbs_per_100g: 0, protein_per_100g: 0, fat_per_100g: 0 };
         }
       }
-    } catch {
-      // batch Groq failed — all unknown items get zero defaults
-    }
-  }
 
-  // Phase 3 — assemble results
-  return lookupResults.map(({ item, nutrition }) => {
-    const n = nutrition ?? batchNutrition.get(item.name_en) ?? { calories_per_100g: 0, carbs_per_100g: 0, protein_per_100g: 0, fat_per_100g: 0 };
-    const factor = item.estimated_grams / 100;
-    return {
-      name_en: item.name_en,
-      name_bn: item.name_bn,
-      estimated_grams: item.estimated_grams,
-      calories: Math.round(n.calories_per_100g * factor),
-      confidence: item.confidence,
-      carbs_g: Math.round(n.carbs_per_100g * factor * 10) / 10,
-      protein_g: Math.round(n.protein_per_100g * factor * 10) / 10,
-      fat_g: Math.round(n.fat_per_100g * factor * 10) / 10,
-    };
-  });
+      const factor = item.estimated_grams / 100;
+      return {
+        name_en: item.name_en,
+        name_bn: item.name_bn,
+        estimated_grams: item.estimated_grams,
+        calories: Math.round(nutrition.calories_per_100g * factor),
+        confidence: item.confidence,
+        carbs_g: Math.round(nutrition.carbs_per_100g * factor * 10) / 10,
+        protein_g: Math.round(nutrition.protein_per_100g * factor * 10) / 10,
+        fat_g: Math.round(nutrition.fat_per_100g * factor * 10) / 10,
+      };
+    })
+  );
+
+  return results;
 }
