@@ -19,6 +19,9 @@ type NayanAnalyzeData = {
   urgency_days: number
   next_steps: string[]
   specialist_needed: string
+  disease_description_en?: string
+  disease_description_bn?: string
+  disease_stage?: string
   confidence_score: number
 }
 
@@ -92,6 +95,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
         urgency_days: result.urgency_days,
         next_steps: result.next_steps,
         specialist_needed: result.specialist_needed,
+        disease_description_en: result.disease_description_en,
+        disease_description_bn: result.disease_description_bn,
+        disease_stage: result.disease_stage,
         used_fallback: result.used_fallback,
       },
     }
@@ -123,6 +129,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
       urgency_days: result.urgency_days,
       next_steps: result.next_steps,
       specialist_needed: result.specialist_needed,
+      disease_description_en: result.disease_description_en || undefined,
+      disease_description_bn: result.disease_description_bn || undefined,
+      disease_stage: result.disease_stage || undefined,
       confidence_score: Math.round(result.confidence * 100),
     }
 

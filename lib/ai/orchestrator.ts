@@ -25,7 +25,6 @@ import { calculateTotalNutrition } from '@/lib/services/calorie';
  */
 
 export interface EyeAnalysisResult {
-  // Triage report from the second agent (Groq, or Flash fallback).
   diagnosis: string
   severity: GroqEyeOutput['severity']
   recommendation_en: string
@@ -33,11 +32,11 @@ export interface EyeAnalysisResult {
   urgency_days: number
   next_steps: string[]
   specialist_needed: string
-  // Confidence reported by the vision model (0–1).
+  disease_description_en: string
+  disease_description_bn: string
+  disease_stage: string
   confidence: number
-  // Preserved for the audit trail / DB record.
   gemini_raw_output: object
-  // True when the result came from the Flash fallback rather than Groq.
   used_fallback: boolean
 }
 
@@ -71,7 +70,10 @@ Output ONLY a JSON object:
   "recommendation_bn": "বাংলা string (সহজ বাংলায়, সর্বোচ্চ ৩ বাক্য)",
   "urgency_days": 0,
   "next_steps": ["string", "string"],
-  "specialist_needed": "Ophthalmologist|General Physician|None"
+  "specialist_needed": "Ophthalmologist|General Physician|None",
+  "disease_description_en": "string — 2-3 sentence plain-English explanation of what this eye condition is, what causes it, and how it progresses if untreated. Written for a patient with no medical background.",
+  "disease_description_bn": "বাংলা string — same 2-3 sentences in simple Bengali. Use everyday language a rural patient understands.",
+  "disease_stage": "string — Early|Moderate|Advanced|Unknown based on the visual findings."
 }
 urgency_days: 0 = emergency, 7 = urgent, 30 = soon, 90 = routine, 365 = annual checkup`
 
@@ -92,6 +94,8 @@ function coerceGroqOutput(raw: unknown): GroqEyeOutput {
     ? (o['next_steps'] as unknown[]).map((s) => String(s))
     : []
 
+  const validStages = ['Early', 'Moderate', 'Advanced', 'Unknown']
+
   return {
     diagnosis: typeof o['diagnosis'] === 'string' ? o['diagnosis'] : 'Unable to determine',
     severity: validSeverities.includes(severity) ? severity : 'Low',
@@ -106,6 +110,14 @@ function coerceGroqOutput(raw: unknown): GroqEyeOutput {
     next_steps: nextSteps.length > 0 ? nextSteps : ['Consult a doctor if symptoms persist.'],
     specialist_needed:
       typeof o['specialist_needed'] === 'string' ? o['specialist_needed'] : 'Ophthalmologist',
+    disease_description_en:
+      typeof o['disease_description_en'] === 'string' ? o['disease_description_en'] : '',
+    disease_description_bn:
+      typeof o['disease_description_bn'] === 'string' ? o['disease_description_bn'] : '',
+    disease_stage:
+      typeof o['disease_stage'] === 'string' && validStages.includes(o['disease_stage'] as string)
+        ? (o['disease_stage'] as string)
+        : 'Unknown',
   }
 }
 
@@ -151,6 +163,9 @@ export async function analyzeEyeImage(
     urgency_days: groqOutput.urgency_days,
     next_steps: groqOutput.next_steps,
     specialist_needed: groqOutput.specialist_needed,
+    disease_description_en: groqOutput.disease_description_en,
+    disease_description_bn: groqOutput.disease_description_bn,
+    disease_stage: groqOutput.disease_stage,
     confidence: extractConfidence(geminiOutput),
     gemini_raw_output: geminiOutput,
     used_fallback: usedFallback,
