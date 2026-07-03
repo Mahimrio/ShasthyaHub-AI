@@ -95,10 +95,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<ScriptGua
 
     if (insertError || !inserted) {
       console.error('[scriptguard/analyze] insert failed:', insertError?.message)
+      throw new Error(insertError?.message ?? 'Failed to save analysis result.')
     }
 
     const data: ScriptGuardAnalyzeData = {
-      id: inserted?.id ?? crypto.randomUUID(),
+      id: inserted.id,
       extracted_drugs: result.extracted_drugs,
       interaction_warnings: result.interaction_warnings,
       has_dangerous_interactions: result.has_dangerous_interactions,

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeEyeImage } from '@/lib/ai/orchestrator'
@@ -103,19 +104,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<NayanAnal
 
     if (insertError || !inserted) {
       console.error('[nayan/analyze] insert failed:', insertError?.message)
+      if (!uploadError) {
+        await supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
+      }
+      throw new Error(insertError?.message ?? 'Failed to save analysis result.')
     }
 
     if (!uploadError) {
-      const { error: deleteError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .remove([storagePath])
-      if (deleteError) {
-        console.error('[nayan/analyze] storage delete failed:', deleteError.message)
-      }
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]).catch(() => {})
     }
 
     const data: NayanAnalyzeData = {
-      id: inserted?.id ?? crypto.randomUUID(),
+      id: inserted.id,
       diagnosis: result.diagnosis,
       severity: result.severity,
       recommendation_en: result.recommendation_en,

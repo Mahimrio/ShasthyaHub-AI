@@ -135,6 +135,8 @@ CREATE TABLE food_analyses (
   risk_level TEXT CHECK (risk_level IN ('Green', 'Yellow', 'Red')),
   risk_summary_en TEXT,
   risk_summary_bn TEXT,
+  chronic_disease_risks JSONB,
+  glucose_impact TEXT,
   meal_modifications JSONB,
   error_message TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
