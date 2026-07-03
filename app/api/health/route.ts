@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import pkg from '@/package.json'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResponse>> {
     gemini: geminiStatus,
     groq: groqStatus,
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
+    version: pkg.version,
   }
 
   const allOk =
