@@ -2,10 +2,12 @@
 
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Eye, Info, RotateCcw, Search } from 'lucide-react'
+import { AlertTriangle, BookOpen, Eye, Info, RotateCcw, Search } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useNayanAnalysis } from '@/hooks/useNayanAnalysis'
 import { useNayanHistory } from '@/hooks/useNayanHistory'
+import { useDoctors } from '@/hooks/useDoctors'
+import { TopDoctorsCard } from '@/components/features/nayan-ai/TopDoctorsCard'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
@@ -14,6 +16,7 @@ import { severityLabel, severityStyles } from '@/components/features/nayan-ai/se
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { ResultCard } from '@/components/shared/ResultCard'
 import { formatDate } from '@/lib/utils'
 
 const DISCLAIMER_KEY = 'nayan_disclaimer_seen'
@@ -46,6 +49,10 @@ export default function NayanAIPage() {
   const { lang } = useLanguage()
   const { analyze, result, isLoading, isError, error, reset } = useNayanAnalysis()
   const { history, isLoading: historyLoading } = useNayanHistory()
+  const { doctors, isLoading: doctorsLoading } = useDoctors({
+    specialty: result?.specialist_needed ?? null,
+    enabled: !!result,
+  })
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   // Lazily read the "seen" flag at mount. SSR-safe: window is undefined during
@@ -238,8 +245,53 @@ export default function NayanAIPage() {
 
             {/* Right Column: Screen Result Details */}
             {result && (
-              <div className="md:col-span-7">
+              <div className="md:col-span-7 space-y-4">
                 <EyeResultCard result={result} lang={lang} />
+
+                {/* About This Condition */}
+                {(result.disease_description_en || result.disease_description_bn) && (
+                  <ResultCard
+                    title={lang === 'bn' ? 'এই রোগ সম্পর্কে' : 'About This Condition'}
+                    badge={
+                      result.disease_stage
+                        ? {
+                            label: result.disease_stage === 'Advanced'
+                              ? (lang === 'bn' ? 'উন্নত পর্যায়' : 'Advanced')
+                              : result.disease_stage === 'Moderate'
+                                ? (lang === 'bn' ? 'মাঝারি' : 'Moderate')
+                                : result.disease_stage === 'Early'
+                                  ? (lang === 'bn' ? 'প্রাথমিক' : 'Early')
+                                  : result.disease_stage,
+                            variant: result.disease_stage === 'Advanced'
+                              ? 'destructive'
+                              : result.disease_stage === 'Moderate'
+                                ? 'secondary'
+                                : 'outline',
+                          }
+                        : undefined
+                    }
+                  >
+                    <div className="space-y-3">
+                      <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                        {lang === 'bn'
+                          ? result.disease_description_bn
+                          : result.disease_description_en}
+                      </p>
+                      {result.disease_stage === 'Advanced' && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/40">
+                          <p className="text-sm font-semibold text-red-700 dark:text-red-300">
+                            {lang === 'bn'
+                              ? 'উন্নত পর্যায় শনাক্ত — অবিলম্বে চিকিৎসা নিন'
+                              : 'Advanced stage detected — seek treatment immediately'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </ResultCard>
+                )}
+
+                {/* Top Specialists Nearby */}
+                <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
               </div>
             )}
           </div>

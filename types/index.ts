@@ -204,6 +204,9 @@ export interface GroqEyeOutput {
   urgency_days: number
   next_steps: string[]
   specialist_needed: string
+  disease_description_en: string
+  disease_description_bn: string
+  disease_stage: string
 }
 
 // --- ScriptGuard (prescription) AI output types ---
@@ -280,6 +283,9 @@ export interface NayanResult {
   urgency_days: number
   next_steps: string[]
   specialist_needed: string
+  disease_description_en?: string
+  disease_description_bn?: string
+  disease_stage?: string
   /** Confidence as an integer percentage 0–100. */
   confidence_score: number
 }
