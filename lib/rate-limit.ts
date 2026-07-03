@@ -10,13 +10,6 @@ export function rateLimit(
   config: RateLimitConfig = { windowMs: 60_000, maxRequests: 10 }
 ): boolean {
   const now = Date.now()
-
-  for (const [key, entry] of requestCounts) {
-    if (now >= entry.resetTime) {
-      requestCounts.delete(key)
-    }
-  }
-
   const entry = requestCounts.get(identifier)
 
   if (!entry || now >= entry.resetTime) {

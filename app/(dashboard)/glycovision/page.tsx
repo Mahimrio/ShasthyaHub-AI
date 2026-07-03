@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Apple,
@@ -8,6 +8,7 @@ import {
   Clock,
   Heart,
   History,
+  Info,
   Play,
   RotateCcw,
   Salad,
@@ -23,8 +24,10 @@ import { ResultCard } from '@/components/shared/ResultCard'
 import FoodItemsList from '@/components/features/glycovision/FoodItemsList'
 import NutritionDonutChart from '@/components/features/glycovision/NutritionDonutChart'
 import RiskScoreCard from '@/components/features/glycovision/RiskScoreCard'
+import { useGlycoVisionHistory } from '@/hooks/useGlycoVisionHistory'
 import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { cn, formatDate } from '@/lib/utils'
 import type { EnrichedFoodItem, ChronicDiseaseRisk, RiskLevel, MealModification } from '@/types'
 
 type AnalysisState = 'idle' | 'disclaimer' | 'uploading' | 'processing' | 'complete'
@@ -81,6 +84,8 @@ export default function GlycoVisionPage() {
   const [showDisclaimer, setShowDisclaimer] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [result, setResult] = useState<AnalysisResult | null>(null)
+
+  const { history: pastFoodHistory, isLoading: historyLoading } = useGlycoVisionHistory()
 
   const resultKeyRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
@@ -541,22 +546,84 @@ export default function GlycoVisionPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
-              <Clock className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                {lang === 'bn' ? 'খাদ্য বিশ্লেষণের ইতিহাস' : 'Meal Analysis History'}
-              </h3>
-              <p className="mx-auto mt-1 max-w-xs text-xs text-gray-400 dark:text-gray-500">
-                {lang === 'bn'
-                  ? 'আপনার পূর্বের খাদ্য বিশ্লেষণ এখানে দেখতে পাবেন। শীঘ্রই আসছে!'
-                  : 'Your past meal analysis results will appear here. Coming soon!'}
-              </p>
+            {historyLoading ? (
+              <div className="space-y-2">
+                {[0, 1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="h-20 animate-pulse rounded-xl border border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800"
+                  />
+                ))}
+              </div>
+            ) : pastFoodHistory.length === 0 && !result ? (
+              <div className="rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-8 text-center dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]">
+                <Clock className="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600" />
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  {lang === 'bn' ? 'খাদ্য বিশ্লেষণের ইতিহাস' : 'Meal Analysis History'}
+                </h3>
+                <p className="mx-auto mt-1 max-w-xs text-xs text-gray-400 dark:text-gray-500">
+                  {lang === 'bn'
+                    ? 'এখনো কোনো বিশ্লেষণ করা হয়নি। আপনার প্রথম খাবারের ছবি আপলোড করুন!'
+                    : 'No analysis done yet. Upload your first meal photo to get started!'}
+                </p>
+              </div>
+            ) : (
+              <>
+                {pastFoodHistory.length > 0 && (
+                  <>
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Info className="h-4 w-4 text-gray-400" />
+                      {lang === 'bn' ? 'পূর্বের বিশ্লেষণ' : 'Past Analyses'}
+                    </h3>
+                    <ul className="space-y-2">
+                      {pastFoodHistory.map((item) => {
+                        const riskBadge = item.risk_level === 'Red'
+                          ? 'destructive'
+                          : item.risk_level === 'Yellow'
+                            ? 'secondary'
+                            : 'outline'
+                        const riskLabel = item.risk_level === 'Red'
+                          ? (lang === 'bn' ? 'উচ্চ ঝুঁকি' : 'High Risk')
+                          : item.risk_level === 'Yellow'
+                            ? (lang === 'bn' ? 'মাঝারি ঝুঁকি' : 'Moderate')
+                            : item.risk_level === 'Green'
+                              ? (lang === 'bn' ? 'নিরাপদ' : 'Safe')
+                              : (lang === 'bn' ? 'অজানা' : 'Unknown')
+                        return (
+                          <li
+                            key={item.id}
+                            className="flex items-center justify-between rounded-xl border border-gray-100 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-medium text-gray-800 dark:text-gray-200">
+                                {item.risk_summary_en ?? (lang === 'bn' ? 'কোনো সারসংক্ষেপ নেই' : 'No summary')}
+                              </p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">
+                                {item.total_calories !== null && (
+                                  <span className="tabular-nums">{Math.round(item.total_calories)} kcal</span>
+                                )}
+                                {item.total_calories !== null && item.glycemic_load !== null && ' · '}
+                                {item.glycemic_load !== null && (
+                                  <span className="tabular-nums">GL {item.glycemic_load.toFixed(1)}</span>
+                                )}
+                                {' · '}
+                                {formatDate(item.created_at)}
+                              </p>
+                            </div>
+                            <Badge variant={riskBadge as 'destructive' | 'secondary' | 'outline'} className="shrink-0 ml-3">
+                              {riskLabel}
+                            </Badge>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </>
+                )}
 
-              {/* Meal history chart placeholder - show a summary if there's a current result */}
-              {result && (
-                <div className="mt-6">
-                  <div className="rounded-xl bg-gray-50 p-4 dark:bg-gray-700/50">
-                    <p className="mb-3 text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {/* Current session result */}
+                {result && (
+                  <div className="mt-4 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-6 dark:border-gray-700/60 dark:bg-gray-900/90">
+                    <p className="mb-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400">
                       {lang === 'bn' ? 'সর্বশেষ বিশ্লেষণ' : 'Latest Analysis'}
                     </p>
                     <div className="flex items-center justify-center">
@@ -567,9 +634,9 @@ export default function GlycoVisionPage() {
                       />
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </>
+            )}
           </motion.div>
         )}
 

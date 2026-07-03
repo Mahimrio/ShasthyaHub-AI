@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { NextResponse } from 'next/server'

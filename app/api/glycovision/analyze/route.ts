@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeFood } from '@/lib/ai/orchestrator'
@@ -100,19 +101,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<GlycoVisi
 
     if (insertError || !inserted) {
       console.error('[glycovision/analyze] insert failed:', insertError?.message)
+      if (!uploadError) {
+        await supabase.storage.from(STORAGE_BUCKET).remove([storagePath])
+      }
+      throw new Error(insertError?.message ?? 'Failed to save analysis result.')
     }
 
     if (!uploadError) {
-      const { error: deleteError } = await supabase.storage
-        .from(STORAGE_BUCKET)
-        .remove([storagePath])
-      if (deleteError) {
-        console.error('[glycovision/analyze] storage delete failed:', deleteError.message)
-      }
+      await supabase.storage.from(STORAGE_BUCKET).remove([storagePath]).catch(() => {})
     }
 
     const data: GlycoVisionAnalyzeData = {
-      id: inserted?.id ?? crypto.randomUUID(),
+      id: inserted.id,
       identified_items: result.identified_items,
       total_calories: result.total_calories,
       total_carbs_g: result.total_carbs_g,
