@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, BookOpen, Eye, Info, RotateCcw, Search } from 'lucide-react'
+import { AlertTriangle, Eye, Info, RotateCcw, Search } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useNayanAnalysis } from '@/hooks/useNayanAnalysis'
 import { useNayanHistory } from '@/hooks/useNayanHistory'
