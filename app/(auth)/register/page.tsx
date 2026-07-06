@@ -72,6 +72,7 @@ export default function RegisterPage() {
     },
   })
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const preferredLanguage = watch('preferred_language')
 
   const onSubmit = async (data: RegisterForm) => {
