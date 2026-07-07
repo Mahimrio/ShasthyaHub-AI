@@ -35,13 +35,11 @@ const SEVERITY_STRINGS: Record<
 }
 
 let status: NayanModelStatus = 'unloaded'
-let modelPromise: Promise<tf.GraphModel | null> | null = null
-let model: tf.GraphModel | null = null
+let modelPromise: Promise<tf.LayersModel | null> | null = null
+let model: tf.LayersModel | null = null
 
 function devLog(...args: unknown[]) {
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[NayanTF]', ...args)
-  }
+  console.log('[NayanTF]', ...args)
 }
 
 export function getModelStatus(): NayanModelStatus {
@@ -62,7 +60,8 @@ async function selectBackend(): Promise<void> {
   throw new Error('No suitable TensorFlow.js backend found')
 }
 
-async function loadModel(): Promise<tf.GraphModel | null> {
+async function loadModel(): Promise<tf.LayersModel | null> {
+  console.log('[NayanTF] loadModel() called, status:', status)
   if (model) return model
   if (modelPromise) return modelPromise
 
@@ -72,22 +71,23 @@ async function loadModel(): Promise<tf.GraphModel | null> {
       await selectBackend()
       await tf.ready()
 
-      const headResponse = await fetch(MODEL_URL, { method: 'HEAD' })
-      if (!headResponse.ok) {
-        if (headResponse.status === 404) {
+      let loaded: tf.LayersModel | null = null
+      try {
+        loaded = await tf.loadLayersModel(MODEL_URL)
+      } catch (loadErr) {
+        const msg = loadErr instanceof Error ? loadErr.message : String(loadErr)
+        // 404 from loadLayersModel means files don't exist on server
+        if (msg.includes('404')) {
           status = 'missing'
           devLog(
             'Nayan AI offline model not found at public/models/nayan-ai/ — offline analysis will be unavailable until the model is added. See Phase 1a in the implementation plan.'
           )
-          modelPromise = null
-          return null
+        } else {
+          status = 'unsupported'
         }
-        status = 'unsupported'
         modelPromise = null
         return null
       }
-
-      const loaded = await tf.loadGraphModel(MODEL_URL)
       model = loaded
 
       const warmInput = tf.zeros(INPUT_SHAPE)
@@ -172,8 +172,4 @@ export async function analyzeEyeImageOffline(
 
 export function getSeverityStrings(): typeof SEVERITY_STRINGS {
   return SEVERITY_STRINGS
-}
-
-if (typeof window !== 'undefined') {
-  loadModel()
 }

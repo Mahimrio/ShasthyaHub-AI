@@ -157,6 +157,35 @@ export function useNayanAnalysis(): UseNayanAnalysisReturn {
     lastOfflineResultRef.current = null
   }, [clearTimer])
 
+  const runOffline = useCallback(
+    async (file: File) => {
+      try {
+        const img = await fileToImage(file)
+        const offlineResult = await analyzeEyeImageOffline(img)
+        const mapped = mapOfflineResult(offlineResult.severity, offlineResult.confidence)
+
+        setResult(mapped)
+        setAnalysisMode('offline')
+        lastOfflineFileRef.current = file
+        lastOfflineResultRef.current = mapped
+        setOfflineModelStatus(getModelStatus())
+
+        enqueueAnalysis('nayan', file, mapped as unknown as Record<string, unknown>).catch(
+          (err) => console.warn('[NayanAnalysis] Queue failed:', err)
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Offline analysis failed.'
+        console.error('[NayanAnalysis] Offline path threw:', err)
+        setOfflineModelStatus(getModelStatus())
+        setError(message)
+        setIsError(true)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+
   const analyze = useCallback(
     async (file: File) => {
       clearTimer()
@@ -187,6 +216,12 @@ export function useNayanAnalysis(): UseNayanAnalysisReturn {
 
           if (!response.ok || !payload || !payload.success) {
             const apiError = payload && !payload.success ? payload : null
+            if (response.status === 429) {
+              clearTimer()
+              console.warn('[NayanAnalysis] API rate limited, falling back to offline model')
+              await runOffline(file)
+              return
+            }
             throw new Error(
               apiError?.error_bn || apiError?.error || 'Analysis failed. Please try again.'
             )
@@ -195,71 +230,34 @@ export function useNayanAnalysis(): UseNayanAnalysisReturn {
           setResult({ ...payload.data, analysis_mode: 'online' })
           setAnalysisMode('online')
         } catch (err) {
-          const message =
-            err instanceof DOMException && err.name === 'AbortError'
-              ? 'The request took too long. Please try again. / সময় শেষ হয়ে গেছে। আবার চেষ্টা করুন।'
-              : err instanceof Error
-                ? err.message
-                : 'Something went wrong. Please try again.'
-          setError(message)
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            setError('The request took too long. Please try again. / সময় শেষ হয়ে গেছে। আবার চেষ্টা করুন।')
+          } else if (err instanceof TypeError) {
+            // Network error (ERR_INTERNET_DISCONNECTED, Failed to fetch, etc.)
+            clearTimer()
+            console.warn('[NayanAnalysis] Network error, falling back to offline model')
+            await runOffline(file)
+            return
+          } else {
+            const msg = err instanceof Error ? err.message : 'Something went wrong. Please try again.'
+            if (msg.toLowerCase().includes('rate limit') || msg.toLowerCase().includes('quota')) {
+              clearTimer()
+              console.warn('[NayanAnalysis] API quota exhausted, falling back to offline model')
+              await runOffline(file)
+              return
+            }
+            setError(msg)
+          }
           setIsError(true)
         } finally {
           clearTimer()
           setIsLoading(false)
         }
       } else {
-        const modelStatus = getModelStatus()
-        setOfflineModelStatus(modelStatus)
-
-        if (modelStatus === 'ready') {
-          try {
-            const img = await fileToImage(file)
-            const offlineResult = await analyzeEyeImageOffline(img)
-            const mapped = mapOfflineResult(
-              offlineResult.severity,
-              offlineResult.confidence
-            )
-
-            setResult(mapped)
-            setAnalysisMode('offline')
-            lastOfflineFileRef.current = file
-            lastOfflineResultRef.current = mapped
-
-            enqueueAnalysis('nayan', file, mapped as unknown as Record<string, unknown>).catch(
-              (err) => console.warn('[NayanAnalysis] Queue failed:', err)
-            )
-          } catch (err) {
-            const message =
-              err instanceof Error ? err.message : 'Offline analysis failed.'
-            setError(message)
-            setIsError(true)
-          } finally {
-            setIsLoading(false)
-          }
-        } else {
-          setIsLoading(false)
-          if (modelStatus === 'missing') {
-            setError(
-              'Offline analysis is not set up on this device yet — connect to the internet for analysis.'
-            )
-          } else if (modelStatus === 'unsupported') {
-            setError(
-              'Offline AI is not supported on this device — please connect to the internet for analysis.'
-            )
-          } else if (modelStatus === 'loading') {
-            setError(
-              'Offline model is still loading — please wait or connect to the internet.'
-            )
-          } else {
-            setError(
-              'No internet connection and offline analysis is unavailable.'
-            )
-          }
-          setIsError(true)
-        }
+        await runOffline(file)
       }
     },
-    [clearTimer, isOnline]
+    [clearTimer, isOnline, runOffline]
   )
 
   return {

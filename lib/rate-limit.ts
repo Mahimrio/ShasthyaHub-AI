@@ -5,9 +5,11 @@ export interface RateLimitConfig {
 
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
 
+const DEV_MAX = process.env.CI ? 10 : 100
+
 export function rateLimit(
   identifier: string,
-  config: RateLimitConfig = { windowMs: 60_000, maxRequests: 10 }
+  config: RateLimitConfig = { windowMs: 60_000, maxRequests: DEV_MAX }
 ): boolean {
   const now = Date.now()
   const entry = requestCounts.get(identifier)
