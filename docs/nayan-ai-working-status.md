@@ -123,7 +123,7 @@ SW Fetch Handler (GET requests for /models/)
      - SW serves `group1-shard1of1.bin` from `MODELS_CACHE`
    - Warm-up inference with zeros
    - Status = `'ready'`, model cached in memory
-6. Image preprocessing: `imageToTensor()` → resize to 224×224 → normalize to [0,1]
+6. Image preprocessing: `imageToTensor()` → resize to 224×224 → normalize to [-1,1] (MobileNetV2 standard)
 7. `model.predict()` → argmax → severity class + confidence
 8. Result returned to UI
 
@@ -207,6 +207,7 @@ so 'script-src' is used as a fallback.
 ## All Fixes Applied
 
 | # | File | Change | Why |
+
 |---|------|--------|-----|
 | 1 | `lib/ai/tensorflow-nayan.ts:76` | `loadGraphModel()` → `loadLayersModel()` | Model format is `layers-model` (Keras), not `tfjs-model` |
 | 2 | `lib/ai/tensorflow-nayan.ts` | Removed eager `loadModel()` on module import | Eager load locked status to `'unsupported'` |
@@ -218,6 +219,11 @@ so 'script-src' is used as a fallback.
 | 8 | `public/sw.js:103-114` | Model prefetch runs immediately in `waitUntil` chain | SW stays alive until both model files are cached |
 | 9 | `lib/rate-limit.ts:10` | `maxRequests: 10` → `100` (dev), `10` (CI) | Testing hit rate limit |
 | 10 | `middleware.ts:69` | Added `worker-src 'self' blob;` to CSP | TF.js worker from blob: URL was blocked |
+| 11 | `public/models/nayan-ai/model.json` | Preserved original `weightsManifest` with uint8 quantization metadata | Replacing manifest loses per-weight `min`/`scale` → weights load as wrong values |
+| 12 | `public/models/nayan-ai/model.json` | Removed augmentation layers (RandomFlip, Rotation, Zoom, Brightness) from topology | TF.js doesn't support Keras augmentation layers |
+| 13 | `public/models/nayan-ai/model.json` | Stripped Keras 3 artifacts (`module`, `registered_name`, `build_config`, `groups`, `sparse`, `ragged`) | These fields cause TF.js `loadLayersModel()` to throw |
+| 14 | `lib/ai/tensorflow-nayan.ts:119` | Changed normalization `resized.div(255.0)` → `resized.div(127.5).sub(1.0)` | MobileNetV2 expects `[-1, 1]` range (standard `preprocess_input`) |
+| 15 | `public/sw.js:14` | `MODELS_CACHE` `v3` → `v4` | Force browser to re-cache model.json with correct weights |
 
 ---
 
@@ -234,7 +240,7 @@ so 'script-src' is used as a fallback.
 - **Format**: Keras `Functional` API → TensorFlow.js `layers-model`
 - **Backbone**: MobileNetV2 (1.00, 224×224), ImageNet-pretrained → fine-tuned 3-class head
 - **Classes**: `normal` → `refer` → `urgent`
-- **Input**: `[1, 224, 224, 3]` float32, normalized [0,1]
+- **Input**: `[1, 224, 224, 3]` float32, normalized to [-1,1] via `x/127.5 - 1`
 - **Files**:
   - `public/models/nayan-ai/model.json` — model topology + weights manifest
   - `public/models/nayan-ai/group1-shard1of1.bin` — weight values (2.2 MB)
