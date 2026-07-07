@@ -21,7 +21,7 @@ await page.waitForTimeout(5000)
 // We can check by looking for the status variable via __NEXT_RSC or other means.
 // Fallback: check DOM text for any status indicators
 const pageText = await page.textContent('body')
-const statusMatch = pageText.match(/getModelStatus.*?(unloaded|loading|ready|unsupported|missing)/i)
+const _statusMatch = pageText.match(/getModelStatus.*?(unloaded|loading|ready|unsupported|missing)/i)
 
 consoleLogs.push(`[PAGE_TEXT_SAMPLE] ${pageText.substring(0, 500).replace(/\s+/g, ' ')}`)
 

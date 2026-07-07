@@ -84,6 +84,7 @@ async function loadModel(): Promise<tf.LayersModel | null> {
           )
         } else {
           status = 'unsupported'
+          devLog('Model load failed:', msg)
         }
         modelPromise = null
         return null
@@ -115,7 +116,8 @@ function imageToTensor(image: HTMLImageElement): tf.Tensor3D {
     INPUT_SHAPE[1],
     INPUT_SHAPE[2],
   ])
-  const normalized = resized.div(255.0) as tf.Tensor3D
+  const scaled = resized.div(127.5) as tf.Tensor3D
+  const normalized = scaled.sub(tf.scalar(1.0)) as tf.Tensor3D
   return normalized
 }
 

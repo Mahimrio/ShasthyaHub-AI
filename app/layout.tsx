@@ -1,21 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-  display: "swap",
-});
-
-const hindSiliguri = Hind_Siliguri({
-  weight: ["400", "500", "600", "700"],
-  subsets: ["bengali", "latin"],
-  variable: "--font-bengali",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ShasthyaHub-AI",
@@ -43,14 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="bn"
-      className={`${inter.variable} ${hindSiliguri.variable} h-full antialiased`}
-    >
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-      </head>
+    <html lang="bn" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans select-none">
         <Providers>{children}</Providers>
         <ServiceWorkerRegister />

@@ -16,6 +16,7 @@ import type { ExtractedMedication, Language, MappingConfidence } from '@/types'
 interface ExtractedMedsTableProps {
   drugs: ExtractedMedication[]
   lang: Language
+  mode?: 'online' | 'offline'
 }
 
 const container = {
@@ -55,7 +56,7 @@ function confidenceLabel(c: MappingConfidence, lang: Language): string {
   return c === 'high' ? 'High' : c === 'medium' ? 'Medium' : 'Low'
 }
 
-export default function ExtractedMedsTable({ drugs, lang }: ExtractedMedsTableProps) {
+export default function ExtractedMedsTable({ drugs, lang, mode }: ExtractedMedsTableProps) {
   const [expanded, setExpanded] = useState<number | null>(null)
 
   if (drugs.length === 0) {
@@ -111,30 +112,37 @@ export default function ExtractedMedsTable({ drugs, lang }: ExtractedMedsTablePr
                     {drug.drug_class || '—'}
                   </td>
                   <td className="px-3 py-2.5 align-top text-right">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          aria-label={confidenceTooltip(drug.mapping_confidence, lang)}
-                          className="inline-flex items-center"
-                        >
-                          <Badge
-                            variant={confidenceVariant(drug.mapping_confidence)}
-                            className="cursor-help"
+                    <div className="inline-flex items-center gap-1">
+                      {mode === 'offline' && (
+                        <span className="text-[10px] uppercase tracking-wider text-amber-500 dark:text-amber-400 font-semibold">
+                          OCR
+                        </span>
+                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={confidenceTooltip(drug.mapping_confidence, lang)}
+                            className="inline-flex items-center"
                           >
-                            {drug.mapping_confidence === 'high' ? (
-                              <Check className="mr-1 h-3 w-3" />
-                            ) : (
-                              <HelpCircle className="mr-1 h-3 w-3" />
-                            )}
-                            {confidenceLabel(drug.mapping_confidence, lang)}
-                          </Badge>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {confidenceTooltip(drug.mapping_confidence, lang)}
-                      </TooltipContent>
-                    </Tooltip>
+                            <Badge
+                              variant={confidenceVariant(drug.mapping_confidence)}
+                              className="cursor-help"
+                            >
+                              {drug.mapping_confidence === 'high' ? (
+                                <Check className="mr-1 h-3 w-3" />
+                              ) : (
+                                <HelpCircle className="mr-1 h-3 w-3" />
+                              )}
+                              {confidenceLabel(drug.mapping_confidence, lang)}
+                            </Badge>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {confidenceTooltip(drug.mapping_confidence, lang)}
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
                   </td>
                 </motion.tr>
               ))}
@@ -169,14 +177,21 @@ export default function ExtractedMedsTable({ drugs, lang }: ExtractedMedsTablePr
                       {drug.generic_name}
                     </p>
                   </div>
-                  <Badge variant={confidenceVariant(drug.mapping_confidence)}>
-                    {drug.mapping_confidence === 'high' ? (
-                      <Check className="mr-1 h-3 w-3" />
-                    ) : (
-                      <HelpCircle className="mr-1 h-3 w-3" />
+                  <div className="flex items-center gap-1">
+                    {mode === 'offline' && (
+                      <span className="text-[10px] uppercase tracking-wider text-amber-500 dark:text-amber-400 font-semibold">
+                        OCR
+                      </span>
                     )}
-                    {confidenceLabel(drug.mapping_confidence, lang)}
-                  </Badge>
+                    <Badge variant={confidenceVariant(drug.mapping_confidence)}>
+                      {drug.mapping_confidence === 'high' ? (
+                        <Check className="mr-1 h-3 w-3" />
+                      ) : (
+                        <HelpCircle className="mr-1 h-3 w-3" />
+                      )}
+                      {confidenceLabel(drug.mapping_confidence, lang)}
+                    </Badge>
+                  </div>
                 </button>
                 <motion.div
                   initial={false}

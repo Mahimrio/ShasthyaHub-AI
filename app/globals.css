@@ -26,9 +26,9 @@
   --color-health-yellow: #f59e0b;
   --color-health-red: #ef4444;
   --color-health-blue: #3b82f6;
-  --font-sans: var(--font-inter);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  --font-bengali: var(--font-bengali);
+  --font-bengali: 'Hind Siliguri', 'Segoe UI', 'Nirmala UI', 'Shonar Bangla', 'Vrinda', system-ui, sans-serif;
   --radius: 0.75rem;
 }
 
