@@ -11,6 +11,7 @@ const STATIC_CACHE = 'shasthyahub-static-v2'
 const NAV_CACHE = 'shasthyahub-nav-v2'
 const RSC_PREFETCH_CACHE = 'pages-rsc-prefetch'
 const RSC_NAV_CACHE = 'pages-rsc'
+const MODELS_CACHE = 'shasthyahub-models-v1'
 
 const PRECACHE_URLS = ['/login', '/offline', '/manifest.json']
 
@@ -89,12 +90,32 @@ self.addEventListener('activate', (event) => {
                 k !== STATIC_CACHE &&
                 k !== NAV_CACHE &&
                 k !== RSC_PREFETCH_CACHE &&
-                k !== RSC_NAV_CACHE
+                k !== RSC_NAV_CACHE &&
+                k !== MODELS_CACHE
             )
             .map((k) => caches.delete(k))
         )
       )
       .then(() => cacheAllPages())
+      // Idle-time model file prefetch — silently ignored if 404 (model not yet added).
+      // requestIdleCallback is not available in ServiceWorkerGlobalScope, so the
+      // setTimeout fallback (5s delay) always runs. Kept for forward compatibility
+      // if SW scope gains it.
+      .then(() => {
+        const doPrefetch = () => {
+          fetch('/models/nayan-ai/model.json')
+            .then((res) => {
+              if (!res.ok) return
+              caches.open(MODELS_CACHE).then((cache) => cache.put('/models/nayan-ai/model.json', res))
+            })
+            .catch(() => {})
+        }
+        if (typeof requestIdleCallback === 'function') {
+          requestIdleCallback(doPrefetch, { timeout: 10000 })
+        } else {
+          setTimeout(doPrefetch, 5000)
+        }
+      })
   )
   self.clients.claim()
 })
@@ -258,6 +279,22 @@ self.addEventListener('fetch', (event) => {
             })
             .catch(() => cached)
           return cached || fetchPromise
+        })
+      )
+    )
+    return
+  }
+
+  // ── Model assets: cache-first ───────────────────────────────────
+  if (url.pathname.startsWith('/models/')) {
+    event.respondWith(
+      caches.open(MODELS_CACHE).then((cache) =>
+        cache.match(req).then((cached) => {
+          if (cached) return cached
+          return fetch(req).then((res) => {
+            if (res.ok) cache.put(req, res.clone())
+            return res
+          })
         })
       )
     )

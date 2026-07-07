@@ -288,6 +288,8 @@ export interface NayanResult {
   disease_stage?: string
   /** Confidence as an integer percentage 0–100. */
   confidence_score: number
+  /** Whether this result came from online API or offline TF.js model. */
+  analysis_mode?: 'online' | 'offline'
 }
 
 /** Lightweight projection used by the history list. */

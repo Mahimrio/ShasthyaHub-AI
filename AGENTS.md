@@ -19,12 +19,19 @@ No test framework exists. No `npm test`.
 - **Styling**: Tailwind CSS v4 via `@tailwindcss/postcss` plugin (no `tailwind.config.ts` file exists despite `components.json` referencing it)
 - **UI**: shadcn/ui (new-york style, RSC enabled) — 11 components in `components/ui/`
 - **Auth**: Supabase (cookie-based SSR via `@supabase/ssr`) — clients at `lib/supabase/server.ts` & `client.ts`
-- **AI**: Dual pipeline — Gemini 2.5 Flash (`lib/ai/gemini.ts`) → Groq Llama 3.3 70B (`lib/ai/groq.ts`), orchestrated via `lib/ai/orchestrator.ts`
+- **AI**:
+  - **Online**: Dual pipeline — Gemini 2.5 Flash (`lib/ai/gemini.ts`) → Groq Llama 3.3 70B (`lib/ai/groq.ts`), orchestrated via `lib/ai/orchestrator.ts`
+  - **Offline (Nayan AI only)**: TensorFlow.js (`lib/ai/tensorflow-nayan.ts`) — module singleton, WebGPU→WebGL→WASM backend fallback, 3-class CNN (normal/refer/urgent)
+- **Offline Infrastructure (Phase 0)**: Network detection (`hooks/useNetworkStatus.ts`), IndexedDB queue (`lib/offline-queue.ts`), SW caching in `public/sw.js`, debug page at `/debug-offline`
 - **State**: TanStack React Query (installed, no provider set up yet)
 - **i18n**: `next-i18next` installed, **not configured** (no locale files)
 - **PWA**: `next-pwa` installed, **not configured**
 
 ## Project state
+
+**Phase 0 (Offline Infrastructure)** — Complete: pessimistic network detection, WebP-compressed IndexedDB queue, hand-written SW with RSC caching, background sync, debug page.
+
+**Phase 1 (Nayan Offline AI)** — Complete: TensorFlow.js integration with module-level singleton, 3-bucket classification, automatic online/offline routing, SW model caching (`shasthyahub-models-v1`), warm-up inference, graceful missing-files handling. Model training/conversion (Phase 1a) is pending — place output at `public/models/nayan-ai/`.
 
 **Feature pages completed**: Nayan AI, ScriptGuard, GlycoVision, Reports dashboard — all with dark mode, BN/EN i18n, skeleton loaders, shared components (ImageUploader, ResultCard, DisclaimerModal, AiThinkingBanner). Responsive dashboard layout with sidebar + bottom nav. Dark mode system active. Auth system complete (login, register, middleware). `hooks/useAuth.ts` exists.
 
@@ -42,10 +49,11 @@ No test framework exists. No `npm test`.
 | Agent | Vision model | Reasoning model | Key services |
 |-------|-------------|----------------|--------------|
 | Nayan AI (eye) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeEyeImage()` |
+| Nayan AI (offline) | TensorFlow.js CNN | — | `analyzeEyeImageOffline()` in `lib/ai/tensorflow-nayan.ts` |
 | ScriptGuard (rx) | Gemini 2.5 Flash → | Groq + OpenFDA | `analyzePrescription()`, `mapBrandsToGenerics()`, `checkDrugInteractions()` |
 | GlycoVision (food) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeFood()`, `lookupNutrition()`, `calculateTotalNutrition()` |
 
-All pipelines have Gemini Flash fallback when Groq is unavailable.
+All pipelines have Gemini Flash fallback when Groq is unavailable. Offline Nayan AI runs locally in browser via TensorFlow.js when network is unavailable and model files are present at `public/models/nayan-ai/`.
 
 ## Database
 
