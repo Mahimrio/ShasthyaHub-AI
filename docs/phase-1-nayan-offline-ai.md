@@ -36,7 +36,7 @@ Core TF.js module — the only file that directly imports `@tensorflow/tfjs`.
 - **Status getter**: `getModelStatus(): NayanModelStatus` — synchronous, returns `'unloaded' | 'loading' | 'ready' | 'unsupported' | 'missing'`.
 - **On-demand loading**: `loadModel()` is called lazily by `analyzeEyeImageOffline()`. No eager boot — the module doesn't touch the network on import.
 - **Direct `loadLayersModel()`**: No HEAD pre-check. Calls `tf.loadLayersModel(MODEL_URL)` directly. SW serves both `model.json` and `group1-shard1of1.bin` from cache.
-- **Inference**: `analyzeEyeImageOffline(imageElement: HTMLImageElement)` — converts image to tensor (resize 224×224, normalize `/255`), runs `model.predict()`, finds argmax, returns `{ severity, confidence, mode: 'offline' }`.
+- **Inference**: `analyzeEyeImageOffline(imageElement: HTMLImageElement)` — converts image to tensor (resize 224×224, normalize via `x/127.5 - 1` to `[-1,1]`), runs `model.predict()`, finds argmax, returns `{ severity, confidence, mode: 'offline' }`.
 - **Shape check**: Logs the model's expected input shape vs actual image dimensions before inference.
 - **Tensor lifecycle**: Inference wrapped in `tf.tidy()`. The raw input tensor built outside `tf.tidy()` is explicitly `.dispose()`'d in the `finally` block.
 - **Severity strings**: Three buckets (`normal`, `refer`, `urgent`) each with Bengali and English explanation strings.
@@ -153,7 +153,7 @@ User uploads image (offline)
     │    │    │    │         └── SW intercepts → serves from MODELS_CACHE
     │    │    │    ├── warm-up inference (zeros)
     │    │    │    └── status = 'ready'
-    │    │    ├── imageToTensor() → resize 224×224 → normalize [0,1]
+    │    │    ├── imageToTensor() → resize 224×224 → normalize to [-1,1] (x/127.5 - 1)
     │    │    ├── model.predict() → logits
     │    │    └── argmax → { severity, confidence }
     │    └── mapOfflineResult() → NayanResult (analysis_mode: 'offline')
@@ -216,6 +216,9 @@ Offline TF.js inference MUST be tested against a **production build** (`npm run 
 | 7 | Gemini fallback got 404 | `gemini-1.5-flash` not exposed in v1beta API | Changed to `gemini-2.0-flash` at `lib/ai/gemini.ts:129,132,134` |
 | 8 | API failures showed error instead of falling back to offline | No `catch` fallback in online path | Added auto-fallback on 429, quota, TypeError in `hooks/useNayanAnalysis.ts` |
 | 9 | Rate limiter blocked testing at 10 req/min | `maxRequests: 10` too low for dev testing | Bumped to 100 in dev at `lib/rate-limit.ts:10` |
+| 10 | Model loaded but always predicted class 0 ("healthy") | TF.js converter quantizes ALL weights to uint8 with per-tensor `min`/`scale`. Replacing the weight manifest (to fix topology) lost the quantization metadata — TF.js read manifest as float32, loading wrong bytes for each weight | Preserve original `weightsManifest` from converter output. Fix topology only: strip augmentation layers, Keras 3 artifacts, but never replace weight entries |
+| 11 | `loadLayersModel()` threw on Keras 3 exported models | `module`, `registered_name`, `build_config`, `groups`, `sparse`, `ragged` fields in topology JSON are rejected by TF.js `loadLayersModel()` | Strip these fields recursively before serving `model.json` |
+| 12 | Model predicted wrong classes with correct weights | Image preprocessing used `[0,1]` range but MobileNetV2 expects `[-1,1]` (Keras `preprocess_input` maps `x/127.5 - 1`) | Changed `resized.div(255.0)` → `resized.div(127.5).sub(1.0)` at `lib/ai/tensorflow-nayan.ts:119` |
 
 ---
 
@@ -434,7 +437,7 @@ If the weight shard filename differs from `group1-shard1of1.bin`, update both:
 - **Format**: Keras `Functional` API → TensorFlow.js `layers-model`
 - **Backbone**: MobileNetV2 (1.00, 224×224), ImageNet-pretrained → fine-tuned 3-class head
 - **Classes**: `normal` (index 0) → `refer` (1) → `urgent` (2)
-- **Input**: `[1, 224, 224, 3]` float32, normalized [0,1]
+- **Input**: `[1, 224, 224, 3]` float32, normalized to `[-1,1]` via `x/127.5 - 1`
 - **Quantization**: uint8 (via `tensorflowjs_converter --quantize_uint8=*`)
 - **Files**:
   - `public/models/nayan-ai/model.json` — model topology + weights manifest
