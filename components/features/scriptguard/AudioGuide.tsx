@@ -6,6 +6,12 @@ import { AlertTriangle, Headphones, Pause, Play, Square, Volume2 } from 'lucide-
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import type { Language } from '@/types'
 
@@ -374,17 +380,32 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
 
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            onClick={handlePlay}
-            disabled={playState === 'playing'}
-            className={cn(
-              'flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90',
-              'min-w-[120px]'
-            )}
-          >
-            <Play className="mr-2 h-4 w-4" />
-            {playState === 'paused' ? (lang === 'bn' ? 'চালিয়ে যান' : 'Resume') : labels.play}
-          </Button>
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="flex-1 min-w-[120px]" tabIndex={0}>
+                  <Button
+                    onClick={handlePlay}
+                    disabled={playState === 'playing' || !bnVoiceAvailable}
+                    className={cn(
+                      'flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90',
+                      'min-w-[120px] w-full'
+                    )}
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    {playState === 'paused' ? (lang === 'bn' ? 'চালিয়ে যান' : 'Resume') : labels.play}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {!bnVoiceAvailable && (
+                <TooltipContent>
+                  {lang === 'bn'
+                    ? 'বাংলা অডিও অফলাইনে উপলব্ধ নেই'
+                    : 'Audio unavailable offline'}
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
           <Button
             onClick={handlePause}
             disabled={playState !== 'playing'}

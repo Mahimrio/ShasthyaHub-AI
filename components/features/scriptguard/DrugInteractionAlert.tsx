@@ -18,6 +18,7 @@ interface DrugInteractionAlertProps {
   interactions: DrugInteraction[]
   hasDangerous: boolean
   lang: Language
+  unavailable?: boolean
 }
 
 type InteractionSeverity = DrugInteraction['severity']
@@ -134,7 +135,26 @@ export default function DrugInteractionAlert({
   interactions,
   hasDangerous,
   lang,
+  unavailable = false,
 }: DrugInteractionAlertProps) {
+  if (unavailable) {
+    return (
+      <Alert className="rounded-2xl border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20">
+        <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+          {lang === 'bn'
+            ? '⚡ ইন্টারনেট সংযোগ নেই'
+            : '⚡ No internet connection'}
+        </AlertTitle>
+        <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+          {lang === 'bn'
+            ? 'ওষুধের মিথস্ক্রিয়া যাচাই অফলাইনে উপলব্ধ নয়। ইন্টারনেট সংযোগ থাকলে স্বয়ংক্রিয়ভাবে যাচাই হবে।'
+            : 'Drug interaction check is unavailable offline. It will run automatically when you go online.'}
+        </AlertDescription>
+      </Alert>
+    )
+  }
+
   if (interactions.length === 0) {
     // No interactions — show a reassuring green banner.
     return (

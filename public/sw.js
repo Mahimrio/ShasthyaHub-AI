@@ -11,7 +11,8 @@ const STATIC_CACHE = 'shasthyahub-static-v2'
 const NAV_CACHE = 'shasthyahub-nav-v2'
 const RSC_PREFETCH_CACHE = 'pages-rsc-prefetch'
 const RSC_NAV_CACHE = 'pages-rsc'
-const MODELS_CACHE = 'shasthyahub-models-v1'
+const MODELS_CACHE = 'shasthyahub-models-v4'
+const OCR_CACHE = 'shasthyahub-ocr-v8'
 
 const PRECACHE_URLS = ['/login', '/offline', '/manifest.json']
 
@@ -91,7 +92,8 @@ self.addEventListener('activate', (event) => {
                 k !== NAV_CACHE &&
                 k !== RSC_PREFETCH_CACHE &&
                 k !== RSC_NAV_CACHE &&
-                k !== MODELS_CACHE
+                k !== MODELS_CACHE &&
+                k !== OCR_CACHE
             )
             .map((k) => caches.delete(k))
         )
@@ -109,14 +111,49 @@ self.addEventListener('activate', (event) => {
           Promise.allSettled(
             MODEL_FILES.map((url) =>
               fetch(url)
-                .then((res) => { if (res.ok) cache.put(url, res.clone()) })
+                .then((res) => {
+                  if (res.ok) return bufferAndClone(res).then((bufRes) => cache.put(url, bufRes))
+                })
                 .catch(() => {})
             )
           )
         )
       })
+      // OCR language pack prefetch — caches Tesseract.js traineddata + WASM core
+      // so OCR can run fully offline. Runs inside waitUntil to keep SW alive.
+      .then(() => {
+        const OCR_FILES = [
+          '/tesseract-lang/eng.traineddata',
+          '/tesseract-lang/ben.traineddata',
+          '/tesseract-lang/tesseract-core.wasm.js',
+          '/tesseract-lang/tesseract-core.wasm',
+          '/tesseract-lang/tesseract-core-lstm.wasm.js',
+          '/tesseract-lang/tesseract-core-lstm.wasm',
+          '/tesseract-lang/tesseract-core-simd-lstm.wasm.js',
+          '/tesseract-lang/tesseract-core-simd-lstm.wasm',
+          '/tesseract-lang/tesseract-worker.min.js',
+        ]
+        return caches.open(OCR_CACHE).then((cache) =>
+          Promise.allSettled(
+            OCR_FILES.map((url) =>
+              fetch(url)
+                .then((res) => {
+                  if (res.ok) {
+                    return bufferAndClone(res).then((bufRes) => {
+                      console.log('[SW] prefetched', url, bufRes.headers.get('Content-Length'))
+                      return cache.put(url, bufRes)
+                    })
+                  } else {
+                    console.warn('[SW] Non-ok response for', url, res.status)
+                  }
+                })
+                .catch(() => { console.warn('[SW] Failed to prefetch OCR file:', url) })
+            )
+          )
+        )
+      })
+      .then(() => self.clients.claim())
   )
-  self.clients.claim()
 })
 
 self.addEventListener('message', (event) => {
@@ -209,6 +246,25 @@ function stripRsc(url) {
   return u.toString()
 }
 
+// ── Response buffering helper ────────────────────────────────────
+
+// Next.js serves .wasm/.js files without Content-Length (chunked). When
+// cache.put() receives a streaming response with certain Content-Types
+// (application/wasm, application/javascript), Chromium may store 0 bytes.
+// Reading the body into an ArrayBuffer and constructing a new Response
+// with explicit Content-Length forces correct storage in Cache Storage.
+function bufferAndClone(res) {
+  return res.arrayBuffer().then((buf) => {
+    const headers = new Headers(res.headers)
+    headers.set('Content-Length', buf.byteLength.toString())
+    return new Response(buf, {
+      status: res.status,
+      statusText: res.statusText,
+      headers,
+    })
+  })
+}
+
 // ── Network-first with timeout helper ────────────────────────────
 
 function networkFirstWithTimeout(request, timeoutSeconds) {
@@ -290,8 +346,30 @@ self.addEventListener('fetch', (event) => {
       caches.open(MODELS_CACHE).then((cache) =>
         cache.match(req).then((cached) => {
           if (cached) return cached
+          return fetch(req)
+            .then((res) => {
+              if (res.ok) cache.put(req, res.clone())
+              return res
+            })
+            .catch(() => new Response('Model not cached', { status: 404 }))
+        })
+      )
+    )
+    return
+  }
+
+  // ── OCR language packs + WASM: cache-first ─────────────────────
+  if (url.pathname.startsWith('/tesseract-lang/')) {
+    event.respondWith(
+      caches.open(OCR_CACHE).then((cache) =>
+        cache.match(req).then((cached) => {
+          if (cached) return cached
           return fetch(req).then((res) => {
-            if (res.ok) cache.put(req, res.clone())
+            if (res.ok) {
+              // Use buffered response to avoid Chromium 0-byte storage bug
+              // with chunked application/wasm and application/javascript.
+              bufferAndClone(res).then((bufRes) => cache.put(req, bufRes))
+            }
             return res
           })
         })
@@ -306,10 +384,12 @@ self.addEventListener('fetch', (event) => {
       caches.open(STATIC_CACHE).then((cache) =>
         cache.match(req).then((cached) => {
           if (cached) return cached
-          return fetch(req).then((res) => {
-            if (res.ok) cache.put(req, res.clone())
-            return res
-          })
+          return fetch(req)
+            .then((res) => {
+              if (res.ok) cache.put(req, res.clone())
+              return res
+            })
+            .catch(() => cached || new Response('', { status: 408 }))
         })
       )
     )
@@ -330,13 +410,15 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached
-      return fetch(req).then((res) => {
-        if (res.ok && res.type === 'basic') {
-          const clone = res.clone()
-          caches.open(CACHE).then((cache) => cache.put(req, clone))
-        }
-        return res
-      })
+      return fetch(req)
+        .then((res) => {
+          if (res.ok && res.type === 'basic') {
+            const clone = res.clone()
+            caches.open(CACHE).then((cache) => cache.put(req, clone))
+          }
+          return res
+        })
+        .catch(() => cached || new Response('', { status: 408 }))
     })
   )
 })

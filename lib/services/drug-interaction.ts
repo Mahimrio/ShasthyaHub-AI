@@ -137,6 +137,9 @@ function makePairs(generics: string[]): DrugPair[] {
  * simply skipped without aborting the batch.
  */
 async function queryOpenFda(pair: DrugPair): Promise<string | null> {
+  // Deepest-level network guard — never fire a fetch when offline.
+  if (typeof window !== 'undefined' && !navigator.onLine) return null;
+
   const search = `drug_interactions:"${pair.a}"+AND+"${pair.b}"`;
   const url = `${OPENFDA_BASE}?search=${encodeURIComponent(
     search
@@ -281,6 +284,10 @@ export async function checkDrugInteractions(
     new Set(genericNames.map((g) => g.toLowerCase().trim()).filter(Boolean))
   );
   if (generics.length < 2) return [];
+
+  // Network guard — even if called from a client path that forgot to check,
+  // never fire fetches when offline.
+  if (typeof window !== 'undefined' && !navigator.onLine) return [];
 
   const pairs = makePairs(generics);
 

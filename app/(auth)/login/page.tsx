@@ -72,7 +72,6 @@ export default function LoginPage() {
 
     sendCacheAll()
     router.push('/nayan-ai')
-    router.refresh()
   }
 
   return (

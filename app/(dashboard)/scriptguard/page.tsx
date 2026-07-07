@@ -11,6 +11,7 @@ import {
   Search,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useScriptGuardAnalysis } from '@/hooks/useScriptGuardAnalysis'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
@@ -18,6 +19,7 @@ import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { ResultCard } from '@/components/shared/ResultCard'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { AnalysisModeBadge } from '@/components/shared/AnalysisModeBadge'
 import ExtractedMedsTable from '@/components/features/scriptguard/ExtractedMedsTable'
 import DrugInteractionAlert from '@/components/features/scriptguard/DrugInteractionAlert'
 import MedicationScheduleTimeline from '@/components/features/scriptguard/MedicationScheduleTimeline'
@@ -27,7 +29,8 @@ const DISCLAIMER_KEY = 'scriptguard_disclaimer_seen'
 
 export default function ScriptGuardPage() {
   const { lang } = useLanguage()
-  const { analyze, result, isLoading, isError, error, reset } =
+  const { isOnline } = useNetworkStatus()
+  const { analyze, result, isLoading, isError, error, reset, mode, offlineStatus } =
     useScriptGuardAnalysis()
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -138,6 +141,27 @@ export default function ScriptGuardPage() {
           </div>
         )}
 
+        {/* Offline fallback info */}
+        {!isOnline && offlineStatus !== 'idle' && offlineStatus !== 'ready' && !result && (
+          <Alert className="rounded-2xl border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20">
+            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+              {lang === 'bn' ? 'অফলাইন অবস্থা' : 'Offline Status'}
+            </AlertTitle>
+            <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+              {offlineStatus === 'missing'
+                ? lang === 'bn'
+                  ? 'অফলাইন OCR এই ডিভাইসে সেট আপ করা হয়নি — ইন্টারনেটে সংযুক্ত হন।'
+                  : 'Offline OCR isn\'t set up on this device yet — connect to the internet for analysis.'
+                : offlineStatus === 'unsupported'
+                  ? lang === 'bn'
+                    ? 'অফলাইন AI এই ডিভাইসে সমর্থিত নয় — অনুগ্রহ করে বিশ্লেষণের জন্য ইন্টারনেটে সংযুক্ত হন।'
+                    : 'Offline AI isn\'t supported on this device — please connect to the internet for analysis.'
+                  : ''}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Upload + analyze button (hidden once a result is showing) */}
         {!result && (
           <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -189,11 +213,17 @@ export default function ScriptGuardPage() {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
+            {/* Mode badge */}
+            <div className="flex justify-end">
+              {mode && <AnalysisModeBadge mode={mode} />}
+            </div>
+
             {/* 1. Drug interactions (FIRST for safety) */}
             <DrugInteractionAlert
               interactions={result.interaction_warnings}
               hasDangerous={result.has_dangerous_interactions}
               lang={lang}
+              unavailable={mode === 'offline'}
             />
 
             {/* 2. Extracted medications */}
@@ -207,7 +237,7 @@ export default function ScriptGuardPage() {
               }}
             >
               <div className="pt-3">
-                <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} />
+                <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} mode={mode ?? undefined} />
               </div>
             </ResultCard>
 
