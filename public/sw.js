@@ -97,24 +97,23 @@ self.addEventListener('activate', (event) => {
         )
       )
       .then(() => cacheAllPages())
-      // Idle-time model file prefetch — silently ignored if 404 (model not yet added).
-      // requestIdleCallback is not available in ServiceWorkerGlobalScope, so the
-      // setTimeout fallback (5s delay) always runs. Kept for forward compatibility
-      // if SW scope gains it.
+      // Model file prefetch — caches both model.json and weight shards so TF.js can
+      // load offline. Runs inside waitUntil so the SW stays alive until both files
+      // are fully downloaded.
       .then(() => {
-        const doPrefetch = () => {
-          fetch('/models/nayan-ai/model.json')
-            .then((res) => {
-              if (!res.ok) return
-              caches.open(MODELS_CACHE).then((cache) => cache.put('/models/nayan-ai/model.json', res))
-            })
-            .catch(() => {})
-        }
-        if (typeof requestIdleCallback === 'function') {
-          requestIdleCallback(doPrefetch, { timeout: 10000 })
-        } else {
-          setTimeout(doPrefetch, 5000)
-        }
+        const MODEL_FILES = [
+          '/models/nayan-ai/model.json',
+          '/models/nayan-ai/group1-shard1of1.bin',
+        ]
+        return caches.open(MODELS_CACHE).then((cache) =>
+          Promise.allSettled(
+            MODEL_FILES.map((url) =>
+              fetch(url)
+                .then((res) => { if (res.ok) cache.put(url, res.clone()) })
+                .catch(() => {})
+            )
+          )
+        )
       })
   )
   self.clients.claim()

@@ -126,12 +126,12 @@ export async function callGeminiVision(
       errorMessage.includes('Service Unavailable')
 
     if (is429) {
-      console.warn('[Gemini] Rate limited (429). Waiting 5s, retrying with gemini-1.5-flash...')
+      console.warn('[Gemini] Rate limited (429). Waiting 5s, retrying with gemini-2.0-flash...')
       await sleep(5000)
       try {
-        return await attempt('gemini-1.5-flash')
+        return await attempt('gemini-2.0-flash')
       } catch (retryError) {
-        console.error('[Gemini] Retry with gemini-1.5-flash also failed:', retryError)
+        console.error('[Gemini] Retry with gemini-2.0-flash also failed:', retryError)
         throw new GeminiError(
           `Vision analysis rate limited: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
           429
