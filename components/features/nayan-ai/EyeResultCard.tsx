@@ -2,22 +2,27 @@
 
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
+import { Loader2 } from 'lucide-react'
 import {
   CalendarClock,
   CheckCircle2,
   Download,
   Info,
+  RefreshCw,
   Share2,
   Stethoscope,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { AnalysisModeBadge } from '@/components/shared/AnalysisModeBadge'
 import type { Language, NayanResult } from '@/types'
 import { severityLabel, severityStyles } from './severity-styles'
 
 interface EyeResultCardProps {
   result: NayanResult
   lang: Language
+  analysisMode?: 'online' | 'offline' | null
+  isUpgrading?: boolean
 }
 
 // Staggered entrance — parent orchestrates children reveal.
@@ -47,7 +52,7 @@ function clampPercent(value: number): number {
   return Math.min(Math.max(Math.round(value), 0), 100)
 }
 
-export function EyeResultCard({ result, lang }: EyeResultCardProps) {
+export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeResultCardProps) {
   const style = severityStyles[result.severity]
   const confidence = clampPercent(result.confidence_score)
   const recommendation = lang === 'bn' ? result.recommendation_bn : result.recommendation_en
@@ -204,12 +209,47 @@ export function EyeResultCard({ result, lang }: EyeResultCardProps) {
     >
       {/* Decorative Radial Inner Glow */}
       <div className="pointer-events-none absolute right-0 top-0 h-48 w-48 rounded-full bg-gradient-to-br from-sky-400/8 to-transparent blur-2xl dark:from-sky-400/15" />
-      
+
+      {/* Analysis Mode Badge + Upgrade Indicator */}
+      {analysisMode === 'offline' && (
+        <motion.div variants={item} className="flex items-center gap-2">
+          <AnalysisModeBadge mode="offline" />
+          {isUpgrading && (
+            <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+              {lang === 'bn'
+                ? 'পূর্ণ বিশ্লেষণ নিশ্চিত করা হচ্ছে...'
+                : 'Confirming with full analysis...'}
+            </span>
+          )}
+        </motion.div>
+      )}
+      {analysisMode === 'online' && (
+        <motion.div variants={item}>
+          <AnalysisModeBadge mode="online" />
+        </motion.div>
+      )}
+
+      {/* Background upgrade-in-progress banner */}
+      {analysisMode === 'offline' && isUpgrading && (
+        <motion.div
+          variants={item}
+          className="flex items-center gap-2.5 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 dark:border-amber-800/40 dark:bg-amber-950/20"
+        >
+          <Loader2 className="h-4 w-4 animate-spin text-amber-600 dark:text-amber-400" />
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-300">
+            {lang === 'bn'
+              ? 'এটি একটি প্রাথমিক অফলাইন ফলাফল — পূর্ণ বিশ্লেষণের সাথে নিশ্চিত করা হচ্ছে...'
+              : 'This is a preliminary offline read — confirming with full analysis...'}
+          </p>
+        </motion.div>
+      )}
+
       {/* Header section with Severity Badge and Scan ID */}
       <motion.div variants={item} className="flex items-center justify-between">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${style.bg} ${style.text}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${style.dot} animate-pulse-slow`} />
-          {lang === 'bn' 
+          {lang === 'bn'
             ? `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'bn')}`
             : `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'en')}`}
         </span>

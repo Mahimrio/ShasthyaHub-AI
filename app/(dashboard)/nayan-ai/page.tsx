@@ -2,11 +2,21 @@
 
 import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Eye, Info, RotateCcw, Search } from 'lucide-react'
+import {
+  AlertTriangle,
+  Cpu,
+  Download,
+  Eye,
+  Info,
+  RotateCcw,
+  Search,
+  WifiOff,
+} from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useNayanAnalysis } from '@/hooks/useNayanAnalysis'
 import { useNayanHistory } from '@/hooks/useNayanHistory'
 import { useDoctors } from '@/hooks/useDoctors'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { TopDoctorsCard } from '@/components/features/nayan-ai/TopDoctorsCard'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
@@ -47,7 +57,18 @@ const INSTRUCTIONS = [
 
 export default function NayanAIPage() {
   const { lang } = useLanguage()
-  const { analyze, result, isLoading, isError, error, reset } = useNayanAnalysis()
+  const {
+    analyze,
+    result,
+    isLoading,
+    isError,
+    error,
+    reset,
+    analysisMode,
+    offlineModelStatus,
+    isUpgrading,
+  } = useNayanAnalysis()
+  const { isOnline } = useNetworkStatus()
   const { history, isLoading: historyLoading } = useNayanHistory()
   const { doctors, isLoading: doctorsLoading } = useDoctors({
     specialty: result?.specialist_needed ?? null,
@@ -191,6 +212,71 @@ export default function NayanAIPage() {
                 />
               </motion.div>
 
+              {/* Offline fallback states */}
+              {!isOnline && offlineModelStatus === 'missing' && !result && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-800/50 dark:bg-amber-950/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <Download className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-amber-800 dark:text-amber-200">
+                        {lang === 'bn'
+                          ? 'অফলাইন বিশ্লেষণ সেট আপ করা হয়নি'
+                          : 'Offline Analysis Not Set Up'}
+                      </p>
+                      <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                        {lang === 'bn'
+                          ? 'এই ডিভাইসে অফলাইন বিশ্লেষণ সেট আপ করা হয়নি — অনুগ্রহ করে ইন্টারনেটে সংযুক্ত হন।'
+                          : 'Offline analysis is not set up on this device yet — connect to the internet for analysis.'}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {!isOnline && offlineModelStatus === 'unsupported' && !result && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-xl border border-gray-200 bg-gray-50 p-5 dark:border-gray-700 dark:bg-gray-900"
+                >
+                  <div className="flex items-start gap-3">
+                    <Cpu className="mt-0.5 h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" />
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                        {lang === 'bn'
+                          ? 'অফলাইন এআই সমর্থিত নয়'
+                          : 'Offline AI Not Supported'}
+                      </p>
+                      <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                        {lang === 'bn'
+                          ? 'এই ডিভাইসে অফলাইন এআই সমর্থিত নয় — অনুগ্রহ করে বিশ্লেষণের জন্য ইন্টারনেটে সংযুক্ত হন।'
+                          : 'Offline AI is not supported on this device — please connect to the internet for analysis.'}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Offline banner when no result yet */}
+              {!isOnline && !result && offlineModelStatus !== 'missing' && offlineModelStatus !== 'unsupported' && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/50 px-4 py-2.5 dark:border-amber-800/40 dark:bg-amber-950/10"
+                >
+                  <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                    {lang === 'bn'
+                      ? 'অফলাইন — ফলাফল প্রাথমিক হবে'
+                      : 'Offline — results will be preliminary'}
+                  </span>
+                </motion.div>
+              )}
+
               {/* Action Trigger Buttons */}
               {!result ? (
                 <motion.div
@@ -199,7 +285,7 @@ export default function NayanAIPage() {
                 >
                   <Button
                     onClick={handleAnalyzeClick}
-                    disabled={!selectedFile || isLoading}
+                    disabled={!selectedFile || isLoading || (!isOnline && offlineModelStatus === 'missing') || (!isOnline && offlineModelStatus === 'unsupported')}
                     className="w-full rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x py-6 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Search className="mr-2 h-5 w-5" />
@@ -246,7 +332,12 @@ export default function NayanAIPage() {
             {/* Right Column: Screen Result Details */}
             {result && (
               <div className="md:col-span-7 space-y-4">
-                <EyeResultCard result={result} lang={lang} />
+                <EyeResultCard
+                  result={result}
+                  lang={lang}
+                  analysisMode={analysisMode}
+                  isUpgrading={isUpgrading}
+                />
 
                 {/* About This Condition */}
                 {(result.disease_description_en || result.disease_description_bn) && (
