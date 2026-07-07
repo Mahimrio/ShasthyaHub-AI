@@ -1,7 +1,7 @@
 {
-  "name": "ShasthyaHub-AI — স্বাস্থ্যহাব",
-  "short_name": "স্বাস্থ্যহাব",
-  "description": "AI Healthcare for Rural Bangladesh — মাল্টি-এজেন্ট AI স্বাস্থ্যসেবা",
+  "name": "ShasthyaHub-AI",
+  "short_name": "ShasthyaHub",
+  "description": "AI Healthcare for Rural Bangladesh",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

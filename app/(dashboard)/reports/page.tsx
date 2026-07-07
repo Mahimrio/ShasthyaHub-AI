@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { BarChart3, Eye, FileText, Utensils, Search, RefreshCw, AlertCircle, ChevronRight } from 'lucide-react'
+import { BarChart3, Eye, FileText, Utensils, Search, RefreshCw, AlertCircle, ChevronRight, WifiOff } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { PDFDownloadButton } from '@/components/shared/PDFDownloadButton'
@@ -68,6 +69,7 @@ function formatDate(iso: string, lang: 'bn' | 'en') {
 
 export default function ReportsPage() {
   const { lang } = useLanguage()
+  const { isOnline } = useNetworkStatus()
   const [activeFilter, setActiveFilter] = useState<FilterType>('all')
   const [reports, setReports] = useState<ReportItem[]>([])
   const [page, setPage] = useState(1)
@@ -75,13 +77,23 @@ export default function ReportsPage() {
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
   const mountedRef = useRef(false)
+  const langRef = useRef(lang)
+  useEffect(() => { langRef.current = lang }, [lang])
 
   const fetchReports = useCallback(async (pageNum: number, replace: boolean, filter: FilterType) => {
+    if (!isOnline) {
+      setError(langRef.current === 'bn' ? 'আপনি অফলাইনে আছেন — লাইভ ডেটা অনুপলব্ধ' : 'You are offline — live data unavailable')
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setError(null)
     try {
+      const ac = new AbortController()
+      const timeout = setTimeout(() => ac.abort(), 8000)
       const typeParam = filter === 'all' ? '' : `&type=${filter}`
-      const res = await fetch(`/api/reports?page=${pageNum}&limit=20${typeParam}`)
+      const res = await fetch(`/api/reports?page=${pageNum}&limit=20${typeParam}`, { signal: ac.signal })
+      clearTimeout(timeout)
       if (!res.ok) throw new Error('Failed to fetch')
       const json = await res.json()
       if (json.data) {
@@ -90,11 +102,15 @@ export default function ReportsPage() {
         if (replace) setPage(pageNum)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        setError(langRef.current === 'bn' ? 'অনুরোধ সময় শেষ — অনুগ্রহ করে পুনরায় চেষ্টা করুন' : 'Request timed out — please try again')
+      } else {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      }
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isOnline])
 
   // Initial fetch on mount
   useEffect(() => {
@@ -180,8 +196,29 @@ export default function ReportsPage() {
         </motion.div>
       )}
 
+      {/* Offline state */}
+      {!isOnline && reports.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-10 text-center shadow-[0_10px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4)]"
+        >
+          <div className="w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+            <WifiOff className="h-6 w-6 text-gray-400 dark:text-gray-500" />
+          </div>
+          <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-400">
+            {lang === 'bn' ? 'আপনি অফলাইনে আছেন' : 'You are offline'}
+          </h3>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+            {lang === 'bn'
+              ? 'লাইভ ডেটা উপলভ্য নয়। অনলাইনে সংযুক্ত হলে পুনরায় চেষ্টা করুন।'
+              : 'Live data is unavailable. Please reconnect to refresh.'}
+          </p>
+        </motion.div>
+      )}
+
       {/* Empty state */}
-      {!loading && !error && reports.length === 0 && (
+      {!loading && !error && reports.length === 0 && isOnline && (
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}

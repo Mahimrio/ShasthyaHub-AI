@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils } from 'lucide-react'
+import { Home, Eye, FileText, Utensils, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/nayan-ai', icon: Eye, labelEn: 'NayanAI', labelBn: 'চোখের পরীক্ষা' },
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'প্রেসক্রিপশন' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'খাদ্য বিশ্লেষণ' },
+  { href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' },
 ]
 
 export function BottomNav() {

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import type { Profile } from '@/types'
 import type { User } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { sendCacheAll } from '@/lib/cache-all'
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -41,8 +42,12 @@ export function useAuth() {
       if (!cancelled) setIsLoading(false)
 
       const { data: sub } = supabase.auth.onAuthStateChange(
-        async (_event, session) => {
+        async (event, session) => {
           setUser(session?.user ?? null)
+
+          if (event === 'SIGNED_IN') {
+            sendCacheAll()
+          }
 
           if (session?.user) {
             const { data: profile } = await supabase

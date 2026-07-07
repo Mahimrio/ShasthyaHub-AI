@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight } from 'lucide-react'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -11,6 +11,7 @@ import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Skeleton } from '@/components/shared/skeletons/Skeleton'
 import { useState } from 'react'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 
 const sidebarLinks = [
   { href: '/', icon: Home, labelEn: 'Home', labelBn: 'শুরু' },
@@ -18,6 +19,7 @@ const sidebarLinks = [
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'স্ক্রিপ্টগার্ড' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
+  { href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' },
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -25,6 +27,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { lang } = useLanguage()
   const { profile, isLoading, signOut } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { isOnline } = useNetworkStatus()
 
   const handleSignOut = async () => {
     await signOut()
@@ -45,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             )}
           </button>
-          <Link href="/" className="flex items-center gap-2">
+          <Link prefetch={false} href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-lg flex items-center justify-center">
               <span className="text-white text-xs font-bold">S</span>
             </div>
@@ -76,7 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col h-full">
           {/* Mobile Drawer Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-            <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
+            <Link prefetch={false} href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-sky-500/10 dark:shadow-sky-400/10">
                 <span className="text-white text-xs font-black">S</span>
               </div>
@@ -96,6 +99,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               const Icon = link.icon
               return (
                 <Link
+                  prefetch={false}
                   key={link.href}
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
@@ -177,10 +181,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             const isActive = pathname === link.href
             const Icon = link.icon
             return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={cn(
+                <Link
+                  prefetch={false}
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
                   'relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200',
                   isActive
                     ? 'bg-gradient-to-r from-sky-500/10 to-transparent text-sky-600 dark:from-sky-500/20 dark:text-sky-400 font-bold'
@@ -233,6 +238,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </div>
       </aside>
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="md:pl-60 xl:pl-64">
+          <div className="flex items-center justify-center gap-2 bg-amber-500 px-4 py-1.5 text-[11px] font-medium text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+            {lang === 'bn' ? 'আপনি অফলাইনে আছেন — ফলাফল প্রাথমিক' : 'You are offline — results are preliminary'}
+          </div>
+        </div>
+      )}
 
       {/* Main content */}
       <main className="md:pl-60 xl:pl-64 md:pb-0 pb-20">

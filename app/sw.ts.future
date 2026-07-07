@@ -1,0 +1,181 @@
+import { defaultCache } from '@serwist/next/worker'
+import { Serwist, NetworkOnly, StaleWhileRevalidate, ExpirationPlugin } from 'serwist'
+
+interface QueueItem {
+  id?: number
+  agentType: 'nayan' | 'scriptguard' | 'glycovision'
+  imageBlob: Blob
+  localResult: Record<string, unknown>
+  status: 'pending' | 'syncing' | 'synced' | 'failed'
+  createdAt: number
+  retryCount: number
+  syncedAt?: number
+}
+
+declare const self: ServiceWorkerGlobalScope
+
+const serwist = new Serwist({
+  precacheEntries: ['/offline', '/manifest.json'],
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: true,
+  runtimeCaching: [
+    // 1. All API routes: network-only (override defaultCache's NetworkFirst for GET APIs)
+    {
+      matcher: ({ sameOrigin, url: { pathname } }) =>
+        sameOrigin && pathname.startsWith('/api/'),
+      handler: new NetworkOnly({ networkTimeoutSeconds: 10 }),
+    },
+    // 2. RSC prefetch (Next.js <Link> hover): StaleWhileRevalidate
+    {
+      matcher: ({ request, sameOrigin, url: { pathname } }) =>
+        request.headers.get('RSC') === '1' &&
+        request.headers.get('Next-Router-Prefetch') === '1' &&
+        sameOrigin &&
+        !pathname.startsWith('/api/'),
+      handler: new StaleWhileRevalidate({
+        cacheName: 'pages-rsc-prefetch',
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
+      }),
+    },
+    // 3. RSC navigation (Next.js <Link> click): StaleWhileRevalidate
+    {
+      matcher: ({ request, sameOrigin, url: { pathname } }) =>
+        request.headers.get('RSC') === '1' &&
+        !request.headers.get('Next-Router-Prefetch') &&
+        sameOrigin &&
+        !pathname.startsWith('/api/'),
+      handler: new StaleWhileRevalidate({
+        cacheName: 'pages-rsc',
+        plugins: [new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 })],
+      }),
+    },
+    // 4. Default @serwist/next caching rules (Google Fonts, static assets, images, etc.)
+    ...defaultCache,
+    // Note: defaultCache already provides NetworkFirst with networkTimeoutSeconds
+    // for HTML pages ("pages" cache), next-data, cross-origin, and a catch-all
+    // NetworkOnly. Our entries 1-3 take precedence because they're registered first.
+  ],
+  fallbacks: {
+    entries: [
+      {
+        url: '/offline',
+        matcher: ({ request }) => request.destination === 'document',
+      },
+    ],
+  },
+})
+
+serwist.addEventListeners()
+
+// ── Background Sync handler ─────────────────────────────────────
+
+async function getQueueDb() {
+  const { openDB } = await import('idb')
+  return openDB('shasthyahub-offline-queue', 1, {
+    upgrade(db) {
+      if (!db.objectStoreNames.contains('pending-analyses')) {
+        const store = db.createObjectStore('pending-analyses', {
+          keyPath: 'id',
+          autoIncrement: true,
+        })
+        store.createIndex('status', 'status')
+      }
+    },
+  })
+}
+
+async function rePostAnalysis(item: QueueItem): Promise<boolean> {
+  const endpointMap: Record<string, string> = {
+    nayan: '/api/nayan/analyze',
+    scriptguard: '/api/scriptguard/analyze',
+    glycovision: '/api/glycovision/analyze',
+  }
+  const endpoint = endpointMap[item.agentType]
+  if (!endpoint) return false
+  try {
+    const formData = new FormData()
+    formData.append('image', item.imageBlob, 'offline-sync.jpg')
+    formData.append('mode', 'offline')
+    formData.append('localResult', JSON.stringify(item.localResult))
+    const response = await fetch(endpoint, { method: 'POST', body: formData })
+    return response.ok
+  } catch {
+    return false
+  }
+}
+
+// ── Warm all caches (document + RSC + RSC prefetch) ──────────────
+
+const ALL_PAGES = ['/', '/nayan-ai', '/scriptguard', '/glycovision', '/reports', '/debug-offline']
+
+async function warmCaches() {
+  const navCache = await caches.open('pages')
+  const rscCache = await caches.open('pages-rsc')
+  const rscPrefetchCache = await caches.open('pages-rsc-prefetch')
+
+  const rscHeaders: Record<string, string> = {
+    'RSC': '1',
+    'Next-Router-State-Tree': '%5B%22%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D',
+  }
+
+  const tasks = ALL_PAGES.flatMap((url) => [
+    fetch(url)
+      .then((res) => { if (res.ok && res.type === 'basic') navCache.put(url, res) })
+      .catch(() => {}),
+    fetch(url, { headers: { ...rscHeaders } })
+      .then((res) => { if (res.ok && res.type === 'basic') rscCache.put(url, res) })
+      .catch(() => {}),
+    fetch(url, { headers: { ...rscHeaders, 'Next-Router-Prefetch': '1' } })
+      .then((res) => { if (res.ok && res.type === 'basic') rscPrefetchCache.put(url, res) })
+      .catch(() => {}),
+  ])
+
+  await Promise.allSettled(tasks)
+}
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(warmCaches())
+})
+
+self.addEventListener('message', (event) => {
+  if (event.data === 'cache-all') {
+    event.waitUntil(warmCaches())
+  }
+})
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-analyses') {
+    event.waitUntil(
+      (async () => {
+        try {
+          const db = await getQueueDb()
+          const tx = db.transaction('pending-analyses', 'readonly')
+          const store = tx.objectStore('pending-analyses')
+          const index = store.index('status')
+          const pendingItems: QueueItem[] = await index.getAll('pending')
+          for (const item of pendingItems) {
+            if (item.id == null) continue
+            const success = await rePostAnalysis(item)
+            const writeTx = db.transaction('pending-analyses', 'readwrite')
+            const stored = await writeTx.objectStore('pending-analyses').get(item.id)
+            if (stored) {
+              if (success) {
+                stored.status = 'synced'
+                stored.syncedAt = Date.now()
+              } else {
+                stored.status = 'failed'
+                stored.retryCount += 1
+              }
+              await writeTx.objectStore('pending-analyses').put(stored)
+            }
+          }
+        } catch (err) {
+          console.error('[SW] Sync handler error:', err)
+        }
+      })()
+    )
+  }
+})
+
+export {}

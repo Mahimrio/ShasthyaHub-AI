@@ -64,6 +64,11 @@ export default async function middleware(request: NextRequest) {
   supabaseResponse.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   supabaseResponse.headers.set('Permissions-Policy', 'camera=self, microphone=self')
 
+  supabaseResponse.headers.set(
+    'Content-Security-Policy',
+    "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' 'unsafe-eval';"
+  )
+
   return supabaseResponse
 }
 
