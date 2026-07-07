@@ -5,6 +5,7 @@ import { Eye, FileText, Utensils, ChevronRight, Loader2 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { motion } from 'framer-motion'
 
 interface HealthScoreData {
@@ -62,16 +63,24 @@ function getScoreColor(val: number) {
 export default function DashboardHome() {
   const { lang } = useLanguage()
   const { profile } = useAuth()
+  const { isOnline } = useNetworkStatus()
 
   const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery<{ success: boolean; data: HealthScoreData }>({
     queryKey: ['healthScore'],
-    queryFn: async () => {
-      const res = await fetch('/api/reports/health-score')
-      if (!res.ok) throw new Error('Failed to fetch health score')
-      return res.json()
+    queryFn: async ({ signal }) => {
+      const timeoutAc = new AbortController()
+      const timeoutId = setTimeout(() => timeoutAc.abort(), 8000)
+      signal?.addEventListener('abort', () => timeoutAc.abort())
+      try {
+        const res = await fetch('/api/reports/health-score', { signal: timeoutAc.signal })
+        if (!res.ok) throw new Error('Failed to fetch health score')
+        return res.json()
+      } finally {
+        clearTimeout(timeoutId)
+      }
     },
-    refetchInterval: 30_000,
-    retry: 2,
+    refetchInterval: isOnline ? 30_000 : false,
+    retry: !isOnline ? 0 : 2,
     staleTime: 15_000,
   })
 
