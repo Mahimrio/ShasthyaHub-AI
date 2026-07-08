@@ -301,6 +301,73 @@ export interface NayanResultLight {
   confidence_score: number | null
 }
 
+// --- Lokhon (Symptom Screener) types ---
+
+export type RiskBand = 'Low' | 'Moderate' | 'High' | 'Urgent'
+
+export interface LokhonQuestion {
+  id: string
+  disease_slug: string
+  text_en: string
+  text_bn: string
+  weight: number
+  is_red_flag: boolean
+  order_index: number
+}
+
+export interface LokhonDisease {
+  slug: string
+  name_en: string
+  name_bn: string
+  description_en: string | null
+  description_bn: string | null
+  icon: string | null
+  estimated_time_en: string | null
+  estimated_time_bn: string | null
+  question_count: number | null
+}
+
+export interface LokhonAnswer {
+  questionId: string
+  value: number
+}
+
+export interface LokhonAdvice {
+  advice_en: string
+  advice_bn: string
+  doctor_type_en: string
+  doctor_type_bn: string
+  urgency: string
+}
+
+export interface LokhonResult {
+  id: string
+  riskPercentage: number
+  riskBand: RiskBand
+  isRedFlag: boolean
+  advice: LokhonAdvice
+  disclaimer: string
+  diseaseSlug: string
+  diseaseNameEn: string
+  diseaseNameBn: string
+  topSymptoms: { text_en: string; text_bn: string; value: number }[]
+  requiresImmediateSupport?: boolean
+  crisisResources?: { helpline: string; messageEn: string; messageBn: string }
+  created_at?: string
+}
+
+export interface LokhonAnalysisRow {
+  id: string
+  user_id: string
+  disease_slug: string
+  answers: Record<string, number>
+  risk_percentage: number | null
+  risk_band: string | null
+  is_red_flag: boolean | null
+  advice: LokhonAdvice | null
+  created_at: string
+}
+
 export const BANGLADESH_DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria',
   'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', 'Cox\'s Bazar',

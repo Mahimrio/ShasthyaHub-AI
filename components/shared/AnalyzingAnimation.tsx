@@ -10,6 +10,7 @@ interface AnalyzingAnimationProps {
   stages?: { en: string; bn: string }[]
   icon?: ReactNode
   estimatedTime?: { en: string; bn: string }
+  hideIcon?: boolean
 }
 
 const DEFAULT_STAGES: { en: string; bn: string }[] = [
@@ -29,6 +30,7 @@ export function AnalyzingAnimation({
   stages = DEFAULT_STAGES,
   icon,
   estimatedTime = DEFAULT_ESTIMATED,
+  hideIcon = false,
 }: AnalyzingAnimationProps) {
   const { lang: langCtx } = useLanguage()
   const lang = langProp ?? langCtx
@@ -55,7 +57,7 @@ export function AnalyzingAnimation({
         animate={{ scale: 1, opacity: 1 }}
         className="w-full max-w-sm rounded-2xl bg-white p-8 text-center dark:bg-gray-800"
       >
-        {icon ? (
+        {!hideIcon && (icon ? (
           <div className="relative mx-auto mb-7 flex h-28 w-28 items-center justify-center">
             <motion.div
               className="absolute h-28 w-28 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 opacity-20"
@@ -83,7 +85,7 @@ export function AnalyzingAnimation({
               transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
             />
           </div>
-        )}
+        ))}
 
         <div className="mb-6 flex justify-center gap-1.5">
           {[0, 1, 2].map((i) => (

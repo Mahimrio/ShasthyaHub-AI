@@ -6,9 +6,9 @@
 // Edit this file directly; do NOT maintain a parallel implementation.
 // ====================================================================
 
-const CACHE = 'shasthyahub-v2'
-const STATIC_CACHE = 'shasthyahub-static-v2'
-const NAV_CACHE = 'shasthyahub-nav-v2'
+const CACHE = 'shasthyahub-v4'
+const STATIC_CACHE = 'shasthyahub-static-v4'
+const NAV_CACHE = 'shasthyahub-nav-v3'
 const RSC_PREFETCH_CACHE = 'pages-rsc-prefetch'
 const RSC_NAV_CACHE = 'pages-rsc'
 const MODELS_CACHE = 'shasthyahub-models-v4'
@@ -45,33 +45,18 @@ async function cacheAllPages() {
   const rscCache = await caches.open(RSC_NAV_CACHE)
   const rscPrefetchCache = await caches.open(RSC_PREFETCH_CACHE)
 
-  const rscHeaders = {
-    'RSC': '1',
-    'Next-Router-State-Tree': '%5B%22%22%2C%7B%22children%22%3A%5B%22__PAGE__%22%2C%7B%7D%5D%7D%2Cnull%2Cnull%2Ctrue%5D',
-  }
-
-  const tasks = ALL_PAGES.flatMap((url) => [
-    // Warm document/HTML cache (for hard refresh)
-    fetch(url)
-      .then((res) => {
-        if (res.ok && res.type === 'basic') navCache.put(url, res)
-      })
-      .catch(() => {}),
-    // Warm RSC navigation cache (for <Link> clicks)
-    fetch(url, { headers: { ...rscHeaders } })
-      .then((res) => {
-        if (res.ok && res.type === 'basic') rscCache.put(url, res)
-      })
-      .catch(() => {}),
-    // Warm RSC prefetch cache (for <Link> hover)
-    fetch(url, {
-      headers: { ...rscHeaders, 'Next-Router-Prefetch': '1' },
-    })
-      .then((res) => {
-        if (res.ok && res.type === 'basic') rscPrefetchCache.put(url, res)
-      })
-      .catch(() => {}),
-  ])
+  const tasks = ALL_PAGES.flatMap((url) => {
+    // Only warm pages that won't redirect (auth pages)
+    const isAuthPage = url === '/login' || url === '/register'
+    if (!isAuthPage) return []
+    return [
+      fetch(url)
+        .then((res) => {
+          if (res.ok && res.type === 'basic') navCache.put(url, res)
+        })
+        .catch(() => {}),
+    ]
+  })
 
   const results = await Promise.allSettled(tasks)
   const fulfilled = results.filter((r) => r.status === 'fulfilled').length
