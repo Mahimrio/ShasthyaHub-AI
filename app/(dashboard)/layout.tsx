@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Bug } from 'lucide-react'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -18,8 +18,9 @@ const sidebarLinks = [
   { href: '/nayan-ai', icon: Eye, labelEn: 'Nayan AI', labelBn: 'নয়ান AI' },
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'স্ক্রিপ্টগার্ড' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
+  { href: '/lokhon', icon: Activity, labelEn: 'Lokhon', labelBn: 'লক্ষণ' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
-  { href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' },
+
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
