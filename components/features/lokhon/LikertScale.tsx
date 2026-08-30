@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface LikertScaleProps {
   value: number | null
@@ -9,22 +10,24 @@ interface LikertScaleProps {
 }
 
 const OPTIONS = [
-  { value: 1, labelEn: 'Strongly Disagree', labelBn: 'একদমই না' },
-  { value: 2, labelEn: 'Disagree', labelBn: 'না' },
-  { value: 3, labelEn: 'Neutral', labelBn: 'মাঝামাঝি' },
-  { value: 4, labelEn: 'Agree', labelBn: 'হ্যাঁ' },
-  { value: 5, labelEn: 'Strongly Agree', labelBn: 'অবশ্যই হ্যাঁ' },
+  { value: 1, labelEn: 'Not at all', labelBn: 'একদমই না' },
+  { value: 2, labelEn: 'No', labelBn: 'না' },
+  { value: 3, labelEn: 'Somewhat', labelBn: 'মাঝামাঝি' },
+  { value: 4, labelEn: 'Yes', labelBn: 'হ্যাঁ' },
+  { value: 5, labelEn: 'Definitely', labelBn: 'অবশ্যই হ্যাঁ' },
 ]
 
+// 1 = symptom absent (calm green) → 5 = symptom severe (alert red)
 const STATE_COLORS = [
-  'from-red-500 to-red-400',
-  'from-orange-400 to-amber-400',
-  'from-yellow-400 to-amber-300',
-  'from-lime-400 to-green-400',
   'from-emerald-500 to-green-500',
+  'from-lime-400 to-green-400',
+  'from-yellow-400 to-amber-300',
+  'from-orange-400 to-amber-400',
+  'from-red-500 to-red-400',
 ]
 
 export function LikertScale({ value, onChange, disabled }: LikertScaleProps) {
+  const { lang } = useLanguage()
   return (
     <div className="flex flex-wrap gap-2 justify-center" role="radiogroup" aria-label="Response scale">
       {OPTIONS.map((opt, i) => {
@@ -47,7 +50,7 @@ export function LikertScale({ value, onChange, disabled }: LikertScaleProps) {
           >
             <span className="text-lg font-bold leading-none">{opt.value}</span>
             <span className="text-[10px] leading-tight text-center whitespace-nowrap">
-              {opt.labelBn}
+              {lang === 'bn' ? opt.labelBn : opt.labelEn}
             </span>
           </button>
         )
@@ -57,6 +60,7 @@ export function LikertScale({ value, onChange, disabled }: LikertScaleProps) {
 }
 
 export function LikertScaleCompact({ value, onChange, disabled }: LikertScaleProps) {
+  const { lang } = useLanguage()
   return (
     <div className="flex gap-1" role="radiogroup" aria-label="Response scale">
       {OPTIONS.map((opt) => {
@@ -78,7 +82,7 @@ export function LikertScaleCompact({ value, onChange, disabled }: LikertScalePro
             )}
           >
             <span className="text-xs font-bold">{opt.value}</span>
-            <span className="leading-tight text-center">{opt.labelBn}</span>
+            <span className="leading-tight text-center">{lang === 'bn' ? opt.labelBn : opt.labelEn}</span>
           </button>
         )
       })}

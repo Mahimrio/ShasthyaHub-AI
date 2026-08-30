@@ -17,8 +17,8 @@ export function QuestionProgress({ current, total }: QuestionProgressProps) {
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium text-gray-500 dark:text-gray-400">
           {lang === 'bn'
-            ? `প্রশ্ন ${current} / ${total}`
-            : `Question ${current} of ${total}`}
+            ? `উত্তর দেওয়া হয়েছে ${current} / ${total}`
+            : `Answered ${current} of ${total}`}
         </span>
         <span className="text-gray-400 dark:text-gray-500 tabular-nums">{pct}%</span>
       </div>

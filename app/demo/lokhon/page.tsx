@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, Play, RotateCcw } from 'lucide-react'
+import { Activity, Play, RotateCcw, Target } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
@@ -72,7 +72,7 @@ export default function DemoLokhonPage() {
         <div className="relative z-10 mx-auto max-w-3xl space-y-6 p-4 md:p-6">
           {/* Demo banner */}
           <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-900/20">
-            <span className="text-lg">🎯</span>
+            <Target className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
             <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
               {lang === 'bn'
                 ? 'ডেমো মোড — নমুনা তথ্য ব্যবহার করা হচ্ছে (কোনো আসল AI কল নেই)'
@@ -87,7 +87,7 @@ export default function DemoLokhonPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
-                {lang === 'bn' ? '🧿 লোকন — ডেমো' : '🧿 Lokhon — Demo'}
+                {lang === 'bn' ? 'লোকন — ডেমো' : 'Lokhon — Demo'}
               </h1>
               <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                 {lang === 'bn'

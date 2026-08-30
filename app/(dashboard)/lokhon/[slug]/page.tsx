@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, ChevronLeft, ChevronRight, ClipboardCheck, RotateCcw, Search } from 'lucide-react'
+import { ArrowLeft, Brain, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck, ClipboardList, Microscope, RotateCcw, Search } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useLokhonAnalysis } from '@/hooks/useLokhonAnalysis'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
@@ -17,10 +17,10 @@ import { AlertTriangle } from 'lucide-react'
 import type { LokhonQuestion, LokhonDisease, LokhonAnswer } from '@/types'
 
 const LOKHON_STAGES = [
-  { en: '📋 Processing your answers...', bn: '📋 আপনার উত্তর প্রক্রিয়াকরণ করা হচ্ছে...' },
-  { en: '🔬 Analyzing symptom patterns...', bn: '🔬 লক্ষণের প্যাটার্ন বিশ্লেষণ করা হচ্ছে...' },
-  { en: '🧠 Generating risk assessment...', bn: '🧠 ঝুঁকি মূল্যায়ন তৈরি করা হচ্ছে...' },
-  { en: '✅ Preparing your report...', bn: '✅ আপনার রিপোর্ট তৈরি করা হচ্ছে...' },
+  { en: 'Processing your answers...', bn: 'আপনার উত্তর প্রক্রিয়াকরণ করা হচ্ছে...', icon: ClipboardList },
+  { en: 'Analyzing symptom patterns...', bn: 'লক্ষণের প্যাটার্ন বিশ্লেষণ করা হচ্ছে...', icon: Microscope },
+  { en: 'Generating risk assessment...', bn: 'ঝুঁকি মূল্যায়ন তৈরি করা হচ্ছে...', icon: Brain },
+  { en: 'Preparing your report...', bn: 'আপনার রিপোর্ট তৈরি করা হচ্ছে...', icon: CheckCircle2 },
 ]
 
 
