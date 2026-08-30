@@ -86,10 +86,11 @@ async function checkGroq(): Promise<'ok' | 'error'> {
     const { default: Groq } = await import('groq-sdk')
     const groq = new Groq({ apiKey })
     const completion = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       messages: [{ role: 'user', content: 'Reply with exactly one word: OK' }],
       temperature: 0.1,
-      max_tokens: 10,
+      // Reasoning model: needs headroom beyond the visible reply
+      max_completion_tokens: 300,
     })
     const text = completion.choices[0]?.message?.content?.trim()
     return text ? 'ok' : 'error'
