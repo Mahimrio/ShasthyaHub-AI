@@ -33,7 +33,8 @@ function getClient(): Groq {
 export async function callGroq(
   userContent: string,
   systemPrompt: string,
-  model = 'openai/gpt-oss-120b'
+  model = 'openai/gpt-oss-120b',
+  maxTokens = 3500
 ): Promise<object> {
   // --- Primary attempt: Groq ---
   try {
@@ -46,8 +47,12 @@ export async function callGroq(
       response_format: { type: 'json_object' },
       temperature: 0.1,
       // Unset, Groq reserves the model's full 65K output budget against the
-      // 8K TPM free-tier limit and 413s. 3500 covers reasoning + JSON.
-      max_completion_tokens: 3500,
+      // 8K TPM free-tier limit and 413s. Callers sharing a request-minute
+      // pass smaller budgets so their combined cost stays under the cap.
+      max_completion_tokens: maxTokens,
+      // gpt-oss burns most of the budget on hidden reasoning at the default
+      // effort — 'low' keeps the visible JSON from being truncated.
+      reasoning_effort: 'low',
     })
 
     const content = completion.choices[0]?.message?.content

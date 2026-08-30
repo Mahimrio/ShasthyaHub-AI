@@ -25,11 +25,13 @@ const macroColors = {
 } as const
 
 export default function FoodItemsList({ items, lang }: FoodItemsListProps) {
+  // Float sums drift (12.399999…) — display at 1-decimal precision.
+  const round1 = (n: number) => Math.round(n * 10) / 10
   const totals = {
-    calories: items.reduce((s, i) => s + i.calories, 0),
-    carbs_g: items.reduce((s, i) => s + i.carbs_g, 0),
-    protein_g: items.reduce((s, i) => s + i.protein_g, 0),
-    fat_g: items.reduce((s, i) => s + i.fat_g, 0),
+    calories: round1(items.reduce((s, i) => s + i.calories, 0)),
+    carbs_g: round1(items.reduce((s, i) => s + i.carbs_g, 0)),
+    protein_g: round1(items.reduce((s, i) => s + i.protein_g, 0)),
+    fat_g: round1(items.reduce((s, i) => s + i.fat_g, 0)),
   }
 
   return (

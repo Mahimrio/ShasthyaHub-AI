@@ -287,8 +287,15 @@ function lookupStaticInteractions(generics: string[]): DrugInteraction[] {
 export async function checkDrugInteractions(
   genericNames: string[]
 ): Promise<DrugInteraction[]> {
+  // Combination products arrive as "aspirin + atorvastatin" — split into
+  // components so pairing and OpenFDA queries work on real ingredients.
   const generics = Array.from(
-    new Set(genericNames.map((g) => g.toLowerCase().trim()).filter(Boolean))
+    new Set(
+      genericNames
+        .flatMap((g) => g.split(/\s*\+\s*/))
+        .map((g) => g.toLowerCase().trim())
+        .filter((g) => g && g.length >= 3)
+    )
   );
   if (generics.length < 2) return [];
 
@@ -319,7 +326,10 @@ export async function checkDrugInteractions(
 
     const raw = await callGroq(
       `These drugs are prescribed together on a Bangladeshi prescription: ${drugList}.${evidenceBlock}`,
-      GROQ_INTERACTION_PROMPT
+      GROQ_INTERACTION_PROMPT,
+      'openai/gpt-oss-120b',
+      // Shares a request-minute with the mapping batch — keep combined cost <8K TPM.
+      2800
     );
     const interactions = coerceInteractions(raw);
     if (interactions.length > 0) return interactions;
