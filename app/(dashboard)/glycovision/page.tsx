@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Apple,
@@ -92,16 +92,20 @@ export default function GlycoVisionPage() {
   const [mainTab, setMainTab] = useState<MainTab>('upload')
   const [resultTab, setResultTab] = useState<ResultTab>('overview')
   // Match Nayan/ScriptGuard: only show the disclaimer until first acceptance.
-  const [state, setState] = useState<AnalysisState>(() => {
-    if (typeof window === 'undefined') return 'disclaimer'
-    return localStorage.getItem(GLYCO_DISCLAIMER_KEY) ? 'idle' : 'disclaimer'
-  })
-  const [showDisclaimer, setShowDisclaimer] = useState(() => {
-    if (typeof window === 'undefined') return true
-    return !localStorage.getItem(GLYCO_DISCLAIMER_KEY)
-  })
+  // SSR always renders the 'disclaimer' state; localStorage is adopted after
+  // mount so server and client HTML stay identical (no hydration mismatch).
+  const [state, setState] = useState<AnalysisState>('disclaimer')
+  const [showDisclaimer, setShowDisclaimer] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [result, setResult] = useState<AnalysisResult | null>(null)
+
+  useEffect(() => {
+    if (localStorage.getItem(GLYCO_DISCLAIMER_KEY)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time adoption of persisted acceptance
+      setShowDisclaimer(false)
+      setState((s) => (s === 'disclaimer' ? 'idle' : s))
+    }
+  }, [])
 
   const { history: pastFoodHistory, isLoading: historyLoading } = useGlycoVisionHistory()
 
