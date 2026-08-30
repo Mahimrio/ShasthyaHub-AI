@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { motion } from 'framer-motion'
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
 import { DailyHealthTip } from '@/components/dashboard/DailyHealthTip'
 import { EmergencyStrip } from '@/components/dashboard/EmergencyStrip'
@@ -183,19 +184,22 @@ export default function DashboardHome() {
             <div className="relative flex flex-col items-center shrink-0">
               <svg className="w-28 h-28 transform -rotate-90">
                 <circle cx="56" cy="56" r="44" stroke="#F3F4F6" strokeWidth="8" fill="transparent" className="dark:stroke-gray-700" />
-                <circle
+                <motion.circle
                   cx="56" cy="56" r="44"
                   stroke={getScoreColor(score)}
                   strokeWidth="8"
                   fill="transparent"
                   strokeDasharray="276.46"
-                  strokeDashoffset={276.46 - (276.46 * score) / 100}
-                  className="transition-all duration-1000 ease-out"
                   strokeLinecap="round"
+                  initial={{ strokeDashoffset: 276.46 }}
+                  animate={{ strokeDashoffset: 276.46 - (276.46 * score) / 100 }}
+                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-2xl font-extrabold" style={{ color: getScoreColor(score) }}>{score}</span>
+                <span style={{ color: getScoreColor(score) }}>
+                  <AnimatedCounter value={score} className="text-2xl font-extrabold tabular-nums" />
+                </span>
                 <span className="text-[9px] text-gray-400 font-medium tracking-wide uppercase mt-0.5">
                   {lang === 'bn' ? 'স্বাস্থ্য স্কোর' : 'Health Score'}
                 </span>
@@ -208,19 +212,25 @@ export default function DashboardHome() {
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'চোখ' : 'Eye'}
                 </p>
-                <p className="text-xl font-bold tabular-nums text-sky-600 dark:text-sky-400 mt-1">{hs?.eye_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-sky-600 dark:text-sky-400 mt-1">
+                  {hs?.eye_score != null ? <AnimatedCounter value={hs.eye_score} /> : '--'}
+                </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center">
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'প্রেসক্রিপশন' : 'Prescription'}
                 </p>
-                <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">{hs?.rx_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
+                  {hs?.rx_score != null ? <AnimatedCounter value={hs.rx_score} /> : '--'}
+                </p>
               </div>
               <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center">
                 <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'খাদ্য' : 'Food'}
                 </p>
-                <p className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400 mt-1">{hs?.food_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400 mt-1">
+                  {hs?.food_score != null ? <AnimatedCounter value={hs.food_score} /> : '--'}
+                </p>
               </div>
             </div>
           </div>

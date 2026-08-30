@@ -6,10 +6,10 @@ import {
   AlertTriangle,
   ChevronDown,
   Lightbulb,
-  ShieldAlert,
   XCircle,
 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AnimatedCheck } from '@/components/shared/AnimatedCheck'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { DrugInteraction, Language } from '@/types'
@@ -159,7 +159,7 @@ export default function DrugInteractionAlert({
     // No interactions — show a reassuring green banner.
     return (
       <Alert className="rounded-2xl border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/20">
-        <ShieldAlert className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <AnimatedCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
         <AlertTitle className="text-sm font-semibold text-green-800 dark:text-green-200">
           {lang === 'bn'
             ? 'কোনো বিপজ্জনক মিথস্ক্রিয়া পাওয়া যায়নি'

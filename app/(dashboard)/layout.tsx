@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -114,7 +115,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   )}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                    <motion.span
+                      layoutId="nav-mobile-pill"
+                      transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
+                    />
                   )}
                   <Icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
                   <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
@@ -196,7 +201,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                  <motion.span
+                    layoutId="nav-desktop-pill"
+                    transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
+                  />
                 )}
                 <Icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
                 <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>

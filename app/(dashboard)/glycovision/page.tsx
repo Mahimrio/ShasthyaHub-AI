@@ -28,6 +28,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
+import { AnimatedCheck } from '@/components/shared/AnimatedCheck'
 import { ResultCard } from '@/components/shared/ResultCard'
 import FoodItemsList from '@/components/features/glycovision/FoodItemsList'
 import NutritionDonutChart from '@/components/features/glycovision/NutritionDonutChart'
@@ -482,7 +483,7 @@ export default function GlycoVisionPage() {
                               {result.mealModifications.length === 0 && result.glycemicLoad <= 30 && (
                                 <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-900/20">
                                   <p className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
-                                    <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                    <AnimatedCheck className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
                                     {lang === 'bn' ? 'এই খাবারটি সুষম এবং নিরাপদ।' : 'This meal is balanced and safe.'}
                                   </p>
                                 </div>

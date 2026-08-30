@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { motion } from 'framer-motion'
 import { Home, Eye, FileText, Utensils, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -33,12 +34,13 @@ export function BottomNav() {
                 isActive ? 'text-sky-600 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500'
               )}
             >
-              <span
-                className={cn(
-                  'absolute -top-[1px] h-0.5 w-8 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500 transition-all duration-300',
-                  isActive ? 'opacity-100 scale-x-100' : 'opacity-0 scale-x-0'
-                )}
-              />
+              {isActive && (
+                <motion.span
+                  layoutId="bottomnav-indicator"
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  className="absolute -top-[1px] h-0.5 w-8 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500"
+                />
+              )}
               <Icon className={cn('h-5 w-5 transition-transform duration-200', isActive && '-translate-y-0.5 scale-110')} />
               <span className="text-[10px] font-medium leading-tight">
                 {lang === 'bn' ? item.labelBn : item.labelEn}

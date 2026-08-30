@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
+import { motion } from 'framer-motion'
 import { Eye, FileText, Utensils, ChevronRight, Activity } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { cn } from '@/lib/utils'
@@ -115,13 +116,24 @@ export function RecentActivity() {
           </p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+        <motion.ul
+          className="divide-y divide-gray-100 dark:divide-gray-800"
+          initial="hidden"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.07 } } }}
+        >
           {items.map((item) => {
             const meta = typeMeta[item.type]
             const Icon = meta.icon
             const sev = severityDot(item.severity_or_risk)
             return (
-              <li key={`${item.type}-${item.id}`}>
+              <motion.li
+                key={`${item.type}-${item.id}`}
+                variants={{
+                  hidden: { opacity: 0, x: -12 },
+                  show: { opacity: 1, x: 0, transition: { type: 'spring', stiffness: 320, damping: 28 } },
+                }}
+              >
                 <Link
                   href="/reports"
                   className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
@@ -147,10 +159,10 @@ export function RecentActivity() {
                     </span>
                   </span>
                 </Link>
-              </li>
+              </motion.li>
             )
           })}
-        </ul>
+        </motion.ul>
       )}
     </section>
   )

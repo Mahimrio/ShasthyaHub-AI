@@ -13,7 +13,7 @@ import {
   Stethoscope,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
+import { AnimatedCounter } from '@/components/shared/AnimatedCounter'
 import { AnalysisModeBadge } from '@/components/shared/AnalysisModeBadge'
 import type { Language, NayanResult } from '@/types'
 import { severityLabel, severityStyles } from './severity-styles'
@@ -276,10 +276,17 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
         <div className="flex items-end justify-between text-[11px] font-bold tracking-wider text-gray-400 dark:text-gray-500">
           <span>AI CONFIDENCE / নির্ভরযোগ্যতা</span>
           <span className="text-lg font-black tabular-nums text-gray-900 dark:text-gray-100">
-            {confidence}%
+            <AnimatedCounter value={confidence} duration={1} />%
           </span>
         </div>
-        <Progress value={confidence} className={`${style.bar} h-2`} />
+        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+          <motion.div
+            className={`h-full rounded-full ${style.bar}`}
+            initial={{ width: 0 }}
+            animate={{ width: `${confidence}%` }}
+            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.25 }}
+          />
+        </div>
       </motion.div>
 
       {/* Urgency Alert Card */}
