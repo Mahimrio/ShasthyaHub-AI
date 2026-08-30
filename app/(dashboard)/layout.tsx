@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -20,7 +21,10 @@ const sidebarLinks = [
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
   { href: '/lokhon', icon: Activity, labelEn: 'Lokhon', labelBn: 'লক্ষণ' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
-
+  // Debug tooling stays out of production builds
+  ...(process.env.NODE_ENV === 'development'
+    ? [{ href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' }]
+    : []),
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
