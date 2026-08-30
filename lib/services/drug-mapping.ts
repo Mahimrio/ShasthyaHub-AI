@@ -91,41 +91,47 @@ const STATIC_CLASS: Record<string, string> = {
 
 // --- Prompts ----------------------------------------------------------------
 
-const GROQ_MAP_PROMPT = `
-You are a Bangladeshi pharmacology assistant. Given text written on a local
-prescription, identify the most likely Bangladeshi brand name and the
-international generic (INN) name.
+const GROQ_MAP_BATCH_PROMPT = `
+You are a South Asian (Bangladesh/India) pharmacology assistant. You receive a
+JSON array of raw medication lines from one handwritten prescription. For EACH
+line, identify the most likely brand name and international generic (INN) name.
 Return ONLY valid JSON — no text outside the JSON object:
 {
-  "brand_name": "string",
-  "generic_name": "string",
-  "drug_class": "string",
-  "atc_code": "string or null",
-  "confidence": "medium" | "low"
+  "mappings": [
+    {
+      "written_text": "the input line, echoed verbatim",
+      "brand_name": "string",
+      "generic_name": "string (lowercase INN; for combination drugs join with ' + ')",
+      "drug_class": "string",
+      "confidence": "medium" | "low"
+    }
+  ]
 }
 Rules:
-- Use "medium" confidence for well-known Bangladeshi brands; "low" only when guessing.
-- generic_name must be the lowercase international nonproprietary name (e.g. "omeprazole").
-- If the text is illegible or not a drug, return generic_name as an empty string and confidence "low".
+- Return mappings in the SAME ORDER as the input array, one per line.
+- Use "medium" for well-known brands; "low" only when guessing.
+- If a line is illegible or not a drug, return generic_name as "" and confidence "low".
 `;
 
 // --- Helpers ----------------------------------------------------------------
 
 /** Dose-form prefixes that precede the brand name on BD prescriptions. */
 const DOSE_FORM_WORDS = new Set([
-  'tab', 'tab.', 'tablet', 'cap', 'cap.', 'capsule', 'syp', 'syp.', 'syrup',
+  'tab', 'tab.', 'tablet', 'cap', 'cap.', 'capsule', 'syp', 'syp.', 'syn', 'syrup',
   'susp', 'susp.', 'suspension', 'inj', 'inj.', 'injection', 'oint', 'ointment',
   'cream', 'gel', 'drops', 'drop', 'spray', 'inh', 'inhaler', 'sol', 'solution',
   // unit fragments left over after stripping digits ("500mg" → "mg")
   'mg', 'ml', 'mcg', 'gm', 'g', 'iu',
 ])
 
-/** First brand-like token: skips list numbers and dose forms ("1. Tab Napa 500mg" → "napa"). */
+/** First brand-like token: skips list numbers and dose forms ("1. Tab Napa 500mg" → "napa").
+ * Tokens under 3 chars are ignored — prescription shorthand ("T.", "C.") would
+ * otherwise substring-match half the reference table. */
 function brandToken(text: string): string {
   const tokens = text.trim().toLowerCase().split(/\s+/)
   for (const t of tokens) {
     const clean = t.replace(/[^a-z\u0980-\u09ff]/g, '')
-    if (!clean || DOSE_FORM_WORDS.has(clean)) continue
+    if (clean.length < 3 || DOSE_FORM_WORDS.has(clean)) continue
     return clean
   }
   return ''
@@ -164,9 +170,9 @@ async function lookupInDatabase(
   supabase: SupabaseClient
 ): Promise<BdDrug | null> {
   if (!searchTerm) return null;
-  const pattern = `%${escapeIlike(searchTerm)}%`;
-  // Single .or() — chaining .ilike().or() would AND the two conditions and
-  // brand-only matches (the common case) would never hit.
+  // Prefix match: prescriptions start with the brand word, and substring
+  // patterns ("%t%") false-match most of the table on short/junk tokens.
+  const pattern = `${escapeIlike(searchTerm)}%`;
   const { data, error } = await supabase
     .from('bd_drugs')
     .select('id, brand_name, generic_name, manufacturer, drug_class, atc_code, common_in_bd')
@@ -181,37 +187,52 @@ async function lookupInDatabase(
   return data[0] as BdDrug;
 }
 
-/** Tier 2 — Groq LLM reasoning for drugs absent from the local DB. */
-async function lookupWithGroq(writtenText: string): Promise<{
-  brand_name: string;
-  generic_name: string;
-  drug_class: string;
-  atc_code: string | null;
-  confidence: MappingConfidence;
-} | null> {
-  const raw = await callGroq(
-    `A Bangladeshi prescription contains: "${writtenText}". What is the most likely Bangladeshi brand name and international generic name?`,
-    GROQ_MAP_PROMPT
-  );
-  const o = raw as Record<string, unknown>;
-  const genericName =
-    typeof o['generic_name'] === 'string' ? o['generic_name'].trim() : '';
-  // An empty generic_name means Groq couldn't identify the drug — treat as a miss.
-  if (!genericName) return null;
+/** Tier 2 — ONE batched Groq call for every drug the DB couldn't map.
+ * A single call keeps a 10-drug prescription inside the free-tier TPM
+ * window — per-drug parallel calls rate-limit the whole pipeline. */
+async function lookupWithGroqBatch(writtenTexts: string[]): Promise<
+  Map<number, {
+    brand_name: string;
+    generic_name: string;
+    drug_class: string;
+    confidence: MappingConfidence;
+  }>
+> {
+  const out = new Map<number, {
+    brand_name: string;
+    generic_name: string;
+    drug_class: string;
+    confidence: MappingConfidence;
+  }>();
+  if (writtenTexts.length === 0) return out;
 
-  return {
-    brand_name:
-      typeof o['brand_name'] === 'string' && o['brand_name'].trim()
-        ? o['brand_name'].trim()
-        : writtenText.trim(),
-    generic_name: genericName.toLowerCase(),
-    drug_class: typeof o['drug_class'] === 'string' ? o['drug_class'] : 'Unknown',
-    atc_code:
-      typeof o['atc_code'] === 'string' && o['atc_code'].trim()
-        ? o['atc_code'].trim()
-        : null,
-    confidence: coerceMappingConfidence(o['confidence']),
-  };
+  const raw = await callGroq(
+    JSON.stringify(writtenTexts),
+    GROQ_MAP_BATCH_PROMPT,
+    // 120b knows regional brands the smaller models hallucinate on; the small
+    // output budget keeps this call + the interaction check inside one TPM window.
+    'openai/gpt-oss-120b',
+    2000
+  );
+  const mappings = (raw as Record<string, unknown>)['mappings'];
+  if (!Array.isArray(mappings)) return out;
+
+  mappings.forEach((entry, i) => {
+    if (i >= writtenTexts.length) return;
+    const o = (entry ?? {}) as Record<string, unknown>;
+    const generic = typeof o['generic_name'] === 'string' ? o['generic_name'].trim() : '';
+    if (!generic) return; // illegible / not a drug — leave unmapped
+    out.set(i, {
+      brand_name:
+        typeof o['brand_name'] === 'string' && o['brand_name'].trim()
+          ? o['brand_name'].trim()
+          : writtenTexts[i]!.trim(),
+      generic_name: generic.toLowerCase(),
+      drug_class: typeof o['drug_class'] === 'string' ? o['drug_class'] : 'Unknown',
+      confidence: coerceMappingConfidence(o['confidence']),
+    });
+  });
+  return out;
 }
 
 /**
@@ -241,13 +262,14 @@ function lookupStatic(writtenText: string): ExtractedMedication | null {
  * Map each Gemini-OCR'd medication to its brand name, generic name, and drug
  * class, preserving the dosage/frequency/duration/instructions from the OCR.
  *
- * Resolution tiers per medication (first hit wins):
- *   1. Supabase `bd_drugs` fuzzy lookup → confidence 'high'
- *   2. Groq LLM                         → confidence 'medium' | 'low'
- *   3. Curated static map               → confidence 'low'
+ * Resolution tiers (first hit wins):
+ *   1. Supabase `bd_drugs` fuzzy lookup (parallel)   → confidence 'high'
+ *   2. ONE batched Groq call for all DB misses       → 'medium' | 'low'
+ *   3. Curated static map                            → 'low'
  *
- * A failure on any single medication never aborts the whole list — the
- * offending entry is returned with confidence 'low' and its raw written_text.
+ * The batch keeps long prescriptions (10+ drugs) inside Groq's free-tier
+ * tokens-per-minute limit — per-drug calls would fire N parallel requests
+ * and rate-limit the whole pipeline into slow Gemini fallbacks.
  *
  * @param medications raw OCR'd medications from Gemini (no brand/generic yet)
  * @param supabase    server Supabase client (RLS-enforced)
@@ -257,61 +279,77 @@ export async function mapBrandsToGenerics(
   medications: GeminiMedication[],
   supabase: SupabaseClient
 ): Promise<ExtractedMedication[]> {
-  const results = await Promise.all(
-    medications.map(async (med): Promise<ExtractedMedication> => {
-      const searchTerm = brandToken(med.written_text);
-      const baseFields = {
-        written_text: med.written_text,
-        dosage: med.dosage,
-        frequency: med.frequency,
-        duration: med.duration,
-        instructions: med.instructions,
-      };
-
-      try {
-        // Tier 1 — database
-        const dbHit = await lookupInDatabase(searchTerm, supabase);
-        if (dbHit) {
-          return {
-            ...baseFields,
-            brand_name: dbHit.brand_name,
-            generic_name: dbHit.generic_name.toLowerCase(),
-            drug_class: dbHit.drug_class ?? 'Unknown',
-            mapping_confidence: 'high',
-          };
-        }
-
-        // Tier 2 — Groq
-        const groqHit = await lookupWithGroq(med.written_text);
-        if (groqHit) {
-          return {
-            ...baseFields,
-            brand_name: groqHit.brand_name,
-            generic_name: groqHit.generic_name,
-            drug_class: groqHit.drug_class,
-            mapping_confidence: groqHit.confidence,
-          };
-        }
-      } catch (err) {
-        console.warn(
-          '[drug-mapping] dynamic lookup failed for "%s", falling back to static:',
-          med.written_text,
-          err
-        );
-      }
-
-      // Tier 3 — curated static map (never throws)
-      const staticHit = lookupStatic(med.written_text);
-      if (staticHit) {
-        return { ...staticHit, ...baseFields };
-      }
-
-      // All tiers exhausted — return a clearly-unmapped placeholder.
-      return unmappedMedication(med);
-    })
+  // Tier 1 — parallel DB lookups (cheap, no rate limits).
+  const dbHits = await Promise.all(
+    medications.map((med) =>
+      lookupInDatabase(brandToken(med.written_text), supabase).catch(() => null)
+    )
   );
 
-  return results;
+  // Tier 2 — one batched Groq call covering every DB miss.
+  const missIdx: number[] = [];
+  dbHits.forEach((hit, i) => {
+    if (!hit) missIdx.push(i);
+  });
+
+  let groqHits = new Map<number, {
+    brand_name: string;
+    generic_name: string;
+    drug_class: string;
+    confidence: MappingConfidence;
+  }>();
+  if (missIdx.length > 0) {
+    try {
+      const batch = await lookupWithGroqBatch(
+        missIdx.map((i) => medications[i]!.written_text)
+      );
+      // Re-key from batch position back to medication index.
+      groqHits = new Map(
+        [...batch.entries()].map(([pos, val]) => [missIdx[pos]!, val])
+      );
+    } catch (err) {
+      console.warn('[drug-mapping] batched Groq mapping failed, using static fallback:', err);
+    }
+  }
+
+  return medications.map((med, i): ExtractedMedication => {
+    const baseFields = {
+      written_text: med.written_text,
+      dosage: med.dosage,
+      frequency: med.frequency,
+      duration: med.duration,
+      instructions: med.instructions,
+    };
+
+    const dbHit = dbHits[i];
+    if (dbHit) {
+      return {
+        ...baseFields,
+        brand_name: dbHit.brand_name,
+        generic_name: dbHit.generic_name.toLowerCase(),
+        drug_class: dbHit.drug_class ?? 'Unknown',
+        mapping_confidence: 'high',
+      };
+    }
+
+    const groqHit = groqHits.get(i);
+    if (groqHit) {
+      return {
+        ...baseFields,
+        brand_name: groqHit.brand_name,
+        generic_name: groqHit.generic_name,
+        drug_class: groqHit.drug_class,
+        mapping_confidence: groqHit.confidence,
+      };
+    }
+
+    const staticHit = lookupStatic(med.written_text);
+    if (staticHit) {
+      return { ...staticHit, ...baseFields };
+    }
+
+    return unmappedMedication(med);
+  });
 }
 
 // --- Backward-compatible exports (pre-existing API) -------------------------
