@@ -42,7 +42,7 @@ export function PDFDownloadButton({ type, analysisId }: PDFDownloadButtonProps) 
       const summary = type === 'eye'
         ? (report?.diagnosis || '')
         : type === 'prescription'
-          ? `${report?.extracted_drugs?.length || 0} drug(s) detected. ${report?.has_dangerous_interactions ? '⚠️ Dangerous interactions found.' : '✓ No dangerous interactions.'}`
+          ? `${report?.extracted_drugs?.length || 0} drug(s) detected. ${report?.has_dangerous_interactions ? 'WARNING: Dangerous interactions found.' : 'No dangerous interactions.'}`
           : (lang === 'bn' ? report?.risk_summary_bn : report?.risk_summary_en) || ''
 
       container.innerHTML = `

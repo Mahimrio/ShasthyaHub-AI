@@ -1,6 +1,6 @@
 'use client'
 
-import { Clock, MapPin, Star } from 'lucide-react'
+import { Clock, MapPin, Phone, Star } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Doctor } from '@/hooks/useDoctors'
 
@@ -82,8 +82,9 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
                 </div>
                 <div className="shrink-0 text-right">
                   {doctor.rating !== null && (
-                    <p className="text-xs font-semibold text-amber-600 dark:text-amber-400">
-                      {'★'} {doctor.rating.toFixed(1)}
+                    <p className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                      <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
+                      {doctor.rating.toFixed(1)}
                     </p>
                   )}
                   {doctor.experience_years !== null && (
@@ -117,9 +118,10 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
               {doctor.phone && (
                 <button
                   onClick={() => window.open(`tel:${doctor.phone}`)}
-                  className="mt-1.5 text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
+                  className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
                 >
-                  📞 {lang === 'bn' ? 'কল করুন' : 'Call'}
+                  <Phone className="h-3 w-3" />
+                  {lang === 'bn' ? 'কল করুন' : 'Call'}
                 </button>
               )}
             </div>

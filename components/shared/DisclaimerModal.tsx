@@ -2,6 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { AlertTriangle } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 interface DisclaimerModalProps {
@@ -17,8 +18,11 @@ export function DisclaimerModal({ open, onOpenChange, onAccept }: DisclaimerModa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm rounded-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {lang === 'bn' ? '⚠️ সতর্কতা' : '⚠️ Medical Disclaimer'}
+          <DialogTitle className="flex items-center gap-2">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-950/50">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </span>
+            {lang === 'bn' ? 'সতর্কতা' : 'Medical Disclaimer'}
           </DialogTitle>
           <DialogDescription className="text-left pt-2">
             <span className="block">

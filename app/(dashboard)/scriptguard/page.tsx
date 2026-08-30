@@ -4,11 +4,14 @@ import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
+  CheckCircle2,
   ClipboardList,
   Info,
   Lightbulb,
   RotateCcw,
   Search,
+  Send,
+  Stethoscope,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -74,11 +77,11 @@ export default function ScriptGuardPage() {
       : result?.special_instructions_en ?? []
 
   const scriptGuardStages = [
-    { en: '📡 Sending prescription to Vision Engine...', bn: '📡 প্রেসক্রিপশন ভিশন ইঞ্জিনে পাঠানো হচ্ছে...' },
-    { en: '🔍 Extracting medication details...', bn: '🔍 ওষুধের তথ্য বের করা হচ্ছে...' },
-    { en: '⚕️ Checking drug interactions...', bn: '⚕️ ওষুধের মিথস্ক্রিয়া যাচাই করা হচ্ছে...' },
-    { en: '📋 Generating schedule & report...', bn: '📋 সময়সূচি ও রিপোর্ট তৈরি হচ্ছে...' },
-    { en: '✅ Almost done...', bn: '✅ প্রায় শেষ...' },
+    { en: 'Sending prescription to Vision Engine...', bn: 'প্রেসক্রিপশন ভিশন ইঞ্জিনে পাঠানো হচ্ছে...', icon: Send },
+    { en: 'Extracting medication details...', bn: 'ওষুধের তথ্য বের করা হচ্ছে...', icon: Search },
+    { en: 'Checking drug interactions...', bn: 'ওষুধের মিথস্ক্রিয়া যাচাই করা হচ্ছে...', icon: Stethoscope },
+    { en: 'Generating schedule & report...', bn: 'সময়সূচি ও রিপোর্ট তৈরি হচ্ছে...', icon: ClipboardList },
+    { en: 'Almost done...', bn: 'প্রায় শেষ...', icon: CheckCircle2 },
   ]
 
   return (
@@ -135,8 +138,8 @@ export default function ScriptGuardPage() {
             <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
             <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-200">
               {lang === 'bn'
-                ? '💡 টিপ: সেরা ফলাফলের জন্য ভালো আলোতে প্রেসক্রিপশনটি সমতল পৃষ্ঠে রেখে ছবি তুলুন।'
-                : '💡 Tip: For best results, take the photo in good lighting with the prescription flat on a surface.'}
+                ? 'টিপ: সেরা ফলাফলের জন্য ভালো আলোতে প্রেসক্রিপশনটি সমতল পৃষ্ঠে রেখে ছবি তুলুন।'
+                : 'Tip: For best results, take the photo in good lighting with the prescription flat on a surface.'}
             </p>
           </div>
         )}

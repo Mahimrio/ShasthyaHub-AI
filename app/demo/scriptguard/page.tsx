@@ -196,7 +196,7 @@ export default function DemoScriptGuardPage() {
         </div>
         <div>
           <p className="text-sm font-bold text-purple-800 dark:text-purple-200">
-            {lang === 'bn' ? '✨ ডেমো মোড' : '✨ Demo Mode'}
+            {lang === 'bn' ? 'ডেমো মোড' : 'Demo Mode'}
           </p>
           <p className="text-xs text-purple-700 dark:text-purple-300">
             {lang === 'bn'

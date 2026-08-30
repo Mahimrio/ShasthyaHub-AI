@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, FileText, Utensils, ChevronRight, Loader2, RotateCcw } from 'lucide-react'
+import { Eye, FileText, Utensils, ChevronRight, Loader2, RotateCcw, Target } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -91,8 +91,8 @@ export default function DashboardHome() {
   const score = hs?.score ?? null
 
   const greeting = lang === 'bn'
-    ? `স্বাগতম, ${profile?.name || 'ব্যবহারকারী'} 👋`
-    : `Welcome back, ${profile?.name || 'User'} 👋`
+    ? `স্বাগতম, ${profile?.name || 'ব্যবহারকারী'}`
+    : `Welcome back, ${profile?.name || 'User'}`
 
   const tagline = lang === 'bn'
     ? 'আপনার স্বাস্থ্য সহায়ক — যেকোনো সময়, যেকোনো স্থানে'
@@ -157,8 +157,9 @@ export default function DashboardHome() {
           </div>
         ) : score === null ? (
           <div className="text-center py-4">
-            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-              {lang === 'bn' ? 'আপনার প্রথম স্কোর তৈরি করুন 🎯' : 'Get Your First Score 🎯'}
+            <h2 className="flex items-center justify-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+              <Target className="h-4 w-4 text-sky-500" />
+              {lang === 'bn' ? 'আপনার প্রথম স্কোর তৈরি করুন' : 'Get Your First Score'}
             </h2>
             <div className="flex gap-3 justify-center flex-wrap">
               {features.map((f) => {

@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Send, Microscope, Brain, CheckCircle2, type LucideIcon } from 'lucide-react'
 
-const stages = [
-  '📡 সার্ভারে পাঠানো হচ্ছে... / Sending to Vision Engine...',
-  '🔬 AI বিশ্লেষণ করছে... / Analyzing patterns...',
-  '🧠 রিপোর্ট তৈরি হচ্ছে... / Generating report...',
-  '✅ প্রায় শেষ... / Almost done...',
+const stages: { text: string; icon: LucideIcon }[] = [
+  { text: 'সার্ভারে পাঠানো হচ্ছে... / Sending to Vision Engine...', icon: Send },
+  { text: 'AI বিশ্লেষণ করছে... / Analyzing patterns...', icon: Microscope },
+  { text: 'রিপোর্ট তৈরি হচ্ছে... / Generating report...', icon: Brain },
+  { text: 'প্রায় শেষ... / Almost done...', icon: CheckCircle2 },
 ]
 
 export function AiThinkingBanner() {
@@ -40,9 +41,10 @@ export function AiThinkingBanner() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.3 }}
-            className="text-sm text-sky-700 dark:text-sky-300 font-medium"
+            className="flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 font-medium"
           >
-            {stages[stageIndex]}
+            {(() => { const StageIcon = stages[stageIndex].icon; return <StageIcon className="h-4 w-4 shrink-0" /> })()}
+            {stages[stageIndex].text}
           </motion.p>
         </AnimatePresence>
       </div>

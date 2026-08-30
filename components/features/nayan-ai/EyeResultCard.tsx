@@ -346,7 +346,7 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
               {lang === 'bn' ? 'প্রয়োজনীয় চিকিৎসক / Specialist' : 'Specialist / প্রয়োজনীয় চিকিৎসক'}
             </p>
             <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-200">
-              👨‍⚕️ {result.specialist_needed}
+              {result.specialist_needed}
             </p>
           </div>
         </div>
