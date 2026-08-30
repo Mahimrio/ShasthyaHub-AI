@@ -152,8 +152,8 @@ export default function NayanAIPage() {
             <div>
               <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
                 {lang === 'bn'
-                  ? '👁️ নয়ান AI — চোখের পরীক্ষা'
-                  : '👁️ NayanAI — Eye Screening'}
+                  ? 'নয়ান AI — চোখের পরীক্ষা'
+                  : 'NayanAI — Eye Screening'}
               </h1>
               <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
                 {lang === 'bn'
@@ -289,7 +289,7 @@ export default function NayanAIPage() {
                     className="w-full rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x py-6 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Search className="mr-2 h-5 w-5" />
-                    {lang === 'bn' ? 'বিশ্লেষণ করুন / ফলাফল দেখুন' : 'Analyze Now / ফলাফল দেখুন'}
+                    {lang === 'bn' ? 'বিশ্লেষণ করুন' : 'Analyze Now'}
                   </Button>
                 </motion.div>
               ) : (
@@ -397,7 +397,7 @@ export default function NayanAIPage() {
           )}
 
           {/* Bottom disclaimer */}
-          <p className="text-center text-[10px] leading-relaxed text-gray-400 dark:text-gray-500 max-w-3xl mx-auto border-t border-gray-50 pt-6 dark:border-gray-800/40">
+          <p className="text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400 max-w-3xl mx-auto border-t border-gray-50 pt-6 dark:border-gray-800/40">
             {lang === 'bn'
               ? 'DISCLAIMER: ShasthyaHub-AI একটি AI স্ক্রিনিং টুল, ক্লিনিকাল রোগ নির্ণয় নয়। স্বাস্থ্য সংক্রান্ত সিদ্ধান্ত নেওয়ার আগে সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
               : 'DISCLAIMER: ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}

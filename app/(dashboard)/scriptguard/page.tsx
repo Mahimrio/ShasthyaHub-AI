@@ -118,8 +118,8 @@ export default function ScriptGuardPage() {
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
               {lang === 'bn'
-                ? '📋 স্ক্রিপ্টগার্ড — প্রেসক্রিপশন চেকার'
-                : '📋 ScriptGuard — Prescription Checker'}
+                ? 'স্ক্রিপ্টগার্ড — প্রেসক্রিপশন চেকার'
+                : 'ScriptGuard — Prescription Checker'}
             </h1>
             <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               {lang === 'bn'
@@ -273,8 +273,8 @@ export default function ScriptGuardPage() {
         )}
 
         {/* Bottom disclaimer */}
-        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
-          <Info className="h-3 w-3 shrink-0" />
+        <p className="flex items-center justify-center gap-1.5 text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+          <Info className="h-3.5 w-3.5 shrink-0" />
           {lang === 'bn'
             ? 'ScriptGuard একটি সহায়ক টুল, চিকিৎসকের পরামর্শের বিকল্প নয়। ওষুধ পরিবর্তনের আগে অবশ্যই ডাক্তারের সাথে পরামর্শ করুন।'
             : 'ScriptGuard is a supportive tool, not a substitute for a doctor. Always consult a physician before changing any medication.'}

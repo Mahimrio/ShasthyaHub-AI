@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, FileText, Utensils, ChevronRight, Loader2 } from 'lucide-react'
+import { Eye, FileText, Utensils, ChevronRight, Loader2, RotateCcw } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -65,7 +65,7 @@ export default function DashboardHome() {
   const { profile } = useAuth()
   const { isOnline } = useNetworkStatus()
 
-  const { data: healthData, isLoading: healthLoading, isError: healthError } = useQuery<{ success: boolean; data: HealthScoreData }>({
+  const { data: healthData, isLoading: healthLoading, isError: healthError, refetch: refetchHealth } = useQuery<{ success: boolean; data: HealthScoreData }>({
     queryKey: ['healthScore'],
     queryFn: async ({ signal }) => {
       const timeoutAc = new AbortController()
@@ -125,7 +125,25 @@ export default function DashboardHome() {
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
           </div>
-        ) : healthError || score === null ? (
+        ) : healthError ? (
+          <div className="text-center py-4">
+            <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {lang === 'bn' ? 'স্কোর লোড করা যায়নি' : "Couldn't load your score"}
+            </h2>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {lang === 'bn'
+                ? 'ইন্টারনেট সংযোগ পরীক্ষা করে আবার চেষ্টা করুন'
+                : 'Check your connection and try again'}
+            </p>
+            <button
+              onClick={() => refetchHealth()}
+              className="inline-flex items-center gap-1.5 mt-3 px-4 py-2 rounded-xl text-xs font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'Retry'}
+            </button>
+          </div>
+        ) : score === null ? (
           <div className="text-center py-4">
             <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
               {lang === 'bn' ? 'আপনার প্রথম স্কোর তৈরি করুন 🎯' : 'Get Your First Score 🎯'}
@@ -137,7 +155,7 @@ export default function DashboardHome() {
                   <Link
                     key={f.href}
                     href={f.href}
-                    className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-br ${f.gradient} text-white rounded-xl text-xs font-medium hover:opacity-90 transition-opacity`}
+                    className={`flex items-center gap-2 px-3 py-2 bg-gradient-to-br ${f.gradient} text-white rounded-xl text-xs font-medium shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all`}
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {lang === 'bn' ? f.titleBn : f.titleEn}
@@ -202,8 +220,8 @@ export default function DashboardHome() {
           const Icon = feature.icon
           return (
             <Link key={feature.href} href={feature.href}>
-              <div className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 group cursor-pointer shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
-                <div className={`w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4`}>
+              <div className="bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border border-gray-200/50 dark:border-gray-700/60 p-5 transition-all duration-300 group cursor-pointer hover:-translate-y-1 hover:border-sky-200/70 dark:hover:border-sky-800/60 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(14,165,233,0.06)] hover:shadow-[0_20px_60px_rgba(14,165,233,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)] dark:hover:shadow-[0_20px_60px_rgba(14,165,233,0.15),0_8px_24px_rgba(0,0,0,0.5)]">
+                <div className={`w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center mb-4 shadow-md group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300`}>
                   <Icon className="h-6 w-6 text-white" />
                 </div>
                 <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-base">

@@ -249,9 +249,15 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
       <motion.div variants={item} className="flex items-center justify-between">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${style.bg} ${style.text}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${style.dot} animate-pulse-slow`} />
-          {lang === 'bn'
-            ? `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'bn')}`
-            : `${result.severity === 'Normal' ? 'NORMAL' : result.severity === 'Low' ? 'LOW RISK' : result.severity === 'Medium' ? 'MEDIUM RISK' : result.severity === 'High' ? 'HIGH RISK' : 'CRITICAL'} — ${severityLabel(result.severity, 'en')}`}
+          {(() => {
+            const caps =
+              result.severity === 'Normal' ? 'NORMAL'
+              : result.severity === 'Low' ? 'LOW RISK'
+              : result.severity === 'Medium' ? 'MEDIUM RISK'
+              : result.severity === 'High' ? 'HIGH RISK'
+              : 'CRITICAL'
+            return lang === 'bn' ? `${caps} — ${severityLabel(result.severity, 'bn')}` : caps
+          })()}
         </span>
         <span className="font-mono text-xs text-gray-400 tracking-wider">
           #SCAN-{result.id.slice(0, 8).toUpperCase()}

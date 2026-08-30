@@ -93,7 +93,7 @@ export default function DemoNayanAIPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
-              {lang === 'bn' ? '🧿 নয়ান AI — ডেমো' : '🧿 NayanAI — Demo'}
+              {lang === 'bn' ? 'নয়ান AI — ডেমো' : 'NayanAI — Demo'}
             </h1>
             <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               {lang === 'bn'

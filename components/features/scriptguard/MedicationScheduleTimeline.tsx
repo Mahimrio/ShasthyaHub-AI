@@ -117,7 +117,7 @@ function SlotCard({
           </span>
         </div>
         <Badge variant="outline" className="text-[11px]">
-          {slots.length} {lang === 'bn' ? 'ওষুধ' : 'drugs'}
+          {slots.length} {lang === 'bn' ? 'ওষুধ' : slots.length === 1 ? 'drug' : 'drugs'}
         </Badge>
       </div>
 

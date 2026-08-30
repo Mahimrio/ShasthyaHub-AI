@@ -19,7 +19,10 @@ const sidebarLinks = [
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'স্ক্রিপ্টগার্ড' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
-  { href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' },
+  // Debug tooling stays out of production builds
+  ...(process.env.NODE_ENV === 'development'
+    ? [{ href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' }]
+    : []),
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -143,13 +146,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 </div>
               )}
-              <div className="flex gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
-                <div className="flex-1 flex justify-center items-center">
+              <div className="flex flex-col gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+                <div className="flex justify-center">
                   <LanguageToggle />
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
+                  className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   <span>{lang === 'bn' ? 'সাইন আউট' : 'Sign Out'}</span>
@@ -223,13 +226,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             )}
 
-            <div className="flex gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
-              <div className="flex-1 flex justify-center items-center">
+            <div className="flex flex-col gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+              <div className="flex justify-center">
                 <LanguageToggle />
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span>{lang === 'bn' ? 'সাইন আউট' : 'Sign Out'}</span>

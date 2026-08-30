@@ -32,6 +32,8 @@ import type { EnrichedFoodItem, ChronicDiseaseRisk, RiskLevel, MealModification 
 
 type AnalysisState = 'idle' | 'disclaimer' | 'uploading' | 'processing' | 'complete'
 
+const GLYCO_DISCLAIMER_KEY = 'glycovision_disclaimer_seen'
+
 type MainTab = 'upload' | 'history'
 type ResultTab = 'overview' | 'nutrients' | 'risks' | 'suggestions'
 
@@ -80,8 +82,15 @@ export default function GlycoVisionPage() {
   const { lang } = useLanguage()
   const [mainTab, setMainTab] = useState<MainTab>('upload')
   const [resultTab, setResultTab] = useState<ResultTab>('overview')
-  const [state, setState] = useState<AnalysisState>('disclaimer')
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
+  // Match Nayan/ScriptGuard: only show the disclaimer until first acceptance.
+  const [state, setState] = useState<AnalysisState>(() => {
+    if (typeof window === 'undefined') return 'disclaimer'
+    return localStorage.getItem(GLYCO_DISCLAIMER_KEY) ? 'idle' : 'disclaimer'
+  })
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return !localStorage.getItem(GLYCO_DISCLAIMER_KEY)
+  })
   const [errorMsg, setErrorMsg] = useState('')
   const [result, setResult] = useState<AnalysisResult | null>(null)
 
@@ -91,6 +100,7 @@ export default function GlycoVisionPage() {
   const abortRef = useRef<AbortController | null>(null)
 
   const handleAcceptDisclaimer = useCallback(() => {
+    if (typeof window !== 'undefined') localStorage.setItem(GLYCO_DISCLAIMER_KEY, '1')
     setShowDisclaimer(false)
     setState('idle')
   }, [])
@@ -642,7 +652,7 @@ export default function GlycoVisionPage() {
 
         {/* Bottom disclaimer */}
         {state !== 'disclaimer' && (
-          <p className="text-center text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+          <p className="text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
             {lang === 'bn'
               ? 'ShasthyaHub-AI একটি AI স্ক্রিনিং টুল, ক্লিনিকাল রোগ নির্ণয় নয়। স্বাস্থ্য সংক্রান্ত সিদ্ধান্ত নেওয়ার আগে সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
               : 'ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}

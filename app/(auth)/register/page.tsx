@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { BANGLADESH_DISTRICTS } from '@/types'
+import { friendlyAuthError } from '@/lib/auth-errors'
 
 const registerSchema = z
   .object({
@@ -79,23 +80,28 @@ export default function RegisterPage() {
     setApiError(null)
     setSuccessMessage(null)
 
-    const { createClient } = await import('@/lib/supabase/client')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: {
-        data: {
-          name: data.name,
-          phone: data.phone,
-          district: data.district,
-          preferred_language: data.preferred_language,
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            phone: data.phone,
+            district: data.district,
+            preferred_language: data.preferred_language,
+          },
         },
-      },
-    })
+      })
 
-    if (error) {
-      setApiError(error.message)
+      if (error) {
+        setApiError(friendlyAuthError(error.message))
+        return
+      }
+    } catch (err) {
+      setApiError(friendlyAuthError(err instanceof Error ? err.message : 'network'))
       return
     }
 
@@ -246,6 +252,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       tabIndex={-1}
                     >
@@ -277,6 +284,7 @@ export default function RegisterPage() {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       tabIndex={-1}
                     >
