@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Headphones, Pause, Play, Square, Volume2 } from 'lucide-react'
+import { AlertTriangle, Headphones, Loader2, Pause, Play, Sparkles, Square, Volume2 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -82,6 +82,10 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
   const [currentSlot, setCurrentSlot] = useState<number>(-1)
   const [bnVoiceAvailable, setBnVoiceAvailable] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Server TTS fallback (no on-device Bengali voice)
+  const [ttsLoading, setTtsLoading] = useState(false)
+  const [serverTtsFailed, setServerTtsFailed] = useState(false)
+  const [serverDuration, setServerDuration] = useState<number | null>(null)
   const supported = useSyncExternalStore(
     EMPTY_SUBSCRIBE,
     getSpeechSnapshot,
@@ -94,6 +98,9 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
   const bnVoiceRef = useRef<SpeechSynthesisVoice | null>(null)
   const startTimeRef = useRef<number>(0)
   const elapsedBeforePauseRef = useRef<number>(0)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const audioUrlRef = useRef<string | null>(null)
+  const audioScriptRef = useRef<string | null>(null)
 
   const labels =
     lang === 'bn'
@@ -109,9 +116,11 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
           ended: 'শেষ হয়েছে',
           errorTitle: 'প্লেব্যাক সমস্যা',
           errorMessage: 'অডিও চালানো যায়নি। আবার চেষ্টা করুন বা অন্য ব্রাউজার ব্যবহার করুন।',
-          noVoiceTitle: 'বাংলা ভয়েস পাওয়া যায়নি',
+          noVoiceTitle: 'বাংলা অডিও উপলব্ধ নয়',
           noVoiceMessage:
-            'এই ডিভাইসে বাংলা টেক্সট-টু-স্পিচ ভয়েস ইনস্টল নেই। অনুগ্রহ করে আপনার ডিভাইসে বাংলা ভয়েস প্যাক যোগ করুন।',
+            'এই ডিভাইসে বাংলা ভয়েস নেই এবং অনলাইন অডিও তৈরি করা যায়নি। ইন্টারনেট সংযোগ পরীক্ষা করুন অথবা ডিভাইসে বাংলা ভয়েস প্যাক যোগ করুন।',
+          preparing: 'অডিও তৈরি হচ্ছে...',
+          aiVoice: 'AI ভয়েস — অনলাইনে তৈরি',
         }
       : {
           header: 'Listen to Your Schedule',
@@ -125,9 +134,11 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
           ended: 'Finished',
           errorTitle: 'Playback Error',
           errorMessage: 'Could not play the audio. Please try again or use a different browser.',
-          noVoiceTitle: 'Bengali Voice Unavailable',
+          noVoiceTitle: 'Bengali Audio Unavailable',
           noVoiceMessage:
-            'No Bengali text-to-speech voice installed on this device. Please add a Bengali voice pack in your device settings.',
+            'No Bengali voice on this device and online audio could not be generated. Check your connection, or add a Bengali voice pack in your device settings.',
+          preparing: 'Preparing audio...',
+          aiVoice: 'AI voice — generated online',
         }
   const errorMessage = labels.errorMessage
 
@@ -139,6 +150,8 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel()
       }
+      audioRef.current?.pause()
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
     }
   }, [])
 
@@ -159,7 +172,9 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
   }, [supported])
 
   const totalChars = audioScriptBn.length
-  const totalDurationSec = Math.max(totalChars / CHARS_PER_SECOND, 1)
+  const estimatedDurationSec = Math.max(totalChars / CHARS_PER_SECOND, 1)
+  const totalDurationSec = serverDuration ?? estimatedDurationSec
+  const useServerTts = !bnVoiceAvailable
 
   const clearTimer = useCallback(() => {
     if (intervalRef.current) {
@@ -206,10 +221,100 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     [clearTimer, totalDurationSec, totalChars, audioScriptBn, lang]
   )
 
+  // --- Server TTS playback (no on-device Bengali voice) ---
+  const wireAudioElement = useCallback(
+    (audio: HTMLAudioElement) => {
+      audio.ontimeupdate = () => {
+        if (!audio.duration || Number.isNaN(audio.duration)) return
+        const pct = Math.min((audio.currentTime / audio.duration) * 100, 100)
+        setProgress(pct)
+        const spokenChars = Math.floor((pct / 100) * totalChars)
+        setCurrentSlot(detectCurrentSlot(audioScriptBn, spokenChars, lang))
+      }
+      audio.onloadedmetadata = () => {
+        if (audio.duration && Number.isFinite(audio.duration)) {
+          setServerDuration(audio.duration)
+        }
+      }
+      audio.onended = () => {
+        setPlayState('ended')
+        setProgress(100)
+        setCurrentSlot(-1)
+      }
+      audio.onerror = () => {
+        setPlayState('idle')
+        setProgress(0)
+        setCurrentSlot(-1)
+        setError(errorMessage)
+      }
+    },
+    [audioScriptBn, totalChars, lang, errorMessage]
+  )
+
+  const playServerTts = useCallback(async () => {
+    setError(null)
+
+    // Resume path.
+    if (playState === 'paused' && audioRef.current && audioScriptRef.current === audioScriptBn) {
+      await audioRef.current.play().catch(() => setError(errorMessage))
+      setPlayState('playing')
+      return
+    }
+
+    // Cached audio for this exact script.
+    if (audioRef.current && audioScriptRef.current === audioScriptBn) {
+      audioRef.current.currentTime = 0
+      setProgress(0)
+      await audioRef.current.play().catch(() => setError(errorMessage))
+      setPlayState('playing')
+      return
+    }
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setServerTtsFailed(true)
+      return
+    }
+
+    setTtsLoading(true)
+    try {
+      const res = await fetch('/api/scriptguard/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: audioScriptBn.slice(0, 1500) }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json?.data?.wavBase64) throw new Error(json?.error ?? 'tts failed')
+
+      const bytes = Uint8Array.from(atob(json.data.wavBase64), (c) => c.charCodeAt(0))
+      const blob = new Blob([bytes], { type: 'audio/wav' })
+      if (audioUrlRef.current) URL.revokeObjectURL(audioUrlRef.current)
+      const url = URL.createObjectURL(blob)
+      audioUrlRef.current = url
+
+      const audio = new Audio(url)
+      wireAudioElement(audio)
+      audioRef.current = audio
+      audioScriptRef.current = audioScriptBn
+      setServerTtsFailed(false)
+      setProgress(0)
+      await audio.play()
+      setPlayState('playing')
+    } catch {
+      setServerTtsFailed(true)
+    } finally {
+      setTtsLoading(false)
+    }
+  }, [audioScriptBn, playState, wireAudioElement, errorMessage])
+
   // --- handlePlay ---
   const handlePlay = useCallback(() => {
     if (!supported) return
     if (!audioScriptBn) return
+
+    if (useServerTts) {
+      void playServerTts()
+      return
+    }
 
     setError(null)
     if (playState === 'paused') {
@@ -265,21 +370,41 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     stopKeepAlive,
     clearTimer,
     errorMessage,
+    useServerTts,
+    playServerTts,
   ])
 
   const handlePause = useCallback(() => {
-    if (!supported || playState !== 'playing') return
+    if (playState !== 'playing') return
 
+    if (useServerTts) {
+      audioRef.current?.pause()
+      setPlayState('paused')
+      return
+    }
+
+    if (!supported) return
     window.speechSynthesis.pause()
     clearTimer()
     stopKeepAlive()
     elapsedBeforePauseRef.current = Date.now() - startTimeRef.current
     setPlayState('paused')
-  }, [supported, playState, clearTimer, stopKeepAlive])
+  }, [supported, playState, clearTimer, stopKeepAlive, useServerTts])
 
   const handleStop = useCallback(() => {
-    if (!supported) return
+    if (useServerTts) {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+      setError(null)
+      setPlayState('idle')
+      setProgress(0)
+      setCurrentSlot(-1)
+      return
+    }
 
+    if (!supported) return
     window.speechSynthesis.cancel()
     clearTimer()
     stopKeepAlive()
@@ -288,7 +413,7 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
     setProgress(0)
     setCurrentSlot(-1)
     elapsedBeforePauseRef.current = 0
-  }, [supported, clearTimer, stopKeepAlive])
+  }, [supported, clearTimer, stopKeepAlive, useServerTts])
 
   const slotLabels = lang === 'bn' ? SLOT_LABELS_BN : SLOT_LABELS_EN
 
@@ -335,13 +460,21 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
           </Alert>
         )}
 
-        {/* No Bengali voice available — TTS will use device default */}
-        {!error && supported && !bnVoiceAvailable && (
+        {/* No Bengali voice AND the online fallback failed */}
+        {!error && supported && useServerTts && serverTtsFailed && (
           <Alert className="border-sky-300 bg-sky-50 text-sky-800 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200">
             <AlertTriangle className="h-4 w-4 text-sky-600 dark:text-sky-400" />
             <AlertTitle>{labels.noVoiceTitle}</AlertTitle>
             <AlertDescription>{labels.noVoiceMessage}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Online AI voice notice */}
+        {!error && supported && useServerTts && !serverTtsFailed && (
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-semibold text-teal-700 dark:bg-teal-950/40 dark:text-teal-300">
+            <Sparkles className="h-3 w-3" />
+            {labels.aiVoice}
+          </div>
         )}
 
         {/* Current slot indicator */}
@@ -386,18 +519,27 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
                 <span className="flex-1 min-w-[120px]" tabIndex={0}>
                   <Button
                     onClick={handlePlay}
-                    disabled={playState === 'playing' || !bnVoiceAvailable}
+                    disabled={playState === 'playing' || ttsLoading || (useServerTts && serverTtsFailed)}
                     className={cn(
                       'flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white hover:opacity-90',
                       'min-w-[120px] w-full'
                     )}
                   >
-                    <Play className="mr-2 h-4 w-4" />
-                    {playState === 'paused' ? (lang === 'bn' ? 'চালিয়ে যান' : 'Resume') : labels.play}
+                    {ttsLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        {labels.preparing}
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2 h-4 w-4" />
+                        {playState === 'paused' ? (lang === 'bn' ? 'চালিয়ে যান' : 'Resume') : labels.play}
+                      </>
+                    )}
                   </Button>
                 </span>
               </TooltipTrigger>
-              {!bnVoiceAvailable && (
+              {useServerTts && serverTtsFailed && (
                 <TooltipContent>
                   {lang === 'bn'
                     ? 'বাংলা অডিও অফলাইনে উপলব্ধ নেই'
