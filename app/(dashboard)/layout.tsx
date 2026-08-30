@@ -128,7 +128,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Mobile Drawer Account Footer */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-950/20">
-            <div className="bg-white/80 dark:bg-gray-900/60 rounded-2xl border border-gray-150 dark:border-gray-800/80 p-3 space-y-3 shadow-sm">
+            <div className="bg-white/80 dark:bg-gray-900/60 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-3 space-y-3 shadow-sm">
               {isLoading ? (
                 <Skeleton className="h-10 w-full rounded-xl" />
               ) : (

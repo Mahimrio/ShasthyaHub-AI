@@ -7,6 +7,9 @@ import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { motion } from 'framer-motion'
+import { RecentActivity } from '@/components/dashboard/RecentActivity'
+import { DailyHealthTip } from '@/components/dashboard/DailyHealthTip'
+import { EmergencyStrip } from '@/components/dashboard/EmergencyStrip'
 
 interface HealthScoreData {
   score: number | null
@@ -94,7 +97,11 @@ export default function DashboardHome() {
   const tagline = lang === 'bn'
     ? 'আপনার স্বাস্থ্য সহায়ক — যেকোনো সময়, যেকোনো স্থানে'
     : 'Your health companion — anytime, anywhere'
-
+  const todayLabel = new Date().toLocaleDateString(lang === 'bn' ? 'bn-BD' : 'en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
   return (
     <motion.div
       initial="initial"
@@ -114,9 +121,14 @@ export default function DashboardHome() {
 
       <div className="relative z-10 max-w-4xl mx-auto p-4 md:p-6 space-y-6">
       {/* Greeting */}
-      <motion.div variants={fadeUp}>
-        <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">{greeting}</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{tagline}</p>
+      <motion.div variants={fadeUp} className="flex items-end justify-between gap-4">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-gray-100">{greeting}</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{tagline}</p>
+        </div>
+        <p className="hidden sm:block shrink-0 text-xs font-medium text-gray-400 dark:text-gray-500 pb-0.5">
+          {todayLabel}
+        </p>
       </motion.div>
 
       {/* Health Score Gauge */}
@@ -191,23 +203,23 @@ export default function DashboardHome() {
 
             {/* Mini cards */}
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
-                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'চোখ' : 'Eye'}
                 </p>
-                <p className="text-xl font-bold text-sky-600 mt-1">{hs?.eye_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-sky-600 dark:text-sky-400 mt-1">{hs?.eye_score ?? '--'}</p>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
-                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'প্রেসক্রিপশন' : 'Prescription'}
                 </p>
-                <p className="text-xl font-bold text-emerald-600 mt-1">{hs?.rx_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">{hs?.rx_score ?? '--'}</p>
               </div>
-              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-center">
-                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center">
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
                   {lang === 'bn' ? 'খাদ্য' : 'Food'}
                 </p>
-                <p className="text-xl font-bold text-amber-600 mt-1">{hs?.food_score ?? '--'}</p>
+                <p className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400 mt-1">{hs?.food_score ?? '--'}</p>
               </div>
             </div>
           </div>
@@ -215,7 +227,11 @@ export default function DashboardHome() {
       </motion.div>
 
       {/* Feature Cards */}
-      <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <motion.div variants={fadeUp}>
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+          {lang === 'bn' ? 'AI এজেন্ট' : 'AI Agents'}
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {features.map((feature) => {
           const Icon = feature.icon
           return (
@@ -227,7 +243,7 @@ export default function DashboardHome() {
                 <h3 className="font-semibold text-gray-800 dark:text-gray-100 text-base">
                   {lang === 'bn' ? feature.titleBn : feature.titleEn}
                 </h3>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                <p className="text-xs text-gray-400 dark:text-gray-400 mt-1">
                   {lang === 'bn' ? feature.descBn : feature.descEn}
                 </p>
                 <div className="flex items-center gap-1 mt-3 text-sky-600 dark:text-sky-400 text-xs font-medium group-hover:gap-2 transition-all">
@@ -238,14 +254,30 @@ export default function DashboardHome() {
             </Link>
           )
         })}
+        </div>
+      </motion.div>
+
+      {/* Recent activity + Daily tip */}
+      <motion.div variants={fadeUp} className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <div className="lg:col-span-3">
+          <RecentActivity />
+        </div>
+        <div className="lg:col-span-2">
+          <DailyHealthTip />
+        </div>
+      </motion.div>
+
+      {/* Emergency helplines */}
+      <motion.div variants={fadeUp}>
+        <EmergencyStrip />
       </motion.div>
 
       {/* Disclaimers */}
-      <motion.div variants={fadeUp} className="bg-amber-50 dark:bg-amber-900/30 rounded-2xl border border-amber-100 dark:border-amber-800 p-4">
-        <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed">
+      <motion.div variants={fadeUp} className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl border border-amber-100 dark:border-amber-800/50 p-4">
+        <p className="text-[13px] text-amber-700 dark:text-amber-300 leading-relaxed">
           {lang === 'bn'
-            ? '⚠️ এই AI সরঞ্জামটি শুধুমাত্র তথ্যগত উদ্দেশ্যে। এটি পেশাদার চিকিৎসকের পরামর্শের বিকল্প নয়। জরুরি অবস্থায় নিকটস্থ হাসপাতালে যোগাযোগ করুন।'
-            : '⚠️ This AI tool is for informational purposes only. Not a substitute for professional medical advice. In emergencies, contact your nearest hospital.'}
+            ? 'এই AI সরঞ্জামটি শুধুমাত্র তথ্যগত উদ্দেশ্যে। এটি পেশাদার চিকিৎসকের পরামর্শের বিকল্প নয়। জরুরি অবস্থায় নিকটস্থ হাসপাতালে যোগাযোগ করুন।'
+            : 'This AI tool is for informational purposes only. Not a substitute for professional medical advice. In emergencies, contact your nearest hospital.'}
         </p>
       </motion.div>
     </div>
