@@ -109,6 +109,10 @@ Rules:
 
 const OPENFDA_BASE = 'https://api.fda.gov/drug/label.json';
 
+/** Caps keep the Groq prompt within the free-tier 8,000 tokens-per-minute limit. */
+const MAX_EVIDENCE_CHARS_PER_PAIR = 700;
+const MAX_EVIDENCE_CHARS_TOTAL = 4000;
+
 /** Canonical DrugInteraction.severity values. */
 const SEVERITIES = ['Mild', 'Moderate', 'Severe', 'Critical'] as const;
 
@@ -175,7 +179,10 @@ async function queryOpenFda(pair: DrugPair): Promise<string | null> {
         }
       }
     }
-    return snippets.length > 0 ? snippets.join(' | ') : null;
+    if (snippets.length === 0) return null;
+    // Label sections run 10-50KB each; cap per pair so the Groq prompt stays
+    // within the free-tier 8K TPM budget. Evidence is enrichment, not gospel.
+    return snippets.join(' | ').slice(0, MAX_EVIDENCE_CHARS_PER_PAIR);
   } catch (err) {
     console.warn('[drug-interaction] OpenFDA fetch failed for %s+%s:', pair.a, pair.b, err);
     return null;
@@ -304,9 +311,10 @@ export async function checkDrugInteractions(
   // Tier 2 — one Groq call over the whole list + FDA evidence.
   try {
     const drugList = generics.join(', ');
+    const evidenceJoined = fdaEvidence.join('\n').slice(0, MAX_EVIDENCE_CHARS_TOTAL);
     const evidenceBlock =
       fdaEvidence.length > 0
-        ? `\n\nFDA label evidence (use this, but apply clinical judgment):\n${fdaEvidence.join('\n')}`
+        ? `\n\nFDA label evidence (truncated excerpts — use them, but apply clinical judgment):\n${evidenceJoined}`
         : '\n\n(No FDA label matches were found — rely on your pharmacology knowledge.)';
 
     const raw = await callGroq(

@@ -45,6 +45,9 @@ export async function callGroq(
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
+      // Unset, Groq reserves the model's full 65K output budget against the
+      // 8K TPM free-tier limit and 413s. 3500 covers reasoning + JSON.
+      max_completion_tokens: 3500,
     })
 
     const content = completion.choices[0]?.message?.content

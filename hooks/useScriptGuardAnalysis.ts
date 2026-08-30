@@ -52,7 +52,9 @@ const initialState: State = {
   offlineStatus: 'idle',
 }
 
-const TIMEOUT_MS = 60_000
+// Slightly above the server's 60s cap (vercel maxDuration) so the client
+// surfaces the server's own error instead of aborting in a dead heat.
+const TIMEOUT_MS = 75_000
 
 export function useScriptGuardAnalysis() {
   const [state, dispatch] = useReducer(reducer, initialState)
