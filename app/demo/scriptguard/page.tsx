@@ -196,7 +196,7 @@ export default function DemoScriptGuardPage() {
         </div>
         <div>
           <p className="text-sm font-bold text-purple-800 dark:text-purple-200">
-            {lang === 'bn' ? '✨ ডেমো মোড' : '✨ Demo Mode'}
+            {lang === 'bn' ? 'ডেমো মোড' : 'Demo Mode'}
           </p>
           <p className="text-xs text-purple-700 dark:text-purple-300">
             {lang === 'bn'
@@ -214,8 +214,8 @@ export default function DemoScriptGuardPage() {
         <div>
           <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
             {lang === 'bn'
-              ? '📋 স্ক্রিপ্টগার্ড — ডেমো ফলাফল'
-              : '📋 ScriptGuard — Demo Result'}
+              ? 'স্ক্রিপ্টগার্ড — ডেমো ফলাফল'
+              : 'ScriptGuard — Demo Result'}
           </h1>
           <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
             {lang === 'bn'

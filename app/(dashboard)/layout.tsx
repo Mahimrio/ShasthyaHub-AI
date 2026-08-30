@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -20,7 +21,10 @@ const sidebarLinks = [
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
   { href: '/lokhon', icon: Activity, labelEn: 'Lokhon', labelBn: 'লক্ষণ' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
-
+  // Debug tooling stays out of production builds
+  ...(process.env.NODE_ENV === 'development'
+    ? [{ href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' }]
+    : []),
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -112,7 +116,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   )}
                 >
                   {isActive && (
-                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                    <motion.span
+                      layoutId="nav-mobile-pill"
+                      transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
+                    />
                   )}
                   <Icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
                   <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
@@ -126,7 +134,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Mobile Drawer Account Footer */}
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-950/20">
-            <div className="bg-white/80 dark:bg-gray-900/60 rounded-2xl border border-gray-150 dark:border-gray-800/80 p-3 space-y-3 shadow-sm">
+            <div className="bg-white/80 dark:bg-gray-900/60 rounded-2xl border border-gray-100 dark:border-gray-800/80 p-3 space-y-3 shadow-sm">
               {isLoading ? (
                 <Skeleton className="h-10 w-full rounded-xl" />
               ) : (
@@ -144,13 +152,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   </div>
                 </div>
               )}
-              <div className="flex gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
-                <div className="flex-1 flex justify-center items-center">
+              <div className="flex flex-col gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+                <div className="flex justify-center">
                   <LanguageToggle />
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
+                  className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
                 >
                   <LogOut className="h-3.5 w-3.5" />
                   <span>{lang === 'bn' ? 'সাইন আউট' : 'Sign Out'}</span>
@@ -194,7 +202,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 )}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                  <motion.span
+                    layoutId="nav-desktop-pill"
+                    transition={{ type: 'spring', stiffness: 400, damping: 34 }}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
+                  />
                 )}
                 <Icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
                 <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
@@ -224,13 +236,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             )}
 
-            <div className="flex gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
-              <div className="flex-1 flex justify-center items-center">
+            <div className="flex flex-col gap-2 pt-2.5 border-t border-gray-100 dark:border-gray-800/80">
+              <div className="flex justify-center">
                 <LanguageToggle />
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
+                className="flex items-center justify-center gap-1.5 w-full px-3 py-2 rounded-xl text-[11px] font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all border border-transparent hover:border-red-200/50 dark:hover:border-red-900/30"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span>{lang === 'bn' ? 'সাইন আউট' : 'Sign Out'}</span>

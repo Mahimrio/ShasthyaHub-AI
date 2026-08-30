@@ -1,10 +1,12 @@
 'use client'
 
-import { createContext, useContext, useEffect, useCallback, useSyncExternalStore } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Language } from '@/types'
 
 import '@/lib/i18n'
+
+const LANG_KEY = 'shasthya_lang'
 
 interface LanguageContextType {
   lang: Language
@@ -16,26 +18,53 @@ const LanguageContext = createContext<LanguageContextType>({
   setLang: () => {},
 })
 
-function getServerSnapshot(): Language {
-  return 'bn'
-}
-
-function getSnapshot(): Language {
+function persistLang(l: Language) {
   try {
-    return (localStorage.getItem('shasthya_lang') as Language) || 'bn'
+    localStorage.setItem(LANG_KEY, l)
   } catch {
-    return 'bn'
+    // storage unavailable (private mode)
   }
+  document.cookie = `${LANG_KEY}=${l}; path=/; max-age=31536000; SameSite=Lax`
 }
 
-function subscribe(callback: () => void): () => void {
-  window.addEventListener('storage', callback)
-  return () => window.removeEventListener('storage', callback)
-}
-
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const lang = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
+export function LanguageProvider({
+  children,
+  initialLang = 'bn',
+}: {
+  children: React.ReactNode
+  initialLang?: Language
+}) {
+  const [lang, setLangState] = useState<Language>(initialLang)
   const { i18n } = useTranslation()
+
+  // One-time migration: users from before the cookie existed have their
+  // preference only in localStorage — adopt it and write the cookie.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(LANG_KEY) as Language | null
+      if (stored === 'bn' || stored === 'en') {
+        if (stored !== lang) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from pre-cookie localStorage preference
+          setLangState(stored)
+        }
+        persistLang(stored)
+      }
+    } catch {
+      // storage unavailable
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Cross-tab sync
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === LANG_KEY && (e.newValue === 'bn' || e.newValue === 'en')) {
+        setLangState(e.newValue)
+      }
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [])
 
   useEffect(() => {
     document.documentElement.lang = lang
@@ -43,7 +72,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [lang, i18n])
 
   const setLang = useCallback(async (l: Language) => {
-    localStorage.setItem('shasthya_lang', l)
+    setLangState(l)
+    persistLang(l)
     document.documentElement.lang = l
     i18n.changeLanguage(l)
 

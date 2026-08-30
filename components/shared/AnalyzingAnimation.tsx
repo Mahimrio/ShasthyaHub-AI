@@ -2,22 +2,29 @@
 
 import { useEffect, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
+import { Send, Microscope, Brain, CheckCircle2, type LucideIcon } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Language } from '@/types'
 
+export interface AnalysisStage {
+  en: string
+  bn: string
+  icon?: LucideIcon
+}
+
 interface AnalyzingAnimationProps {
   lang?: Language
-  stages?: { en: string; bn: string }[]
+  stages?: AnalysisStage[]
   icon?: ReactNode
   estimatedTime?: { en: string; bn: string }
   hideIcon?: boolean
 }
 
-const DEFAULT_STAGES: { en: string; bn: string }[] = [
-  { en: '📡 Sending to Vision Engine...', bn: '📡 ভিশন ইঞ্জিনে পাঠানো হচ্ছে...' },
-  { en: '🔬 Analyzing patterns...', bn: '🔬 প্যাটার্ন বিশ্লেষণ করা হচ্ছে...' },
-  { en: '🧠 Generating report...', bn: '🧠 রিপোর্ট তৈরি হচ্ছে...' },
-  { en: '✅ Almost done...', bn: '✅ প্রায় শেষ...' },
+const DEFAULT_STAGES: AnalysisStage[] = [
+  { en: 'Sending to Vision Engine...', bn: 'ভিশন ইঞ্জিনে পাঠানো হচ্ছে...', icon: Send },
+  { en: 'Analyzing patterns...', bn: 'প্যাটার্ন বিশ্লেষণ করা হচ্ছে...', icon: Microscope },
+  { en: 'Generating report...', bn: 'রিপোর্ট তৈরি হচ্ছে...', icon: Brain },
+  { en: 'Almost done...', bn: 'প্রায় শেষ...', icon: CheckCircle2 },
 ]
 
 const DEFAULT_ESTIMATED = {
@@ -106,8 +113,9 @@ export function AnalyzingAnimation({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.3 }}
-              className="text-sm font-medium text-gray-700 dark:text-gray-200"
+              className="flex items-center justify-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200"
             >
+              {stage.icon && <stage.icon className="h-4 w-4 shrink-0 text-sky-500" />}
               {lang === 'bn' ? stage.bn : stage.en}
             </motion.p>
           </AnimatePresence>

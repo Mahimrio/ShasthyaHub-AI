@@ -6,10 +6,10 @@ import {
   AlertTriangle,
   ChevronDown,
   Lightbulb,
-  ShieldAlert,
   XCircle,
 } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AnimatedCheck } from '@/components/shared/AnimatedCheck'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { DrugInteraction, Language } from '@/types'
@@ -143,8 +143,8 @@ export default function DrugInteractionAlert({
         <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
         <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
           {lang === 'bn'
-            ? '⚡ ইন্টারনেট সংযোগ নেই'
-            : '⚡ No internet connection'}
+            ? 'ইন্টারনেট সংযোগ নেই'
+            : 'No internet connection'}
         </AlertTitle>
         <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
           {lang === 'bn'
@@ -159,11 +159,11 @@ export default function DrugInteractionAlert({
     // No interactions — show a reassuring green banner.
     return (
       <Alert className="rounded-2xl border-green-200 bg-green-50 dark:border-green-900/50 dark:bg-green-900/20">
-        <ShieldAlert className="h-5 w-5 text-green-600 dark:text-green-400" />
+        <AnimatedCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
         <AlertTitle className="text-sm font-semibold text-green-800 dark:text-green-200">
           {lang === 'bn'
-            ? '✅ কোনো বিপজ্জনক মিথস্ক্রিয়া পাওয়া যায়নি'
-            : '✅ No dangerous interactions found'}
+            ? 'কোনো বিপজ্জনক মিথস্ক্রিয়া পাওয়া যায়নি'
+            : 'No dangerous interactions found'}
         </AlertTitle>
         <AlertDescription className="text-xs text-green-700 dark:text-green-300">
           {lang === 'bn'
@@ -200,7 +200,7 @@ export default function DrugInteractionAlert({
           >
             <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             <AlertTitle className="text-base font-bold text-red-800 dark:text-red-100">
-              🚨{' '}
+
               {lang === 'bn'
                 ? 'গুরুতর ওষুধ মিথস্ক্রিয়া শনাক্ত হয়েছে'
                 : 'CRITICAL DRUG INTERACTION DETECTED'}
@@ -220,8 +220,8 @@ export default function DrugInteractionAlert({
           <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
           <AlertTitle className="text-sm font-semibold text-yellow-800 dark:text-yellow-200">
             {lang === 'bn'
-              ? `⚠️ ${interactions.length}টি মাঝারি/হালকা মিথস্ক্রিয়া`
-              : `⚠️ ${interactions.length} moderate/mild interaction${
+              ? `${interactions.length}টি মাঝারি/হালকা মিথস্ক্রিয়া`
+              : `${interactions.length} moderate/mild interaction${
                   interactions.length > 1 ? 's' : ''
                 }`}
           </AlertTitle>

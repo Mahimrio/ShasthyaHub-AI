@@ -5,21 +5,30 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Apple,
   BarChart3,
+  CheckCircle2,
   Clock,
+  Droplets,
   Heart,
+  HeartPulse,
   History,
   Info,
+  Lightbulb,
+  Microscope,
   Play,
   RotateCcw,
   Salad,
+  Send,
   Sparkles,
+  Stethoscope,
   Upload,
   Utensils,
+  type LucideIcon,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
+import { AnimatedCheck } from '@/components/shared/AnimatedCheck'
 import { ResultCard } from '@/components/shared/ResultCard'
 import FoodItemsList from '@/components/features/glycovision/FoodItemsList'
 import NutritionDonutChart from '@/components/features/glycovision/NutritionDonutChart'
@@ -31,6 +40,8 @@ import { cn, formatDate } from '@/lib/utils'
 import type { EnrichedFoodItem, ChronicDiseaseRisk, RiskLevel, MealModification } from '@/types'
 
 type AnalysisState = 'idle' | 'disclaimer' | 'uploading' | 'processing' | 'complete'
+
+const GLYCO_DISCLAIMER_KEY = 'glycovision_disclaimer_seen'
 
 type MainTab = 'upload' | 'history'
 type ResultTab = 'overview' | 'nutrients' | 'risks' | 'suggestions'
@@ -49,10 +60,10 @@ interface AnalysisResult {
   mealModifications: MealModification[]
 }
 
-const DISEASE_EMOJI_MAP: Record<string, string> = {
-  'Type 2 Diabetes': '🩸',
-  'Hypertension (High Blood Pressure)': '💓',
-  'Heart Disease': '❤️‍🩹',
+const DISEASE_ICON_MAP: Record<string, LucideIcon> = {
+  'Type 2 Diabetes': Droplets,
+  'Hypertension (High Blood Pressure)': HeartPulse,
+  'Heart Disease': Heart,
 }
 
 const DISEASE_STATUS_CONFIG = {
@@ -80,8 +91,15 @@ export default function GlycoVisionPage() {
   const { lang } = useLanguage()
   const [mainTab, setMainTab] = useState<MainTab>('upload')
   const [resultTab, setResultTab] = useState<ResultTab>('overview')
-  const [state, setState] = useState<AnalysisState>('disclaimer')
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
+  // Match Nayan/ScriptGuard: only show the disclaimer until first acceptance.
+  const [state, setState] = useState<AnalysisState>(() => {
+    if (typeof window === 'undefined') return 'disclaimer'
+    return localStorage.getItem(GLYCO_DISCLAIMER_KEY) ? 'idle' : 'disclaimer'
+  })
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return !localStorage.getItem(GLYCO_DISCLAIMER_KEY)
+  })
   const [errorMsg, setErrorMsg] = useState('')
   const [result, setResult] = useState<AnalysisResult | null>(null)
 
@@ -91,6 +109,7 @@ export default function GlycoVisionPage() {
   const abortRef = useRef<AbortController | null>(null)
 
   const handleAcceptDisclaimer = useCallback(() => {
+    if (typeof window !== 'undefined') localStorage.setItem(GLYCO_DISCLAIMER_KEY, '1')
     setShowDisclaimer(false)
     setState('idle')
   }, [])
@@ -180,11 +199,11 @@ export default function GlycoVisionPage() {
   ]
 
   const glycoStages = [
-    { en: '📡 Sending meal photo to Vision Engine...', bn: '📡 খাবারের ছবি ভিশন ইঞ্জিনে পাঠানো হচ্ছে...' },
-    { en: '🍽️ Identifying food items...', bn: '🍽️ খাদ্য উপাদান চিহ্নিত করা হচ্ছে...' },
-    { en: '🔬 Calculating nutrition values...', bn: '🔬 পুষ্টির মান গণনা করা হচ্ছে...' },
-    { en: '📊 Analyzing health risks...', bn: '📊 স্বাস্থ্য ঝুঁকি বিশ্লেষণ করা হচ্ছে...' },
-    { en: '✅ Almost done...', bn: '✅ প্রায় শেষ...' },
+    { en: 'Sending meal photo to Vision Engine...', bn: 'খাবারের ছবি ভিশন ইঞ্জিনে পাঠানো হচ্ছে...', icon: Send },
+    { en: 'Identifying food items...', bn: 'খাদ্য উপাদান চিহ্নিত করা হচ্ছে...', icon: Utensils },
+    { en: 'Calculating nutrition values...', bn: 'পুষ্টির মান গণনা করা হচ্ছে...', icon: Microscope },
+    { en: 'Analyzing health risks...', bn: 'স্বাস্থ্য ঝুঁকি বিশ্লেষণ করা হচ্ছে...', icon: BarChart3 },
+    { en: 'Almost done...', bn: 'প্রায় শেষ...', icon: CheckCircle2 },
   ]
 
   return (
@@ -422,7 +441,7 @@ export default function GlycoVisionPage() {
                               {result.chronicDiseaseRisks.map((disease) => {
                                 const cfg = DISEASE_STATUS_CONFIG[disease.status]
                                 const StatusIcon = cfg.icon
-                                const emoji = DISEASE_EMOJI_MAP[disease.disease_en] ?? '⚕️'
+                                const DiseaseIcon = DISEASE_ICON_MAP[disease.disease_en] ?? Stethoscope
                                 return (
                                   <div
                                     key={disease.disease_en}
@@ -430,7 +449,9 @@ export default function GlycoVisionPage() {
                                   >
                                     <div className="mb-2.5 flex items-start justify-between">
                                       <div className="flex min-w-0 items-center gap-2">
-                                        <span className="shrink-0 text-lg">{emoji}</span>
+                                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/70 dark:bg-gray-900/50">
+                                          <DiseaseIcon className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                                        </span>
                                         <span className="text-xs font-semibold leading-tight text-gray-700 dark:text-gray-300">
                                           {disease.disease_bn}
                                         </span>
@@ -461,8 +482,9 @@ export default function GlycoVisionPage() {
                             <div className="space-y-3 pt-3">
                               {result.mealModifications.length === 0 && result.glycemicLoad <= 30 && (
                                 <div className="rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-900/50 dark:bg-green-900/20">
-                                  <p className="text-sm font-medium text-green-700 dark:text-green-300">
-                                    {lang === 'bn' ? '✅ এই খাবারটি সুষম এবং নিরাপদ।' : '✅ This meal is balanced and safe.'}
+                                  <p className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
+                                    <AnimatedCheck className="h-4 w-4 shrink-0 text-green-600 dark:text-green-400" />
+                                    {lang === 'bn' ? 'এই খাবারটি সুষম এবং নিরাপদ।' : 'This meal is balanced and safe.'}
                                   </p>
                                 </div>
                               )}
@@ -496,8 +518,9 @@ export default function GlycoVisionPage() {
                               {/* Static tips when glycemic load is high */}
                               {result.glycemicLoad > 40 && (
                                 <div className="border-l-4 border-green-500 py-1.5 pl-3">
-                                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {lang === 'bn' ? '💡 ভাতের পরিমাণ কমান' : '💡 Reduce rice portion'}
+                                  <p className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <Lightbulb className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                                    {lang === 'bn' ? 'ভাতের পরিমাণ কমান' : 'Reduce rice portion'}
                                   </p>
                                   <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                                     {lang === 'bn'
@@ -508,8 +531,9 @@ export default function GlycoVisionPage() {
                               )}
                               {result.totalFat > 20 && (
                                 <div className="border-l-4 border-green-500 py-1.5 pl-3">
-                                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    {lang === 'bn' ? '💡 কম তেলে রান্না করুন' : '💡 Reduce cooking oil'}
+                                  <p className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    <Lightbulb className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                                    {lang === 'bn' ? 'কম তেলে রান্না করুন' : 'Reduce cooking oil'}
                                   </p>
                                   <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                                     {lang === 'bn'
@@ -642,7 +666,7 @@ export default function GlycoVisionPage() {
 
         {/* Bottom disclaimer */}
         {state !== 'disclaimer' && (
-          <p className="text-center text-[11px] leading-relaxed text-gray-400 dark:text-gray-500">
+          <p className="text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
             {lang === 'bn'
               ? 'ShasthyaHub-AI একটি AI স্ক্রিনিং টুল, ক্লিনিকাল রোগ নির্ণয় নয়। স্বাস্থ্য সংক্রান্ত সিদ্ধান্ত নেওয়ার আগে সর্বদা একজন যোগ্য চিকিৎসকের পরামর্শ নিন।'
               : 'ShasthyaHub-AI is an AI screening tool, not a clinical diagnosis. Always consult a qualified medical professional before making health decisions.'}

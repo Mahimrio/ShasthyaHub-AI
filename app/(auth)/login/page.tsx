@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { motion } from 'framer-motion'
 import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react'
 import { sendCacheAll } from '@/lib/cache-all'
+import { friendlyAuthError } from '@/lib/auth-errors'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -58,15 +59,20 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginForm) => {
     setApiError(null)
 
-    const { createClient } = await import('@/lib/supabase/client')
-    const supabase = createClient()
-    const { error } = await supabase.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    })
+    try {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      })
 
-    if (error) {
-      setApiError(error.message)
+      if (error) {
+        setApiError(friendlyAuthError(error.message))
+        return
+      }
+    } catch (err) {
+      setApiError(friendlyAuthError(err instanceof Error ? err.message : 'network'))
       return
     }
 
@@ -88,7 +94,7 @@ export default function LoginPage() {
         <CardHeader className="text-center pb-2 pt-8">
           <motion.div variants={item}>
             <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
-              <Eye className="h-7 w-7 text-white" />
+              <span className="text-white text-2xl font-black">S</span>
             </div>
           </motion.div>
           <motion.div variants={item}>
@@ -149,6 +155,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                     tabIndex={-1}
                   >

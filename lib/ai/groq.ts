@@ -3,7 +3,8 @@ import { callGeminiText } from './gemini'
 import { GroqError } from '@/lib/utils'
 
 /**
- * Groq client — Llama 3.3 70B for clinical triage / report generation.
+ * Groq client — GPT-OSS 120B for clinical triage / report generation.
+ * (llama-3.3-70b-versatile was retired from Groq — swapped 2026-08.)
  * Initialized lazily so `next build` prerendering never throws on a missing key.
  *
  * If Groq is unavailable, callGroq falls back to Gemini 2.5 Flash (text) with
@@ -22,7 +23,7 @@ function getClient(): Groq {
 }
 
 /**
- * Call Groq Llama 3.3 70B with a system/user message pair.
+ * Call Groq (GPT-OSS 120B) with a system/user message pair.
  *
  * On any error, falls back to Gemini 2.5 Flash (text) with the same prompt.
  * The fallback result includes `_fallback_used: true` so callers can log it.
@@ -32,7 +33,7 @@ function getClient(): Groq {
 export async function callGroq(
   userContent: string,
   systemPrompt: string,
-  model = 'llama-3.3-70b-versatile'
+  model = 'openai/gpt-oss-120b'
 ): Promise<object> {
   // --- Primary attempt: Groq ---
   try {
@@ -44,6 +45,9 @@ export async function callGroq(
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
+      // Unset, Groq reserves the model's full 65K output budget against the
+      // 8K TPM free-tier limit and 413s. 3500 covers reasoning + JSON.
+      max_completion_tokens: 3500,
     })
 
     const content = completion.choices[0]?.message?.content

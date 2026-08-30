@@ -37,6 +37,7 @@ export default async function middleware(request: NextRequest) {
       request.nextUrl.pathname.startsWith('/nayan-ai') ||
       request.nextUrl.pathname.startsWith('/scriptguard') ||
       request.nextUrl.pathname.startsWith('/glycovision') ||
+      request.nextUrl.pathname.startsWith('/lokhon') ||
       request.nextUrl.pathname.startsWith('/reports')
 
     const isAuthPage =

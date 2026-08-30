@@ -365,7 +365,7 @@ export default function AudioGuide({ audioScriptBn, lang }: AudioGuideProps) {
               </span>
             </motion.div>
           ) : playState === 'ended' ? (
-            <span className="text-xs text-gray-400">{labels.ended} ✅</span>
+            <span className="text-xs text-gray-400">{labels.ended}</span>
           ) : null}
         </div>
 

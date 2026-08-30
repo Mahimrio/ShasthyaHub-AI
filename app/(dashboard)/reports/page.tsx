@@ -94,7 +94,13 @@ export default function ReportsPage() {
       const typeParam = filter === 'all' ? '' : `&type=${filter}`
       const res = await fetch(`/api/reports?page=${pageNum}&limit=20${typeParam}`, { signal: ac.signal })
       clearTimeout(timeout)
-      if (!res.ok) throw new Error('Failed to fetch')
+      if (!res.ok) {
+        throw new Error(
+          langRef.current === 'bn'
+            ? 'রিপোর্ট লোড করা যায়নি — কিছুক্ষণ পর আবার চেষ্টা করুন'
+            : 'Could not load reports — please try again in a moment'
+        )
+      }
       const json = await res.json()
       if (json.data) {
         setReports(prev => replace ? json.data : [...prev, ...json.data])
@@ -103,8 +109,13 @@ export default function ReportsPage() {
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        setError(langRef.current === 'bn' ? 'অনুরোধ সময় শেষ — অনুগ্রহ করে পুনরায় চেষ্টা করুন' : 'Request timed out — please try again')
-      } else {
+        setError(langRef.current === 'bn' ? 'অনুরোধ সময় শেষ — অনুগ্রহ করে পুনরায় চেষ্টা করুন' : 'Request timed out — please try again')      } else if (err instanceof TypeError) {
+        // fetch network failure
+        setError(
+          langRef.current === 'bn'
+            ? 'সার্ভারে সংযোগ করা যাচ্ছে না — ইন্টারনেট সংযোগ পরীক্ষা করুন'
+            : 'Could not reach the server — check your internet connection'
+        )      } else {
         setError(err instanceof Error ? err.message : 'An error occurred')
       }
     } finally {
@@ -232,8 +243,8 @@ export default function ReportsPage() {
           </h3>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
             {lang === 'bn'
-              ? 'প্রথমে একটি বিশ্লেষণ সম্পন্ন করুন — নয়ান AI 🧿 দিয়ে শুরু করুন'
-              : 'Start by completing an analysis — try NayanAI 🧿'}
+              ? 'প্রথমে একটি বিশ্লেষণ সম্পন্ন করুন — নয়ান AI দিয়ে শুরু করুন'
+              : 'Start by completing an analysis — try NayanAI'}
           </p>
           <Link
             href="/nayan-ai"
@@ -261,7 +272,7 @@ export default function ReportsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 className={cn(
-                  'bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border p-4 flex items-center gap-4 transition-all duration-300 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(168,85,247,0.06)] hover:shadow-[0_20px_60px_rgba(168,85,247,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_20px_60px_rgba(168,85,247,0.15),0_8px_24px_rgba(0,0,0,0.5)]',
+                  'bg-white/90 backdrop-blur-sm dark:bg-gray-900/90 dark:backdrop-blur-sm rounded-2xl border p-4 flex items-center gap-4 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(168,85,247,0.06)] hover:shadow-[0_20px_60px_rgba(168,85,247,0.12),0_8px_24px_rgba(0,0,0,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(168,85,247,0.08)] dark:hover:shadow-[0_20px_60px_rgba(168,85,247,0.15),0_8px_24px_rgba(0,0,0,0.5)]',
                   isDangerous
                     ? 'border-red-200 dark:border-red-900/50'
                     : 'border-gray-100 dark:border-gray-700'

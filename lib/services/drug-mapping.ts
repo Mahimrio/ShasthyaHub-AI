@@ -111,11 +111,24 @@ Rules:
 
 // --- Helpers ----------------------------------------------------------------
 
-/** First whitespace-delimited token of a string, lowercased, for DB searching. */
-function firstWord(text: string): string {
-  const trimmed = text.trim();
-  if (!trimmed) return '';
-  return trimmed.split(/\s+/)[0]!.toLowerCase();
+/** Dose-form prefixes that precede the brand name on BD prescriptions. */
+const DOSE_FORM_WORDS = new Set([
+  'tab', 'tab.', 'tablet', 'cap', 'cap.', 'capsule', 'syp', 'syp.', 'syrup',
+  'susp', 'susp.', 'suspension', 'inj', 'inj.', 'injection', 'oint', 'ointment',
+  'cream', 'gel', 'drops', 'drop', 'spray', 'inh', 'inhaler', 'sol', 'solution',
+  // unit fragments left over after stripping digits ("500mg" → "mg")
+  'mg', 'ml', 'mcg', 'gm', 'g', 'iu',
+])
+
+/** First brand-like token: skips list numbers and dose forms ("1. Tab Napa 500mg" → "napa"). */
+function brandToken(text: string): string {
+  const tokens = text.trim().toLowerCase().split(/\s+/)
+  for (const t of tokens) {
+    const clean = t.replace(/[^a-z\u0980-\u09ff]/g, '')
+    if (!clean || DOSE_FORM_WORDS.has(clean)) continue
+    return clean
+  }
+  return ''
 }
 
 /** Escape a user-provided term for use inside a PostgREST ILIKE pattern. */
@@ -152,11 +165,12 @@ async function lookupInDatabase(
 ): Promise<BdDrug | null> {
   if (!searchTerm) return null;
   const pattern = `%${escapeIlike(searchTerm)}%`;
+  // Single .or() — chaining .ilike().or() would AND the two conditions and
+  // brand-only matches (the common case) would never hit.
   const { data, error } = await supabase
     .from('bd_drugs')
     .select('id, brand_name, generic_name, manufacturer, drug_class, atc_code, common_in_bd')
-    .ilike('brand_name', pattern)
-    .or(`generic_name.ilike.${pattern}`)
+    .or(`brand_name.ilike.${pattern},generic_name.ilike.${pattern}`)
     .limit(3);
 
   if (error) {
@@ -205,7 +219,7 @@ async function lookupWithGroq(writtenText: string): Promise<{
  * so the pipeline never throws just because external services are down.
  */
 function lookupStatic(writtenText: string): ExtractedMedication | null {
-  const term = firstWord(writtenText);
+  const term = brandToken(writtenText);
   const generic = drugMapping[term];
   if (!generic) return null;
   return {
@@ -245,7 +259,7 @@ export async function mapBrandsToGenerics(
 ): Promise<ExtractedMedication[]> {
   const results = await Promise.all(
     medications.map(async (med): Promise<ExtractedMedication> => {
-      const searchTerm = firstWord(med.written_text);
+      const searchTerm = brandToken(med.written_text);
       const baseFields = {
         written_text: med.written_text,
         dosage: med.dosage,

@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Eye, FileText, Utensils, Bug } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Home, Eye, FileText, Utensils, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 
@@ -11,7 +12,7 @@ const navItems = [
   { href: '/nayan-ai', icon: Eye, labelEn: 'NayanAI', labelBn: 'চোখের পরীক্ষা' },
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'প্রেসক্রিপশন' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'খাদ্য বিশ্লেষণ' },
-  { href: '/debug-offline', icon: Bug, labelEn: 'Debug', labelBn: 'ডিবাগ' },
+  { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
 ]
 
 export function BottomNav() {
@@ -29,11 +30,18 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center gap-0.5 py-1 px-3 min-w-[64px]',
+                'relative flex flex-col items-center gap-0.5 py-1 px-3 min-w-[64px] transition-colors duration-200 active:scale-95',
                 isActive ? 'text-sky-600 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500'
               )}
             >
-              <Icon className="h-5 w-5" />
+              {isActive && (
+                <motion.span
+                  layoutId="bottomnav-indicator"
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  className="absolute -top-[1px] h-0.5 w-8 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500"
+                />
+              )}
+              <Icon className={cn('h-5 w-5 transition-transform duration-200', isActive && '-translate-y-0.5 scale-110')} />
               <span className="text-[10px] font-medium leading-tight">
                 {lang === 'bn' ? item.labelBn : item.labelEn}
               </span>
