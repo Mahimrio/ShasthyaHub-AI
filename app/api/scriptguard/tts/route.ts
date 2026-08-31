@@ -14,7 +14,7 @@ export const maxDuration = 60
  * length-capped to protect the API key.
  */
 
-const TTS_MODEL = 'gemini-2.5-flash-preview-tts'
+const TTS_MODEL = 'gemini-3.1-flash-tts-preview'
 const MAX_TEXT_LENGTH = 1600
 
 type TtsData = { wavBase64: string; sampleRate: number }

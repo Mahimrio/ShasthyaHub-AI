@@ -49,6 +49,10 @@ function rotateGeminiKey(): boolean {
 
 export type ImageMimeType = 'image/jpeg' | 'image/png' | 'image/webp'
 
+// New AQ.-style keys are gated to Gemini 3.x — gemini-2.5-* now 404s for new projects.
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash'
+const GEMINI_FALLBACK_MODEL = 'gemini-3.5-flash-lite'
+
 // ── JSON extraction (3 attempts) ───────────────────────────────────────────
 
 /**
@@ -132,7 +136,7 @@ export async function callGeminiVision(
   }
 
   try {
-    return await attempt('gemini-2.5-flash')
+    return await attempt(GEMINI_MODEL)
   } catch (error) {
     const elapsed = Date.now() - start
     console.error('[Gemini Error]', {
@@ -157,18 +161,18 @@ export async function callGeminiVision(
       // A different project's key has its own quota — rotating beats waiting.
       if (rotateGeminiKey()) {
         try {
-          return await attempt('gemini-2.5-flash')
+          return await attempt(GEMINI_MODEL)
         } catch (rotateError) {
           console.warn('[Gemini] Rotated key also failed:', rotateError)
           // fall through to the wait-and-downgrade path
         }
       }
-      console.warn('[Gemini] Rate limited (429). Waiting 5s, retrying with gemini-2.0-flash...')
+      console.warn(`[Gemini] Rate limited (429). Waiting 5s, retrying with ${GEMINI_FALLBACK_MODEL}...`)
       await sleep(5000)
       try {
-        return await attempt('gemini-2.0-flash')
+        return await attempt(GEMINI_FALLBACK_MODEL)
       } catch (retryError) {
-        console.error('[Gemini] Retry with gemini-2.0-flash also failed:', retryError)
+        console.error(`[Gemini] Retry with ${GEMINI_FALLBACK_MODEL} also failed:`, retryError)
         throw new GeminiError(
           `Vision analysis rate limited: ${retryError instanceof Error ? retryError.message : String(retryError)}`,
           429
@@ -180,7 +184,7 @@ export async function callGeminiVision(
       console.warn('[Gemini] Service unavailable (503). Waiting 3s, retrying...')
       await sleep(3000)
       try {
-        return await attempt('gemini-2.5-flash')
+        return await attempt(GEMINI_MODEL)
       } catch (retryError) {
         console.error('[Gemini] Retry after 503 also failed:', retryError)
         throw new GeminiError(
@@ -212,7 +216,7 @@ export async function callGeminiText(prompt: string): Promise<object> {
   const start = Date.now()
 
   async function attempt(): Promise<object> {
-    const model = getClient().getGenerativeModel({ model: 'gemini-2.5-flash' })
+    const model = getClient().getGenerativeModel({ model: GEMINI_MODEL })
     const result = await model.generateContent(prompt)
     return extractJsonSafely(result.response.text())
   }

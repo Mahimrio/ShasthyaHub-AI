@@ -89,10 +89,10 @@ export async function callGroq(
       }
     }
 
-    // --- Fallback 2: Gemini 2.5 Flash (text) ---
+    // --- Fallback 2: Gemini (text) ---
     console.warn('[Groq Fallback]', {
       reason,
-      fallback: 'gemini-2.5-flash',
+      fallback: 'gemini',
       timestamp: new Date().toISOString(),
     })
     try {

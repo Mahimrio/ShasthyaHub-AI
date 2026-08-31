@@ -17,7 +17,7 @@ export function isOpenRouterConfigured(): boolean {
 export async function callOpenRouter(
   userContent: string,
   systemPrompt: string,
-  model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free',
+  model = process.env.OPENROUTER_MODEL || 'minimax/minimax-m3:free',
   maxTokens = 3500
 ): Promise<object> {
   const apiKey = process.env.OPENROUTER_API_KEY
