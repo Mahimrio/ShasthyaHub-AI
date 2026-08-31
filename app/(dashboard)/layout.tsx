@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { Footer } from '@/components/layout/Footer'
 import { Skeleton } from '@/components/shared/skeletons/Skeleton'
 import { useState } from 'react'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -271,8 +272,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Main content */}
-      <main className="md:pl-60 xl:pl-64 md:pb-0 pb-20">
-        {children}
+      <main className="md:pl-60 xl:pl-64 md:pb-0 pb-20 flex min-h-screen flex-col">
+        <div className="flex-1">{children}</div>
+        <Footer />
       </main>
 
       <BottomNav />

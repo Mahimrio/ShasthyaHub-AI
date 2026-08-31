@@ -1,6 +1,8 @@
+import { Footer } from '@/components/layout/Footer'
+
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 overflow-hidden bg-gray-50 dark:bg-gray-950">
+    <div className="relative min-h-screen flex flex-col overflow-hidden bg-gray-50 dark:bg-gray-950">
       {/* Animated brand-gradient background (sky → cyan → emerald) */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden bg-gradient-to-br from-sky-50 via-cyan-50/40 to-emerald-50 dark:from-gray-950 dark:via-sky-950/25 dark:to-emerald-950/20 animate-gradient-bg z-0 motion-reduce:animate-none motion-reduce:bg-gray-50 motion-reduce:dark:bg-gray-950">
         {/* Ambient Radial Gradient Blobs */}
@@ -17,7 +19,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         />
       </div>
 
-      <div className="relative z-10">{children}</div>
+      <div className="relative z-10 flex flex-1 items-center justify-center p-4">{children}</div>
+      <Footer variant="minimal" />
     </div>
   )
 }
