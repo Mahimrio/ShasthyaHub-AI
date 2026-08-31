@@ -6,7 +6,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { AnimatedCounter } from '@/components/shared/AnimatedCounter'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
 import { DailyHealthTip } from '@/components/dashboard/DailyHealthTip'
@@ -112,6 +112,40 @@ export default function DashboardHome() {
 
   const hs = healthData?.data
   const score = hs?.score ?? null
+  const reduceMotion = useReducedMotion()
+
+  const miniStats = [
+    {
+      href: '/nayan-ai',
+      icon: Eye,
+      label: lang === 'bn' ? 'চোখ' : 'Eye',
+      value: hs?.eye_score ?? null,
+      hex: '#0EA5E9',
+      text: 'text-sky-600 dark:text-sky-400',
+      iconColor: 'text-sky-500',
+      hoverBorder: 'hover:border-sky-200 dark:hover:border-sky-800/60',
+    },
+    {
+      href: '/scriptguard',
+      icon: FileText,
+      label: lang === 'bn' ? 'প্রেসক্রিপশন' : 'Prescription',
+      value: hs?.rx_score ?? null,
+      hex: '#10B981',
+      text: 'text-emerald-600 dark:text-emerald-400',
+      iconColor: 'text-emerald-500',
+      hoverBorder: 'hover:border-emerald-200 dark:hover:border-emerald-800/60',
+    },
+    {
+      href: '/glycovision',
+      icon: Utensils,
+      label: lang === 'bn' ? 'খাদ্য' : 'Food',
+      value: hs?.food_score ?? null,
+      hex: '#F59E0B',
+      text: 'text-amber-600 dark:text-amber-400',
+      iconColor: 'text-amber-500',
+      hoverBorder: 'hover:border-amber-200 dark:hover:border-amber-800/60',
+    },
+  ]
 
   const hour = new Date().getHours()
   const timeGreeting =
@@ -238,7 +272,15 @@ export default function DashboardHome() {
           <div className="flex items-center gap-6 flex-col sm:flex-row">
             {/* Gauge */}
             <div className="relative flex flex-col items-center shrink-0">
-              <svg className="w-28 h-28 transform -rotate-90">
+              {/* Breathing glow behind the ring */}
+              <motion.div
+                aria-hidden
+                className="absolute top-0 inset-x-0 mx-auto h-28 w-28 rounded-full blur-xl"
+                style={{ backgroundColor: getScoreColor(score) }}
+                animate={reduceMotion ? { opacity: 0.14 } : { opacity: [0.1, 0.28, 0.1], scale: [0.9, 1.06, 0.9] }}
+                transition={{ duration: 3.2, repeat: reduceMotion ? 0 : Infinity, ease: 'easeInOut' }}
+              />
+              <svg className="relative w-28 h-28 transform -rotate-90">
                 <circle cx="56" cy="56" r="44" stroke="#F3F4F6" strokeWidth="8" fill="transparent" className="dark:stroke-gray-700" />
                 <motion.circle
                   cx="56" cy="56" r="44"
@@ -252,6 +294,21 @@ export default function DashboardHome() {
                   transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
                 />
               </svg>
+              {/* Orbiting dot riding the arc tip */}
+              {!reduceMotion && (
+                <motion.div
+                  aria-hidden
+                  className="absolute top-0 inset-x-0 mx-auto h-28 w-28"
+                  initial={{ rotate: 0 }}
+                  animate={{ rotate: (score / 100) * 360 }}
+                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
+                >
+                  <span
+                    className="absolute left-1/2 top-[6px] h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white dark:border-gray-900"
+                    style={{ backgroundColor: getScoreColor(score), boxShadow: `0 0 10px ${getScoreColor(score)}` }}
+                  />
+                </motion.div>
+              )}
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span style={{ color: getScoreColor(score) }}>
                   <AnimatedCounter value={score} className="text-2xl font-extrabold tabular-nums" />
@@ -260,46 +317,59 @@ export default function DashboardHome() {
                   {lang === 'bn' ? 'স্বাস্থ্য স্কোর' : 'Health Score'}
                 </span>
               </div>
-              <span
+              <motion.span
+                initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.85 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ delay: 1.15, type: 'spring', stiffness: 320, damping: 20 }}
                 className="mt-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
                 style={{ color: getScoreColor(score), backgroundColor: `${getScoreColor(score)}1A` }}
               >
                 {scoreLabel}
-              </span>
+              </motion.span>
             </div>
 
             {/* Mini cards — tap through to each agent */}
             <div className="flex-1 w-full">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-                <Link href="/nayan-ai" className="group p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center transition-all hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-sm dark:hover:border-sky-800/60">
-                  <p className="flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
-                    <Eye className="h-3 w-3 text-sky-500" />
-                    {lang === 'bn' ? 'চোখ' : 'Eye'}
-                  </p>
-                  <p className="text-xl font-bold tabular-nums text-sky-600 dark:text-sky-400 mt-1">
-                    {hs?.eye_score != null ? <AnimatedCounter value={hs.eye_score} /> : '--'}
-                  </p>
-                </Link>
-                <Link href="/scriptguard" className="group p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center transition-all hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-sm dark:hover:border-emerald-800/60">
-                  <p className="flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
-                    <FileText className="h-3 w-3 text-emerald-500" />
-                    {lang === 'bn' ? 'প্রেসক্রিপশন' : 'Prescription'}
-                  </p>
-                  <p className="text-xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
-                    {hs?.rx_score != null ? <AnimatedCounter value={hs.rx_score} /> : '--'}
-                  </p>
-                </Link>
-                <Link href="/glycovision" className="group p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center transition-all hover:-translate-y-0.5 hover:border-amber-200 hover:shadow-sm dark:hover:border-amber-800/60">
-                  <p className="flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
-                    <Utensils className="h-3 w-3 text-amber-500" />
-                    {lang === 'bn' ? 'খাদ্য' : 'Food'}
-                  </p>
-                  <p className="text-xl font-bold tabular-nums text-amber-600 dark:text-amber-400 mt-1">
-                    {hs?.food_score != null ? <AnimatedCounter value={hs.food_score} /> : '--'}
-                  </p>
-                </Link>
+                {miniStats.map((s, i) => {
+                  const SIcon = s.icon
+                  return (
+                    <motion.div
+                      key={s.href}
+                      initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.35 + i * 0.12, type: 'spring', stiffness: 260, damping: 22 }}
+                    >
+                      <Link
+                        href={s.href}
+                        className={`group block p-3 bg-gray-50 dark:bg-gray-800/60 border border-transparent dark:border-gray-700/40 rounded-xl text-center transition-all hover:-translate-y-0.5 hover:shadow-sm ${s.hoverBorder}`}
+                      >
+                        <p className="flex items-center justify-center gap-1 text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-wide">
+                          <SIcon className={`h-3 w-3 ${s.iconColor} transition-transform duration-200 group-hover:scale-125`} />
+                          {s.label}
+                        </p>
+                        <p className={`text-xl font-bold tabular-nums mt-1 ${s.text}`}>
+                          {s.value != null ? <AnimatedCounter value={s.value} /> : '--'}
+                        </p>
+                        <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-200/70 dark:bg-gray-700/60">
+                          <motion.div
+                            className="h-full rounded-full"
+                            style={{ backgroundColor: s.hex }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${s.value ?? 0}%` }}
+                            transition={{ duration: 1, delay: 0.55 + i * 0.12, ease: [0.16, 1, 0.3, 1] }}
+                          />
+                        </div>
+                      </Link>
+                    </motion.div>
+                  )
+                })}
               </div>
-              <p className="mt-2.5 text-center sm:text-left text-[11px] text-gray-400 dark:text-gray-500">
+              <p className="mt-2.5 flex items-center justify-center sm:justify-start gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                <span className="relative flex h-2 w-2">
+                  <span className="motion-reduce:hidden absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+                </span>
                 {lang === 'bn'
                   ? 'সাম্প্রতিক বিশ্লেষণ থেকে লাইভ আপডেট — বিস্তারিত দেখতে কার্ডে ট্যাপ করুন'
                   : 'Live from your recent analyses — tap a card for details'}
