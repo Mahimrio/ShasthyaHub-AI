@@ -8,7 +8,7 @@ export default function DashboardLoading() {
         <Skeleton className="h-4 w-48 rounded-lg" />
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 space-y-4 transition-colors">
         <Skeleton className="h-4 w-36 rounded-lg" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -22,7 +22,7 @@ export default function DashboardLoading() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
+          <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 space-y-3 transition-colors">
             <Skeleton className="h-12 w-12 rounded-xl" />
             <Skeleton className="h-5 w-28 rounded-lg" />
             <Skeleton className="h-3 w-36 rounded-lg" />
@@ -31,7 +31,7 @@ export default function DashboardLoading() {
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-4">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-5 space-y-4 transition-colors">
         <Skeleton className="h-4 w-32 rounded-lg" />
         {[1, 2].map((i) => (
           <div key={i} className="flex items-center gap-3">
