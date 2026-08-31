@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk'
 import { callGeminiText } from './gemini'
+import { callOpenRouter, isOpenRouterConfigured } from './openrouter'
 import { GroqError } from '@/lib/utils'
 
 /**
@@ -7,8 +8,8 @@ import { GroqError } from '@/lib/utils'
  * (llama-3.3-70b-versatile was retired from Groq — swapped 2026-08.)
  * Initialized lazily so `next build` prerendering never throws on a missing key.
  *
- * If Groq is unavailable, callGroq falls back to Gemini 2.5 Flash (text) with
- * the same prompt so the pipeline never hard-fails on a transient outage.
+ * Fallback chain: Groq → OpenRouter (if configured) → Gemini 2.5 Flash (text),
+ * so the pipeline never hard-fails on a single provider's outage or quota.
  */
 let groqClient: Groq | null = null
 
@@ -69,19 +70,36 @@ export async function callGroq(
     }
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
+
+    // --- Fallback 1: OpenRouter (independent provider + quota) ---
+    if (isOpenRouterConfigured()) {
+      console.warn('[Groq Fallback]', {
+        reason,
+        fallback: 'openrouter',
+        timestamp: new Date().toISOString(),
+      })
+      try {
+        const raw = await callOpenRouter(userContent, systemPrompt, undefined, maxTokens)
+        return { ...raw, _fallback_used: true, _fallback_provider: 'openrouter' }
+      } catch (orError) {
+        console.warn('[Groq Fallback] OpenRouter also failed:', {
+          reason: orError instanceof Error ? orError.message : String(orError),
+          timestamp: new Date().toISOString(),
+        })
+      }
+    }
+
+    // --- Fallback 2: Gemini 2.5 Flash (text) ---
     console.warn('[Groq Fallback]', {
       reason,
       fallback: 'gemini-2.5-flash',
       timestamp: new Date().toISOString(),
     })
-
-    // --- Fallback: Gemini 2.5 Flash (text) ---
-    // Disable JSON mode — Gemini uses a different mechanism.
     try {
       const combinedPrompt = `${systemPrompt}\n\n${userContent}`
       const raw = await callGeminiText(combinedPrompt)
       // The result is already parsed by extractJsonSafely inside callGeminiText.
-      return { ...raw, _fallback_used: true }
+      return { ...raw, _fallback_used: true, _fallback_provider: 'gemini' }
     } catch (fallbackError) {
       const fallbackReason = fallbackError instanceof Error ? fallbackError.message : String(fallbackError)
       console.error('[Groq Fallback] Gemini fallback also failed:', {
@@ -89,7 +107,7 @@ export async function callGroq(
         timestamp: new Date().toISOString(),
       })
       throw new GroqError(
-        `Groq call failed and Gemini fallback also failed. Groq: ${reason} | Gemini: ${fallbackReason}`
+        `Groq call failed and all fallbacks failed. Groq: ${reason} | Gemini: ${fallbackReason}`
       )
     }
   }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimit } from '@/lib/rate-limit'
+import { getGeminiKeys } from '@/lib/ai/gemini'
 import type { ApiError, ApiSuccess } from '@/types'
 
 export const maxDuration = 60
@@ -86,8 +87,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<TtsRespon
       return NextResponse.json<ApiSuccess<TtsData>>({ success: true, data: cached })
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
+    const keys = getGeminiKeys()
+    if (keys.length === 0) {
       return NextResponse.json<ApiError>(
         {
           success: false,
@@ -99,29 +100,35 @@ export async function POST(request: NextRequest): Promise<NextResponse<TtsRespon
       )
     }
 
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text }] }],
-          generationConfig: {
-            responseModalities: ['AUDIO'],
-            speechConfig: {
-              voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
-            },
+    // Try each key on 429 — TTS preview quota is tiny and per-project.
+    let res: Response | undefined
+    for (let i = 0; i < keys.length; i++) {
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': keys[i],
           },
-        }),
-      }
-    )
+          body: JSON.stringify({
+            contents: [{ parts: [{ text }] }],
+            generationConfig: {
+              responseModalities: ['AUDIO'],
+              speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } },
+              },
+            },
+          }),
+        }
+      )
+      if (res.status !== 429) break
+      if (i < keys.length - 1) console.warn(`[tts] Key #${i + 1} rate-limited — trying key #${i + 2}`)
+    }
 
-    if (!res.ok) {
-      const errText = (await res.text()).slice(0, 300)
-      console.error('[tts] Gemini TTS failed:', res.status, errText)
+    if (!res || !res.ok) {
+      const errText = res ? (await res.text()).slice(0, 300) : 'no response'
+      console.error('[tts] Gemini TTS failed:', res?.status, errText)
       return NextResponse.json<ApiError>(
         {
           success: false,
