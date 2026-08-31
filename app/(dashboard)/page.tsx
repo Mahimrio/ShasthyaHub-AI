@@ -271,57 +271,59 @@ export default function DashboardHome() {
         ) : (
           <div className="flex items-center gap-6 flex-col sm:flex-row">
             {/* Gauge */}
-            <div className="relative flex flex-col items-center shrink-0">
-              {/* Breathing glow behind the ring */}
-              <motion.div
-                aria-hidden
-                className="absolute top-0 inset-x-0 mx-auto h-28 w-28 rounded-full blur-xl"
-                style={{ backgroundColor: getScoreColor(score) }}
-                animate={reduceMotion ? { opacity: 0.14 } : { opacity: [0.1, 0.28, 0.1], scale: [0.9, 1.06, 0.9] }}
-                transition={{ duration: 3.2, repeat: reduceMotion ? 0 : Infinity, ease: 'easeInOut' }}
-              />
-              <svg className="relative w-28 h-28 transform -rotate-90">
-                <circle cx="56" cy="56" r="44" stroke="#F3F4F6" strokeWidth="8" fill="transparent" className="dark:stroke-gray-700" />
-                <motion.circle
-                  cx="56" cy="56" r="44"
-                  stroke={getScoreColor(score)}
-                  strokeWidth="8"
-                  fill="transparent"
-                  strokeDasharray="276.46"
-                  strokeLinecap="round"
-                  initial={{ strokeDashoffset: 276.46 }}
-                  animate={{ strokeDashoffset: 276.46 - (276.46 * score) / 100 }}
-                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                />
-              </svg>
-              {/* Orbiting dot riding the arc tip */}
-              {!reduceMotion && (
+            <div className="flex flex-col items-center shrink-0">
+              <div className="relative h-28 w-28">
+                {/* Breathing glow behind the ring */}
                 <motion.div
                   aria-hidden
-                  className="absolute top-0 inset-x-0 mx-auto h-28 w-28"
-                  initial={{ rotate: 0 }}
-                  animate={{ rotate: (score / 100) * 360 }}
-                  transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                >
-                  <span
-                    className="absolute left-1/2 top-[6px] h-3 w-3 -translate-x-1/2 rounded-full border-2 border-white dark:border-gray-900"
-                    style={{ backgroundColor: getScoreColor(score), boxShadow: `0 0 10px ${getScoreColor(score)}` }}
+                  className="absolute inset-0 rounded-full blur-xl"
+                  style={{ backgroundColor: getScoreColor(score) }}
+                  animate={reduceMotion ? { opacity: 0.14 } : { opacity: [0.1, 0.28, 0.1], scale: [0.9, 1.06, 0.9] }}
+                  transition={{ duration: 3.2, repeat: reduceMotion ? 0 : Infinity, ease: 'easeInOut' }}
+                />
+                <svg className="relative w-28 h-28 transform -rotate-90">
+                  <circle cx="56" cy="56" r="44" stroke="#F3F4F6" strokeWidth="8" fill="transparent" className="dark:stroke-gray-700" />
+                  <motion.circle
+                    cx="56" cy="56" r="44"
+                    stroke={getScoreColor(score)}
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray="276.46"
+                    strokeLinecap="round"
+                    initial={{ strokeDashoffset: 276.46 }}
+                    animate={{ strokeDashoffset: 276.46 - (276.46 * score) / 100 }}
+                    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
                   />
-                </motion.div>
-              )}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span style={{ color: getScoreColor(score) }}>
-                  <AnimatedCounter value={score} className="text-2xl font-extrabold tabular-nums" />
-                </span>
-                <span className="text-[9px] text-gray-400 font-medium tracking-wide uppercase mt-0.5">
-                  {lang === 'bn' ? 'স্বাস্থ্য স্কোর' : 'Health Score'}
-                </span>
+                  {/* Dot marks the arc tip — exact trig position, fades in after the draw */}
+                  {!reduceMotion && (
+                    <motion.circle
+                      cx={56 + 44 * Math.cos((score / 100) * 2 * Math.PI)}
+                      cy={56 + 44 * Math.sin((score / 100) * 2 * Math.PI)}
+                      r="5.5"
+                      fill={getScoreColor(score)}
+                      strokeWidth="2.5"
+                      className="stroke-white dark:stroke-gray-900"
+                      style={{ filter: `drop-shadow(0 0 4px ${getScoreColor(score)})` }}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 1.25, duration: 0.35 }}
+                    />
+                  )}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span style={{ color: getScoreColor(score) }}>
+                    <AnimatedCounter value={score} className="text-2xl font-extrabold tabular-nums" />
+                  </span>
+                  <span className="text-[9px] text-gray-400 font-medium tracking-wide uppercase mt-0.5">
+                    {lang === 'bn' ? 'স্বাস্থ্য স্কোর' : 'Health Score'}
+                  </span>
+                </div>
               </div>
               <motion.span
                 initial={reduceMotion ? false : { opacity: 0, y: 4, scale: 0.85 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 1.15, type: 'spring', stiffness: 320, damping: 20 }}
-                className="mt-1 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                className="mt-2 rounded-full px-2.5 py-0.5 text-[10px] font-bold"
                 style={{ color: getScoreColor(score), backgroundColor: `${getScoreColor(score)}1A` }}
               >
                 {scoreLabel}
