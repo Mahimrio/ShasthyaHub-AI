@@ -302,8 +302,9 @@ self.addEventListener('fetch', (event) => {
               if (res.ok && res.type === 'basic') cache.put(cacheKey, res.clone())
               return res
             })
-            .catch(() => cached)
-          return cached || fetchPromise
+            .catch(() => cached || Response.error())
+          // Dev: stale RSC payloads crash newer client runtimes — always prefer network
+          return IS_DEV ? fetchPromise : cached || fetchPromise
         })
       )
     )
@@ -321,8 +322,8 @@ self.addEventListener('fetch', (event) => {
               if (res.ok && res.type === 'basic') cache.put(cacheKey, res.clone())
               return res
             })
-            .catch(() => cached)
-          return cached || fetchPromise
+            .catch(() => cached || Response.error())
+          return IS_DEV ? fetchPromise : cached || fetchPromise
         })
       )
     )
