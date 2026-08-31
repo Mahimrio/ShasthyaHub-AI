@@ -11,6 +11,7 @@ import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Footer } from '@/components/layout/Footer'
+import { ChatWidget } from '@/components/chat/ChatWidget'
 import { Skeleton } from '@/components/shared/skeletons/Skeleton'
 import { useState } from 'react'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -278,6 +279,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </main>
 
       <BottomNav />
+      <ChatWidget />
     </div>
   )
 }

@@ -1,6 +1,6 @@
 -- ============================================================
 -- ShasthyaHub-AI: Complete Database Schema
--- SciBlitz AI Challenge 2026 — Track A (Health & Society)
+-- AUST CSE Carnival 8.0 — Project Showcase
 -- ============================================================
 
 -- 0. Extensions

@@ -1,6 +1,6 @@
 # ShasthyaHub-AI — Agent Guide
 
-**Next.js 16 + TypeScript** health AI app (SciBlitz AI Challenge 2026, Track A). Three AI agents: Nayan AI (eye), ScriptGuard (prescription), GlycoVision (food).
+**Next.js 16 + TypeScript** health AI app, built for **AUST CSE Carnival 8.0 — Project Showcase**. Four AI agents — Nayan AI (eye), ScriptGuard (prescription), GlycoVision (food), Lokhon (symptoms) — plus the Shasthya Bondhu floating AI chatbot.
 
 ## Commands
 
@@ -20,20 +20,20 @@ No test framework exists. No `npm test`.
 - **UI**: shadcn/ui (new-york style, RSC enabled) — 11 components in `components/ui/`
 - **Auth**: Supabase (cookie-based SSR via `@supabase/ssr`) — clients at `lib/supabase/server.ts` & `client.ts`
 - **AI**:
-  - **Online**: Dual pipeline — Gemini 2.5 Flash (`lib/ai/gemini.ts`) → Groq Llama 3.3 70B (`lib/ai/groq.ts`), orchestrated via `lib/ai/orchestrator.ts`
-  - **Offline (Nayan AI only)**: TensorFlow.js (`lib/ai/tensorflow-nayan.ts`) — module singleton, WebGPU→WebGL→WASM backend fallback, 3-class CNN (normal/refer/urgent)
-- **Offline Infrastructure (Phase 0)**: Network detection (`hooks/useNetworkStatus.ts`), IndexedDB queue (`lib/offline-queue.ts`), SW caching in `public/sw.js`, debug page at `/debug-offline`
-- **State**: TanStack React Query (installed, no provider set up yet)
-- **i18n**: `next-i18next` installed, **not configured** (no locale files)
-- **PWA**: `next-pwa` installed, **not configured**
+  - **Online**: Gemini 3.5-flash vision/text (`lib/ai/gemini.ts`, key POOL via `GEMINI_API_KEYS` — rotates on 429; new AQ.-style keys are gated to Gemini 3.x, 2.5 returns 404) → Groq `openai/gpt-oss-120b` reasoning (`lib/ai/groq.ts`, 8K TPM free tier, always set `max_completion_tokens` + `reasoning_effort: 'low'`) → OpenRouter `minimax/minimax-m3:free` fallback (`lib/ai/openrouter.ts`). JSON-mode chain: Groq → OpenRouter → Gemini text.
+  - **Chat**: `/api/chat` streams PLAIN TEXT from Groq (separate from the JSON pipeline) with the same fallback chain — helpers in `lib/ai/chat.ts`.
+  - **TTS**: `/api/scriptguard/tts` → `gemini-3.1-flash-tts-preview` (voice Kore, ~3-8s, PCM→WAV server-side, key-pool failover).
+  - **Offline (Nayan AI only)**: TensorFlow.js (`lib/ai/tensorflow-nayan.ts`) — module singleton, WebGPU→WebGL→WASM backend fallback, 3-class CNN. ScriptGuard offline OCR: Tesseract.js v5 (`lib/ai/tesseract-scriptguard.ts`, eng+ben, self-hosted in `public/tesseract-lang/`).
+- **Offline Infrastructure (Phase 0)**: Network detection (`hooks/useNetworkStatus.ts`), IndexedDB queue (`lib/offline-queue.ts`), SW caching in `public/sw.js` (network-first for `/_next/static/` and RSC caches on localhost — prevents stale-chunk hydration crashes; cache-first in prod), debug page at `/debug-offline`
+- **State**: TanStack React Query (provider wired in `components/providers.tsx`)
+- **i18n**: cookie-based (`shasthya_lang`) via `contexts/LanguageContext.tsx`, resolved server-side in the root layout — `next-i18next` is installed but unused
+- **PWA**: hand-written `public/sw.js` is the single source of truth (`next-pwa` removed; `app/sw.ts.future` is dead reference code)
 
 ## Project state
 
-**Phase 0 (Offline Infrastructure)** — Complete: pessimistic network detection, WebP-compressed IndexedDB queue, hand-written SW with RSC caching, background sync, debug page.
+**All core phases complete.** Phase 0 (offline infra), Phase 1 (Nayan offline TF.js — model files EXIST at `public/models/nayan-ai/`), Phase 2 (ScriptGuard offline OCR via Tesseract).
 
-**Phase 1 (Nayan Offline AI)** — Complete: TensorFlow.js integration with module-level singleton, 3-bucket classification, automatic online/offline routing, SW model caching (`shasthyahub-models-v1`), warm-up inference, graceful missing-files handling. Model training/conversion (Phase 1a) is pending — place output at `public/models/nayan-ai/`.
-
-**Feature pages completed**: Nayan AI, ScriptGuard, GlycoVision, Reports dashboard — all with dark mode, BN/EN i18n, skeleton loaders, shared components (ImageUploader, ResultCard, DisclaimerModal, AiThinkingBanner). Responsive dashboard layout with sidebar + bottom nav. Dark mode system active. Auth system complete (login, register, middleware). `hooks/useAuth.ts` exists.
+**Features shipped**: Nayan AI, ScriptGuard (batched drug mapping, ~18-44s), GlycoVision, Lokhon (zero-LLM weighted symptom scoring, crisis path with 16463 Shuchona helpline), Reports dashboard, Shasthya Bondhu chatbot (streaming, report-aware, red-flag escalation, TTS playback, chat_messages persistence), Bengali TTS on ScriptGuard, doctors directory, public demo pages under `/demo`. All bilingual (BN/EN) with dark mode. Auth complete (login, register, forgot-password, middleware). Responsive layout: desktop sidebar + mobile bottom nav, slim app footer, floating chat FAB.
 
 ## Service layer
 
@@ -48,16 +48,18 @@ No test framework exists. No `npm test`.
 
 | Agent | Vision model | Reasoning model | Key services |
 |-------|-------------|----------------|--------------|
-| Nayan AI (eye) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeEyeImage()` |
+| Nayan AI (eye) | Gemini 3.5 Flash → | Groq gpt-oss-120b | `analyzeEyeImage()` |
 | Nayan AI (offline) | TensorFlow.js CNN | — | `analyzeEyeImageOffline()` in `lib/ai/tensorflow-nayan.ts` |
-| ScriptGuard (rx) | Gemini 2.5 Flash → | Groq + OpenFDA | `analyzePrescription()`, `mapBrandsToGenerics()`, `checkDrugInteractions()` |
-| GlycoVision (food) | Gemini 2.5 Flash → | Groq Llama 3.3 70B | `analyzeFood()`, `lookupNutrition()`, `calculateTotalNutrition()` |
+| ScriptGuard (rx) | Gemini 3.5 Flash → | Groq + OpenFDA (evidence capped 700/pair, 4000 total) | `analyzePrescription()`, `mapBrandsToGenerics()` (3-tier: bd_drugs → ONE batched Groq call → static map), `checkDrugInteractions()` |
+| GlycoVision (food) | Gemini 3.5 Flash → | Groq gpt-oss-120b | `analyzeFood()`, `lookupNutrition()`, `calculateTotalNutrition()` |
+| Lokhon (symptoms) | — (zero-LLM) | weighted scoring, red-flag ≥4 forces Urgent | `app/api/lokhon/*` |
+| Shasthya Bondhu (chat) | — | Groq streaming → OpenRouter → Gemini | `lib/ai/chat.ts`, `app/api/chat/route.ts` |
 
-All pipelines have Gemini Flash fallback when Groq is unavailable. Offline Nayan AI runs locally in browser via TensorFlow.js when network is unavailable and model files are present at `public/models/nayan-ai/`.
+All JSON pipelines fall back Groq → OpenRouter (if `OPENROUTER_API_KEY` set) → Gemini text; fallback results carry `_fallback_used` + `_fallback_provider`. Offline Nayan AI runs locally in-browser when the network is down and model files are present.
 
 ## Database
 
-6 tables in `supabase/schema.sql`. Run in order: `schema.sql` → `seed.sql` → `storage-setup.sql`. RLS on all tables. `supabase/seed.sql` has 65 drugs + 85 food items.
+Base tables in `supabase/schema.sql`. Run in order: `schema.sql` → `seed.sql` → `storage-setup.sql` → `doctors.sql` → `migrations/001..003`. RLS on all tables. Seed data: `bd_drugs` (65 rows) + `bd_food_items` (85 rows), anon-readable. Migrations: 001 chronic_disease_risks, 002 analysis_mode columns, 003 chat_messages — **all three applied to the live project**.
 
 ## Deployment
 
@@ -73,14 +75,17 @@ All pipelines have Gemini Flash fallback when Groq is unavailable. Offline Nayan
 
 ## Commit convention
 
-Conventional commits enforced by commitlint. Allowed types: `feat|fix|docs|style|refactor|test|perf|ci|build|revert|chore`. Max header 100 chars, sentence-case subject. Example: `feat(auth): add login page`
+Conventional commits enforced by commitlint. Allowed types: `feat|fix|docs|style|refactor|test|perf|ci|build|revert|chore`. Max header 120 chars, sentence-case subject. Example: `feat(auth): add login page`
 
 ## Gotchas
 
 - No `.env.local` in repo (it's gitignored). Copy `.env.example` and fill in keys.
-- `components.json` references `hooks` alias but `hooks/` dir doesn't exist.
 - `components.json` references `tailwind.config.ts` but it doesn't exist (Tailwind v4 uses CSS-based config).
-- AI keys required at runtime: `GEMINI_API_KEY`, `GROQ_API_KEY`.
+- AI keys required at runtime: `GEMINI_API_KEY` (or `GEMINI_API_KEYS` pool), `GROQ_API_KEY`; optional: `OPENROUTER_API_KEY`, `USDA_API_KEY`.
+- New AQ.-style Gemini keys CANNOT use gemini-2.5-* (404 "no longer available to new users") — the app is on 3.5-flash / 3.5-flash-lite / 3.1-flash-tts-preview. Validate keys with `node scripts/probe-keys.mjs`.
+- Groq free tier = 8,000 TPM; TPM counts prompt + `max_completion_tokens` (unset reserves the full 65K and 413s). gpt-oss burns budget on hidden reasoning — always pass `reasoning_effort: 'low'`.
+- Dev SW is network-first for chunks/RSC on localhost; if a browser holds a pre-fix SW, one hard refresh self-heals. Never trust stale-cache phantom errors before clearing SW caches.
+- Bengali text in files: editing tools may fail on Unicode normalization differences — anchor edits on ASCII-only lines or copy oldString verbatim from a fresh read.
 
 ## ⚠ Critical: Supabase client must NEVER be called during static prerendering
 

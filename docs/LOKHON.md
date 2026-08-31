@@ -1,7 +1,7 @@
 # Lokhon — Symptom Checker
 
 > লোকন — লক্ষণ পরীক্ষা  
-> *Built for SciBlitz AI Challenge 2026, Track A.*
+> *Built for AUST CSE Carnival 8.0 — Project Showcase.*
 
 Lokhon is a structured symptom-screening module that guides users through a disease-specific questionnaire, computes a deterministic risk score, and provides actionable advice. It covers **7 common health conditions** relevant to rural Bangladesh.
 

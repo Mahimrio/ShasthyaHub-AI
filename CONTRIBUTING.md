@@ -51,6 +51,10 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 GEMINI_API_KEY=your_gemini_key_here
 GROQ_API_KEY=your_groq_key_here
 
+# AI APIs (optional)
+GEMINI_API_KEYS=key_one,key_two   # multi-project pool, rotates on 429
+OPENROUTER_API_KEY=your_openrouter_key   # extra reasoning fallback
+
 # Nutrition API (optional)
 USDA_API_KEY=your_usda_key_here
 
@@ -67,6 +71,7 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 | Supabase Service Role | Supabase Dashboard → Settings → API → service_role (keep secret!) |
 | Gemini API Key | [Google AI Studio](https://aistudio.google.com/apikey) |
 | Groq API Key | [console.groq.com](https://console.groq.com/keys) |
+| OpenRouter API Key | [openrouter.ai/keys](https://openrouter.ai/keys) (optional) |
 | USDA API Key | [USDA FoodData Central](https://fdc.nal.usda.gov/api-key-signup.html) (optional) |
 
 ## Project Structure
@@ -74,21 +79,26 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 ShasthyaHub-AI/
 ├── app/
-│   ├── (auth)/           → Login, Register (public)
+│   ├── (auth)/           → Login, Register, Forgot-password (public)
 │   ├── (dashboard)/      → Main app pages (protected)
 │   │   ├── page.tsx      → Dashboard home
 │   │   ├── nayan-ai/     → Eye scan agent
 │   │   ├── scriptguard/  → Prescription agent
-│   │   ├── glycovision/  → Glucose tracker
+│   │   ├── glycovision/  → Food & glucose agent
+│   │   ├── lokhon/       → Symptom checker
 │   │   └── reports/      → Report history
 │   ├── demo/             → Public demos (no auth)
-│   └── api/              → API routes (server-side)
-├── components/ui/        → shadcn/ui components
+│   └── api/              → API routes (incl. /api/chat streaming)
+├── components/
+│   ├── chat/             → Shasthya Bondhu chatbot widget
+│   ├── features/         → Per-agent components
+│   └── ui/               → shadcn/ui components
 ├── lib/
 │   ├── supabase/         → DB & auth clients
-│   ├── ai/               → Gemini + Groq wrappers
+│   ├── ai/               → Gemini + Groq + OpenRouter + chat wrappers
 │   ├── services/         → Business logic
 │   └── utils.ts          → Helper functions
+├── supabase/             → schema, seed, migrations 001-003
 ├── types/index.ts        → Shared TypeScript types
 └── .github/workflows/    → CI/CD pipeline
 ```
@@ -290,4 +300,4 @@ Production URL: Check the Vercel dashboard or the GitHub deployment status.
 
 ---
 
-Built for SciBlitz AI Challenge 2026 — Team ShasthyaHub
+Built for AUST CSE Carnival 8.0 (Project Showcase) — Team ShasthyaHub

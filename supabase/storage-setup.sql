@@ -1,6 +1,6 @@
 -- ============================================================
 -- ShasthyaHub-AI: Storage Bucket Setup
--- SciBlitz AI Challenge 2026 — Track A (Health & Society)
+-- AUST CSE Carnival 8.0 — Project Showcase
 -- ============================================================
 
 -- ============================================================
