@@ -3,13 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug } from 'lucide-react'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug, HeartPulse } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { Footer } from '@/components/layout/Footer'
 import { Skeleton } from '@/components/shared/skeletons/Skeleton'
 import { useState } from 'react'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -41,7 +42,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
       {/* Mobile header */}
-      <header className="sticky top-0 z-30 md:hidden bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-colors">
+      <header className="sticky top-0 z-30 md:hidden bg-white/85 dark:bg-gray-900/85 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800 transition-colors">
         <div className="flex items-center justify-between h-14 px-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -53,9 +54,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Menu className="h-5 w-5 text-gray-600 dark:text-gray-400" />
             )}
           </button>
-          <Link prefetch={false} href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2">
             <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-lg flex items-center justify-center">
-              <span className="text-white text-xs font-bold">S</span>
+              <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
             <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">ShasthyaHub</span>
           </Link>
@@ -84,9 +85,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex flex-col h-full">
           {/* Mobile Drawer Header */}
           <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
-            <Link prefetch={false} href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
+            <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-sky-500/10 dark:shadow-sky-400/10">
-                <span className="text-white text-xs font-black">S</span>
+                <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
               <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400 tracking-tight text-sm">
                 ShasthyaHub
@@ -99,33 +100,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Mobile Drawer Nav Links */}
           <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
+            <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+              {lang === 'bn' ? 'মেনু' : 'Menu'}
+            </p>
             {sidebarLinks.map((link) => {
               const isActive = pathname === link.href
               const Icon = link.icon
               return (
                 <Link
-                  prefetch={false}
                   key={link.href}
                   href={link.href}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    'relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200',
+                    'group relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200',
                     isActive
-                      ? 'bg-gradient-to-r from-sky-500/10 to-transparent text-sky-600 dark:from-sky-500/20 dark:text-sky-400 font-bold'
-                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/50 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
+                      ? 'text-sky-600 dark:text-sky-400 font-bold'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/80 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
                   )}
                 >
                   {isActive && (
                     <motion.span
                       layoutId="nav-mobile-pill"
-                      transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
-                    />
+                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 via-cyan-500/5 to-transparent dark:from-sky-500/20 dark:via-cyan-500/10 ring-1 ring-inset ring-sky-500/15 dark:ring-sky-400/20"
+                    >
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                    </motion.span>
                   )}
-                  <Icon className={cn('h-5 w-5 shrink-0', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
-                  <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
+                  <Icon className={cn('relative z-10 h-5 w-5 shrink-0 transition-transform duration-200 group-active:scale-90', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
+                  <span className="relative z-10">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
                   {isActive && (
-                    <ChevronRight className="h-4 w-4 ml-auto text-sky-400 dark:text-sky-500" />
+                    <ChevronRight className="relative z-10 h-4 w-4 ml-auto text-sky-400 dark:text-sky-500" />
                   )}
                 </Link>
               )
@@ -175,7 +180,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between gap-2 p-5 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-sky-500/10 dark:shadow-sky-400/10">
-              <span className="text-white font-black text-sm">S</span>
+              <HeartPulse className="h-5 w-5 text-white" strokeWidth={2.5} />
             </div>
             <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400 tracking-tight text-base">
               ShasthyaHub
@@ -186,30 +191,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         {/* Desktop Sidebar Nav Links */}
         <nav className="flex-1 p-3.5 space-y-1.5 overflow-y-auto">
+          <p className="px-4 pb-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600">
+            {lang === 'bn' ? 'মেনু' : 'Menu'}
+          </p>
           {sidebarLinks.map((link) => {
             const isActive = pathname === link.href
             const Icon = link.icon
             return (
-                <Link
-                  prefetch={false}
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                  'relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200',
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  'group relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200',
                   isActive
-                    ? 'bg-gradient-to-r from-sky-500/10 to-transparent text-sky-600 dark:from-sky-500/20 dark:text-sky-400 font-bold'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/50 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
+                    ? 'text-sky-600 dark:text-sky-400 font-bold'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/80 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
                 )}
               >
                 {isActive && (
                   <motion.span
                     layoutId="nav-desktop-pill"
-                    transition={{ type: 'spring', stiffness: 400, damping: 34 }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500"
-                  />
+                    transition={{ type: 'spring', stiffness: 380, damping: 32 }}
+                    className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 via-cyan-500/5 to-transparent dark:from-sky-500/20 dark:via-cyan-500/10 ring-1 ring-inset ring-sky-500/15 dark:ring-sky-400/20"
+                  >
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
+                  </motion.span>
                 )}
-                <Icon className={cn('h-5 w-5 shrink-0 transition-colors', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
-                <span>{lang === 'bn' ? link.labelBn : link.labelEn}</span>
+                <Icon className={cn('relative z-10 h-5 w-5 shrink-0 transition-transform duration-200 group-hover:scale-110 group-active:scale-95', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
+                <span className="relative z-10">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
               </Link>
             )
           })}
@@ -263,8 +272,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* Main content */}
-      <main className="md:pl-60 xl:pl-64 md:pb-0 pb-20">
-        {children}
+      <main className="md:pl-60 xl:pl-64 md:pb-0 pb-20 flex min-h-screen flex-col">
+        <div className="flex-1">{children}</div>
+        <Footer />
       </main>
 
       <BottomNav />

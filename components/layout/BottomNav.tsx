@@ -20,7 +20,7 @@ export function BottomNav() {
   const { lang } = useLanguage()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-800 md:hidden z-40 pb-[env(safe-area-inset-bottom)] transition-colors">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 md:hidden z-40 pb-[env(safe-area-inset-bottom)] transition-colors">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href
@@ -30,19 +30,21 @@ export function BottomNav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'relative flex flex-col items-center gap-0.5 py-1 px-3 min-w-[64px] transition-colors duration-200 active:scale-95',
+                'relative flex flex-col items-center gap-0.5 py-1.5 px-2 min-w-[64px] transition-colors duration-200 active:scale-95',
                 isActive ? 'text-sky-600 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500'
               )}
             >
-              {isActive && (
-                <motion.span
-                  layoutId="bottomnav-indicator"
-                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                  className="absolute -top-[1px] h-0.5 w-8 rounded-full bg-gradient-to-r from-sky-500 to-cyan-500"
-                />
-              )}
-              <Icon className={cn('h-5 w-5 transition-transform duration-200', isActive && '-translate-y-0.5 scale-110')} />
-              <span className="text-[10px] font-medium leading-tight">
+              <span className="relative flex h-7 w-13 items-center justify-center">
+                {isActive && (
+                  <motion.span
+                    layoutId="bottomnav-indicator"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    className="absolute inset-0 rounded-full bg-gradient-to-r from-sky-500/15 to-cyan-500/15 dark:from-sky-500/25 dark:to-cyan-500/25"
+                  />
+                )}
+                <Icon className={cn('relative z-10 h-5 w-5 transition-transform duration-200', isActive && 'scale-110')} />
+              </span>
+              <span className={cn('text-[10px] leading-tight', isActive ? 'font-bold' : 'font-medium')}>
                 {lang === 'bn' ? item.labelBn : item.labelEn}
               </span>
             </Link>

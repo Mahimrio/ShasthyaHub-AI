@@ -14,6 +14,10 @@ const RSC_NAV_CACHE = 'pages-rsc'
 const MODELS_CACHE = 'shasthyahub-models-v4'
 const OCR_CACHE = 'shasthyahub-ocr-v8'
 
+// Dev chunks reuse URLs with changed content (no content hashes), so
+// cache-first would pin stale code and cause hydration mismatches.
+const IS_DEV = self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1'
+
 const PRECACHE_URLS = ['/login', '/offline', '/manifest.json']
 
 const ALL_PAGES = [
@@ -298,8 +302,9 @@ self.addEventListener('fetch', (event) => {
               if (res.ok && res.type === 'basic') cache.put(cacheKey, res.clone())
               return res
             })
-            .catch(() => cached)
-          return cached || fetchPromise
+            .catch(() => cached || Response.error())
+          // Dev: stale RSC payloads crash newer client runtimes — always prefer network
+          return IS_DEV ? fetchPromise : cached || fetchPromise
         })
       )
     )
@@ -317,8 +322,8 @@ self.addEventListener('fetch', (event) => {
               if (res.ok && res.type === 'basic') cache.put(cacheKey, res.clone())
               return res
             })
-            .catch(() => cached)
-          return cached || fetchPromise
+            .catch(() => cached || Response.error())
+          return IS_DEV ? fetchPromise : cached || fetchPromise
         })
       )
     )
@@ -363,8 +368,23 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ── Static assets: cache-first ──────────────────────────────────
+  // ── Static assets: cache-first (prod) / network-first (dev) ──────
   if (url.pathname.startsWith('/_next/static/')) {
+    if (IS_DEV) {
+      event.respondWith(
+        caches.open(STATIC_CACHE).then((cache) =>
+          fetch(req)
+            .then((res) => {
+              if (res.ok) cache.put(req, res.clone())
+              return res
+            })
+            .catch(() =>
+              cache.match(req).then((cached) => cached || new Response('', { status: 408 }))
+            )
+        )
+      )
+      return
+    }
     event.respondWith(
       caches.open(STATIC_CACHE).then((cache) =>
         cache.match(req).then((cached) => {

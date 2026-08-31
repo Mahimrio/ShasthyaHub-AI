@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, UserPlus } from 'lucide-react'
+import { Eye, EyeOff, Loader2, UserPlus, User, Mail, Phone, MapPin, Lock } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -117,13 +117,13 @@ export default function RegisterPage() {
       animate="show"
       className="w-full max-w-md"
     >
-      <Card className="border-0 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.08),0_4px_12px_rgba(14,165,233,0.06)] dark:bg-gray-900/80 dark:backdrop-blur-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)]">
+      <Card className="border-0 ring-1 ring-gray-900/5 dark:ring-white/10 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.08),0_4px_12px_rgba(14,165,233,0.06)] dark:bg-gray-900/80 dark:backdrop-blur-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)]">
         {/* Animated gradient accent bar */}
         <div className="h-1.5 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x rounded-t-xl" />
 
         <CardHeader className="text-center pb-2 pt-8">
           <motion.div variants={item}>
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
               <UserPlus className="h-7 w-7 text-white" />
             </div>
           </motion.div>
@@ -167,13 +167,16 @@ export default function RegisterPage() {
                   <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Full Name / পুরো নাম
                   </Label>
-                  <Input
-                    id="name"
-                    placeholder="Your full name"
-                    autoComplete="name"
-                    className="h-11 rounded-xl border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                    {...register('name')}
-                  />
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <Input
+                      id="name"
+                      placeholder="Your full name"
+                      autoComplete="name"
+                      className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      {...register('name')}
+                    />
+                  </div>
                   {errors.name && (
                     <p className="text-xs text-destructive mt-1">{errors.name.message}</p>
                   )}
@@ -183,14 +186,17 @@ export default function RegisterPage() {
                   <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     Email / ইমেইল
                   </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    className="h-11 rounded-xl border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                    {...register('email')}
-                  />
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      {...register('email')}
+                    />
+                  </div>
                   {errors.email && (
                     <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
                   )}
@@ -201,14 +207,17 @@ export default function RegisterPage() {
                     <Label htmlFor="phone" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       Phone / ফোন
                     </Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="01XXXXXXXXX"
-                      autoComplete="tel"
-                      className="h-11 rounded-xl border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                      {...register('phone')}
-                    />
+                    <div className="relative">
+                      <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="01XXXXXXXXX"
+                        autoComplete="tel"
+                        className="h-11 rounded-xl border-gray-200 bg-white/60 pl-9 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                        {...register('phone')}
+                      />
+                    </div>
                     {errors.phone && (
                       <p className="text-xs text-destructive mt-1">{errors.phone.message}</p>
                     )}
@@ -218,18 +227,21 @@ export default function RegisterPage() {
                     <Label htmlFor="district" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                       District / জেলা
                     </Label>
-                    <select
-                      id="district"
-                      className="h-11 w-full rounded-xl border border-gray-200 bg-white/60 px-3 text-sm shadow-sm transition-all focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100"
-                      {...register('district')}
-                    >
-                      <option value="">Select / নির্বাচন করুন</option>
-                      {BANGLADESH_DISTRICTS.map((d) => (
-                        <option key={d} value={d}>
-                          {d}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <MapPin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                      <select
+                        id="district"
+                        className="h-11 w-full rounded-xl border border-gray-200 bg-white/60 pl-9 pr-3 text-sm shadow-sm transition-all focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 focus:outline-none dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100"
+                        {...register('district')}
+                      >
+                        <option value="">Select / নির্বাচন করুন</option>
+                        {BANGLADESH_DISTRICTS.map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     {errors.district && (
                       <p className="text-xs text-destructive mt-1">{errors.district.message}</p>
                     )}
@@ -241,12 +253,13 @@ export default function RegisterPage() {
                     Password / পাসওয়ার্ড
                   </Label>
                   <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     <Input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="At least 8 characters"
                       autoComplete="new-password"
-                      className="h-11 rounded-xl border-gray-200 bg-white/60 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
                       {...register('password')}
                     />
                     <button
@@ -273,12 +286,13 @@ export default function RegisterPage() {
                     Confirm Password / পাসওয়ার্ড নিশ্চিত করুন
                   </Label>
                   <div className="relative">
+                    <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                     <Input
                       id="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
                       placeholder="Re-enter your password"
                       autoComplete="new-password"
-                      className="h-11 rounded-xl border-gray-200 bg-white/60 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                      className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
                       {...register('confirmPassword')}
                     />
                     <button
@@ -332,7 +346,7 @@ export default function RegisterPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold text-base shadow-md hover:shadow-xl hover:shadow-sky-500/25 hover:-translate-y-0.5 active:scale-[0.99] active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (

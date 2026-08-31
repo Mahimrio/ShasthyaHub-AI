@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, Loader2, LogIn } from 'lucide-react'
+import { Eye, EyeOff, Loader2, LogIn, Mail, Lock, HeartPulse, Sparkles, WifiOff, ShieldCheck } from 'lucide-react'
 import { sendCacheAll } from '@/lib/cache-all'
 import { friendlyAuthError } from '@/lib/auth-errors'
 
@@ -87,18 +87,18 @@ export default function LoginPage() {
       animate="show"
       className="w-full max-w-sm"
     >
-      <Card className="border-0 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.08),0_4px_12px_rgba(14,165,233,0.06)] dark:bg-gray-900/80 dark:backdrop-blur-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)]">
+      <Card className="border-0 ring-1 ring-gray-900/5 dark:ring-white/10 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.08),0_4px_12px_rgba(14,165,233,0.06)] dark:bg-gray-900/80 dark:backdrop-blur-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)]">
         {/* Animated gradient accent bar */}
         <div className="h-1.5 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x rounded-t-xl" />
 
         <CardHeader className="text-center pb-2 pt-8">
           <motion.div variants={item}>
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
-              <span className="text-white text-2xl font-black">S</span>
+            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
+              <HeartPulse className="h-7 w-7 text-white" strokeWidth={2.4} />
             </div>
           </motion.div>
           <motion.div variants={item}>
-            <CardTitle className="text-2xl font-black tracking-tight text-gray-900 dark:text-gray-100">
+            <CardTitle className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400">
               ShasthyaHub-AI
             </CardTitle>
           </motion.div>
@@ -126,14 +126,17 @@ export default function LoginPage() {
                 <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   Email
                 </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className="h-11 rounded-xl border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                  {...register('email')}
-                />
+                <div className="relative">
+                  <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    {...register('email')}
+                  />
+                </div>
                 {errors.email && (
                   <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
                 )}
@@ -144,12 +147,13 @@ export default function LoginPage() {
                   Password
                 </Label>
                 <div className="relative">
+                  <Lock className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" />
                   <Input
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     autoComplete="current-password"
-                    className="h-11 rounded-xl border-gray-200 bg-white/60 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
+                    className="h-11 rounded-xl border-gray-200 bg-white/60 pl-10 pr-11 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
                     {...register('password')}
                   />
                   <button
@@ -182,7 +186,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full h-12 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold text-base shadow-md hover:shadow-xl hover:shadow-sky-500/25 hover:-translate-y-0.5 active:scale-[0.99] active:translate-y-0 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -215,6 +219,18 @@ export default function LoginPage() {
           </motion.div>
         </CardContent>
       </Card>
+
+      <motion.div variants={item} className="mt-6 flex items-center justify-center gap-5">
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+          <Sparkles className="h-3.5 w-3.5 text-sky-500" /> AI-powered
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+          <WifiOff className="h-3.5 w-3.5 text-cyan-500" /> Works offline
+        </span>
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+          <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" /> Private & secure
+        </span>
+      </motion.div>
     </motion.div>
   )
 }
