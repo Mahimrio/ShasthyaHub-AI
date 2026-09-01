@@ -1,0 +1,21 @@
+[
+  {
+    "id": "med-1788255826505-hwkqv",
+    "user_id": "51451f3c-85e6-4327-bed2-a5eaa39773b2",
+    "prescription_id": null,
+    "drug_name_en": "Napa Extra 500mgNapa Extra 500mg",
+    "drug_name_bn": "Napa Extra 500mgNapa Extra 500mg",
+    "dosage": "1 Tablet",
+    "meal_timing": "after_meal",
+    "scheduled_time": "08:00",
+    "slot_type": "morning",
+    "frequency_code": "1+0+1",
+    "interval_hours": null,
+    "instructions_en": "",
+    "instructions_bn": "",
+    "start_date": "2026-09-01",
+    "duration_days": 7,
+    "is_active": true,
+    "created_at": "2026-09-01T09:43:46.505Z"
+  }
+]

@@ -241,6 +241,7 @@ export default function ScriptGuardPage() {
                   durationDays={result.duration_days}
                   specialInstructions={specialInstructions}
                   lang={lang}
+                  prescriptionId={result.id}
                 />
               </div>
             </ResultCard>

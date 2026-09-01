@@ -1,0 +1,14 @@
+[
+  {
+    "id": "log-1788255887720-8qx9",
+    "schedule_id": "med-1788255826505-hwkqv",
+    "user_id": "51451f3c-85e6-4327-bed2-a5eaa39773b2",
+    "scheduled_for": "2026-09-01T00:00:00.000Z",
+    "scheduled_time": "08:00",
+    "status": "taken",
+    "logged_at": "2026-09-01T09:44:47.720Z",
+    "snoozed_until": null,
+    "notes": "Logged late after reminder",
+    "created_at": "2026-09-01T09:44:47.720Z"
+  }
+]

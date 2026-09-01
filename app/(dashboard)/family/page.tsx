@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/button'
 
 export default function FamilyPage() {
   const { lang } = useLanguage()
-  const { user, profile } = useAuth()
+  const { user, profile, isLoading: isAuthLoading } = useAuth()
   const [activeTab, setActiveTab] = useState<'tree' | 'members' | 'invitations'>('tree')
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [usernameModalOpen, setUsernameModalOpen] = useState(false)
@@ -39,8 +39,8 @@ export default function FamilyPage() {
   const [copiedId, setCopiedId] = useState(false)
 
   const { data: usernameData } = useProfileUsername()
-  const { data: connections, isLoading: isConnsLoading } = useFamilyConnections()
-  const { data: treeData, isLoading: isTreeLoading } = useFamilyTree()
+  const { data: connections, isLoading: isConnsLoading, isError: isConnsError } = useFamilyConnections()
+  const { data: treeData, isLoading: isTreeLoading, isError: isTreeError } = useFamilyTree()
 
   const currentUsername = usernameData?.username || profile?.username || null
   const userEmail = user?.email || null
@@ -152,7 +152,7 @@ export default function FamilyPage() {
 
         {/* Tab 1: Interactive Family Tree */}
         <TabsContent value="tree" className="space-y-4 pt-1 focus:outline-none">
-          {isTreeLoading ? (
+          {isAuthLoading || isTreeLoading || (!treeData && !isTreeError) ? (
             <div className="flex flex-col items-center justify-center py-20 rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
               <Loader2 className="h-8 w-8 animate-spin text-sky-500 mb-3" />
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -174,7 +174,7 @@ export default function FamilyPage() {
 
         {/* Tab 2: Connected Members List */}
         <TabsContent value="members" className="space-y-3 pt-1 focus:outline-none">
-          {isConnsLoading ? (
+          {isAuthLoading || isConnsLoading || (!connections && !isConnsError) ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
               <Loader2 className="h-6 w-6 animate-spin text-sky-500 mb-2" />
               <p className="text-xs">{lang === 'bn' ? 'সদস্য তালিকা লোড হচ্ছে...' : 'Loading members...'}</p>

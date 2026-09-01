@@ -1,17 +1,27 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import {
+  Bell,
   CalendarClock,
+  Check,
   Info,
   Moon,
   Printer,
+  Settings2,
   Sunset,
   Sun,
   Sunrise,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  useSavePrescriptionToReminders,
+  useReminderSettings,
+} from '@/hooks/useMedicationReminders'
+import { MedicationSettingsModal } from '@/components/features/medications/MedicationSettingsModal'
+import { formatTimeDisplay, resolveSlotTimes } from '@/lib/services/medication-reminder'
 import type {
   Language,
   MedicationSchedule,
@@ -23,6 +33,7 @@ interface MedicationScheduleTimelineProps {
   durationDays: number
   specialInstructions: string[]
   lang: Language
+  prescriptionId?: string
 }
 
 type SlotKey = keyof Pick<
@@ -33,7 +44,6 @@ type SlotKey = keyof Pick<
 interface SlotMeta {
   key: SlotKey
   icon: typeof Sun
-  /** Tailwind gradient classes for the card header. */
   headerBg: string
   iconColor: string
   label: { en: string; bn: string }
@@ -75,10 +85,6 @@ const SLOTS: SlotMeta[] = [
   },
 ]
 
-/**
- * Deterministic pastel color for a drug based on the first char of its name.
- * Keeps the same drug the same color across slots without needing DB data.
- */
 function drugChipColor(name: string): string {
   const palette = [
     'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
@@ -95,33 +101,41 @@ function drugChipColor(name: string): string {
 function SlotCard({
   meta,
   slots,
+  slotTime,
   lang,
 }: {
   meta: SlotMeta
   slots: ScheduleSlot[]
+  slotTime: string
   lang: Language
 }) {
   const Icon = meta.icon
   const label = lang === 'bn' ? meta.label.bn : meta.label.en
   const timeHint = lang === 'bn' ? meta.timeHint.bn : meta.timeHint.en
+  const formattedTime = formatTimeDisplay(slotTime, lang)
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-700 dark:bg-gray-800 print:break-inside-avoid print:border-gray-300">
+    <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white dark:border-gray-800 dark:bg-gray-900 shadow-2xs print:break-inside-avoid print:border-gray-300">
       <div
         className={`flex items-center justify-between bg-gradient-to-r px-4 py-3 ${meta.headerBg}`}
       >
         <div className="flex items-center gap-2">
           <Icon className={`h-5 w-5 ${meta.iconColor}`} />
-          <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
-            {label}
-          </span>
+          <div>
+            <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
+              {label}
+            </span>
+            <span className="ml-2 text-[11px] font-mono font-bold text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-black/30 px-2 py-0.5 rounded-md">
+              {formattedTime}
+            </span>
+          </div>
         </div>
-        <Badge variant="outline" className="text-[11px]">
+        <Badge variant="outline" className="text-[11px] font-semibold">
           {slots.length} {lang === 'bn' ? 'ওষুধ' : slots.length === 1 ? 'drug' : 'drugs'}
         </Badge>
       </div>
 
-      <div className="space-y-2 p-3">
+      <div className="space-y-2 p-3.5">
         {slots.length === 0 ? (
           <p className="py-2 text-center text-xs text-gray-400 dark:text-gray-500">
             {lang === 'bn' ? 'এই সময়ে কোনো ওষুধ নেই' : 'No medication'}
@@ -134,14 +148,20 @@ function SlotCard({
             return (
               <div
                 key={`${name}-${i}`}
-                className={`rounded-full px-3 py-2 text-sm font-medium ${drugChipColor(name)}`}
+                className={`rounded-2xl px-3.5 py-2.5 text-xs font-medium border border-black/5 dark:border-white/5 ${drugChipColor(
+                  name
+                )}`}
               >
-                <span className="font-semibold">{name}</span>
-                {slot.dosage && (
-                  <span className="ml-1 opacity-75">· {slot.dosage}</span>
-                )}
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-sm">{name}</span>
+                  {slot.dosage && (
+                    <span className="text-xs opacity-80 font-mono font-semibold">
+                      {slot.dosage}
+                    </span>
+                  )}
+                </div>
                 {instruction && (
-                  <span className="block text-[11px] font-normal opacity-80">
+                  <span className="block text-[11px] font-normal opacity-90 mt-0.5">
                     {instruction}
                   </span>
                 )}
@@ -151,7 +171,7 @@ function SlotCard({
         )}
         {slots.length > 0 && (
           <p className="pt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">
-            ⏰ {timeHint}
+            ⏰ {timeHint} ({formattedTime})
           </p>
         )}
       </div>
@@ -164,7 +184,47 @@ export default function MedicationScheduleTimeline({
   durationDays,
   specialInstructions,
   lang,
+  prescriptionId,
 }: MedicationScheduleTimelineProps) {
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [savedSuccess, setSavedSuccess] = useState(false)
+
+  const saveToReminders = useSavePrescriptionToReminders()
+  const { data: reminderSettings } = useReminderSettings()
+
+  const defaultTimes = resolveSlotTimes(
+    reminderSettings || {
+      user_id: 'default',
+      breakfast_time: '08:00',
+      lunch_time: '13:30',
+      dinner_time: '21:30',
+      bedtime: '22:30',
+      notifications_enabled: true,
+      sound_enabled: true,
+      notify_caregivers_on_missed: true,
+      grace_period_minutes: 45,
+    }
+  )
+
+  const handleSaveToReminders = async () => {
+    try {
+      await saveToReminders.mutateAsync({
+        digital_schedule: {
+          ...schedule,
+          duration_days: durationDays,
+          special_instructions_en: specialInstructions,
+          special_instructions_bn: specialInstructions,
+          audio_script_bn: '',
+        },
+        prescription_id: prescriptionId,
+      })
+      setSavedSuccess(true)
+      setTimeout(() => setSavedSuccess(false), 4000)
+    } catch (e) {
+      console.error('Failed to save reminders:', e)
+    }
+  }
+
   const handlePrint = () => {
     if (typeof window !== 'undefined') window.print()
   }
@@ -178,25 +238,65 @@ export default function MedicationScheduleTimeline({
       transition={{ duration: 0.3 }}
       className="space-y-4"
     >
-      <div className="flex items-center justify-between print:hidden">
+      {/* Top Controls Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 print:hidden">
         <Badge
           variant="outline"
-          className="border-gray-200 text-gray-600 dark:border-gray-600 dark:text-gray-300"
+          className="border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-semibold"
         >
-          <CalendarClock className="mr-1 h-3.5 w-3.5" />
+          <CalendarClock className="mr-1.5 h-3.5 w-3.5 text-sky-500" />
           {lang === 'bn'
-            ? `${durationDays} দিনের কোর্স`
-            : `${durationDays}-day course`}
+            ? `${durationDays} দিনের সম্পূর্ণ কোর্স`
+            : `${durationDays}-day total course`}
         </Badge>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handlePrint}
-          className="rounded-lg print:hidden"
-        >
-          <Printer className="mr-1.5 h-3.5 w-3.5" />
-          {lang === 'bn' ? 'প্রিন্ট' : 'Print'}
-        </Button>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Settings button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSettingsOpen(true)}
+            className="rounded-xl text-xs font-semibold h-8"
+          >
+            <Settings2 className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+            <span>{lang === 'bn' ? 'খাবারের সময়' : 'Meal Routine'}</span>
+          </Button>
+
+          {/* Activate Reminders Button */}
+          <Button
+            size="sm"
+            onClick={handleSaveToReminders}
+            disabled={saveToReminders.isPending || savedSuccess}
+            className={`rounded-xl text-xs font-bold h-8 transition-all ${
+              savedSuccess
+                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
+                : 'bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white shadow-sm'
+            }`}
+          >
+            {savedSuccess ? (
+              <>
+                <Check className="mr-1.5 h-3.5 w-3.5 text-white" />
+                <span>{lang === 'bn' ? 'রিমাইন্ডার চালু হয়েছে!' : 'Reminders Activated!'}</span>
+              </>
+            ) : (
+              <>
+                <Bell className="mr-1.5 h-3.5 w-3.5" />
+                <span>{lang === 'bn' ? 'রিমাইন্ডার চালু করুন' : 'Activate Alarms'}</span>
+              </>
+            )}
+          </Button>
+
+          {/* Print button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePrint}
+            className="rounded-xl text-xs h-8 text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+          >
+            <Printer className="mr-1.5 h-3.5 w-3.5" />
+            <span>{lang === 'bn' ? 'প্রিন্ট' : 'Print'}</span>
+          </Button>
+        </div>
       </div>
 
       {/* 2x2 grid on desktop, stack on mobile. */}
@@ -206,6 +306,7 @@ export default function MedicationScheduleTimeline({
             key={meta.key}
             meta={meta}
             slots={schedule[meta.key]}
+            slotTime={defaultTimes[meta.key] || '08:00'}
             lang={lang}
           />
         ))}
@@ -213,26 +314,31 @@ export default function MedicationScheduleTimeline({
 
       {/* Special instructions callout */}
       {hasInstructions && (
-        <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900/50 dark:bg-sky-900/20 print:break-inside-avoid">
+        <div className="rounded-2xl border border-sky-200/70 bg-sky-50/70 p-4 dark:border-sky-900/50 dark:bg-sky-900/20 print:break-inside-avoid shadow-2xs">
           <div className="mb-2 flex items-center gap-2">
             <Info className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-            <h4 className="text-sm font-semibold text-sky-800 dark:text-sky-200">
-              {lang === 'bn' ? 'বিশেষ নির্দেশনা' : 'Special Instructions'}
+            <h4 className="text-sm font-bold text-sky-900 dark:text-sky-200">
+              {lang === 'bn' ? 'বিশেষ সতর্কতা ও নির্দেশনা' : 'Special Instructions'}
             </h4>
           </div>
           <ul className="space-y-1.5">
             {specialInstructions.map((instr, i) => (
               <li
                 key={i}
-                className="flex items-start gap-2 text-xs text-sky-800 dark:text-sky-200"
+                className="flex items-start gap-2 text-xs text-sky-950 dark:text-sky-200 font-medium"
               >
-                <span className="mt-0.5 text-sky-500">•</span>
+                <span className="mt-0.5 text-sky-500 font-bold">•</span>
                 <span>{instr}</span>
               </li>
             ))}
           </ul>
         </div>
       )}
+
+      <MedicationSettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+      />
     </motion.div>
   )
 }
