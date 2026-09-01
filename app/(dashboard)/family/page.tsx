@@ -28,7 +28,6 @@ import { MemberHealthPanel } from '@/components/features/family/MemberHealthPane
 import { UpdateUsernameDialog } from '@/components/features/family/UpdateUsernameDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 export default function FamilyPage() {
   const { lang } = useLanguage()
@@ -69,14 +68,9 @@ export default function FamilyPage() {
             <TreeDeciduous className="h-6 w-6" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
-                {lang === 'bn' ? 'পারিবারিক স্বাস্থ্য সেবা' : 'Family Health Care'}
-              </h1>
-              <Badge variant="outline" className="bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 text-[10px] px-2 py-0.2 rounded-full font-bold">
-                {acceptedMembers.length + 1} {lang === 'bn' ? 'সদস্য' : 'Members'}
-              </Badge>
-            </div>
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100">
+              {lang === 'bn' ? 'পারিবারিক স্বাস্থ্য সেবা' : 'Family Health Care'}
+            </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
               {lang === 'bn'
                 ? 'পিতামাতা ও পরিবারের সদস্যদের স্বাস্থ্য ও ওষুধের রুটিন পর্যবেক্ষণ করুন'
