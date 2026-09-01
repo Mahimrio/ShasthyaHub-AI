@@ -34,14 +34,16 @@ interface FamilyTreeProps {
   onAddMember: () => void
 }
 
-interface CalculatedNode {
+interface PositionedOrbNode {
   node: FamilyTreeNode
   x: number
   y: number
   radius: number
   angleDeg: number
-  tier: 'grandparents' | 'parents' | 'peers' | 'children' | 'grandchildren' | 'extended'
-  avatarGradient: string
+  gradient: string
+  borderColor: string
+  accentColor: string
+  ringCategory: string
 }
 
 export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTreeProps) {
@@ -50,29 +52,29 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState<{ width: number; height: number }>({
-    width: 840,
+    width: 860,
     height: 640,
   })
 
-  // Dynamic responsive resize observer
+  // Dynamic Responsive Resize Observer
   useEffect(() => {
-    const updateSize = () => {
+    const handleResize = () => {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current
         setDimensions({
           width: Math.max(340, clientWidth),
-          height: Math.max(500, Math.min(800, clientHeight || 640)),
+          height: Math.max(520, Math.min(840, clientHeight || 640)),
         })
       }
     }
 
-    updateSize()
-    window.addEventListener('resize', updateSize)
-    const observer = new ResizeObserver(updateSize)
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    const observer = new ResizeObserver(handleResize)
     if (containerRef.current) observer.observe(containerRef.current)
 
     return () => {
-      window.removeEventListener('resize', updateSize)
+      window.removeEventListener('resize', handleResize)
       observer.disconnect()
     }
   }, [])
@@ -86,127 +88,168 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   const handleResetZoom = () => setZoomLevel(1)
 
   // =========================================================================
-  // DYNAMIC COLLISION-FREE RESPONSIVE CIRCULAR CALCULATION
+  // DYNAMIC BALANCED RADIAL CONSTELLATION ALGORITHM (NO OVERLAPPING)
   // =========================================================================
   const { width, height } = dimensions
   const cx = width / 2
   const cy = height / 2
 
-  // Auto-calculated responsive sizes
   const minDim = Math.min(width, height)
-  const scale = Math.max(0.7, Math.min(1.2, minDim / 650))
+  const scale = Math.max(0.75, Math.min(1.2, minDim / 660))
 
-  const nodeSize = Math.round(Math.max(54, Math.min(82, 70 * scale)))
-  const selfSize = Math.round(Math.max(76, Math.min(104, 90 * scale)))
+  const nodeSize = Math.round(Math.max(64, Math.min(88, 76 * scale)))
+  const selfSize = Math.round(Math.max(88, Math.min(116, 98 * scale)))
 
-  // Radii scaled dynamically to fit viewport without clipping
-  const rInner = Math.round(Math.max(115, Math.min(210, minDim * 0.28)))
-  const rOuter = Math.round(Math.max(185, Math.min(325, minDim * 0.43)))
+  // Concentric Orbit Radii
+  const rInner = Math.round(Math.max(130, Math.min(210, minDim * 0.29)))
+  const rOuter = Math.round(Math.max(200, Math.min(320, minDim * 0.44)))
 
-  // Generational group extraction
-  const grandparents = useMemo(
-    () => treeData?.generations?.grandparents || otherNodes.filter((n) => n.generation === -2) || [],
-    [treeData, otherNodes]
-  )
-  const parents = useMemo(
-    () => treeData?.generations?.parents || otherNodes.filter((n) => n.generation === -1) || [],
-    [treeData, otherNodes]
-  )
-  const peers = useMemo(
-    () => (treeData?.generations?.peers || otherNodes.filter((n) => n.generation === 0) || []).filter((n) => !n.isCurrentUser),
-    [treeData, otherNodes]
-  )
-  const children = useMemo(
-    () => treeData?.generations?.children || otherNodes.filter((n) => n.generation === 1) || [],
-    [treeData, otherNodes]
-  )
-  const grandchildren = useMemo(
-    () => treeData?.generations?.grandchildren || otherNodes.filter((n) => n.generation === 2) || [],
-    [treeData, otherNodes]
-  )
   const totalMembers = treeData?.totalMembers ?? (otherNodes.length + (self ? 1 : 0))
 
-  // Dynamically place nodes along sectors
-  const dynamicNodes = useMemo(() => {
-    const nodesList: CalculatedNode[] = []
+  // Balanced radial positioning ensuring distinct angles per node
+  const positionedNodes = useMemo(() => {
+    const list: PositionedOrbNode[] = []
+    if (otherNodes.length === 0) return list
 
-    const placeSector = (
-      items: FamilyTreeNode[],
-      startAngle: number,
-      endAngle: number,
-      r: number,
-      tier: CalculatedNode['tier'],
-      gradient: string
-    ) => {
-      if (items.length === 0) return
-      if (items.length === 1) {
-        const mid = (startAngle + endAngle) / 2
-        const rad = (mid * Math.PI) / 180
-        nodesList.push({
-          node: items[0],
-          x: cx + r * Math.cos(rad),
-          y: cy + r * Math.sin(rad),
-          radius: r,
-          angleDeg: mid,
-          tier,
-          avatarGradient: gradient,
-        })
-        return
+    // Group nodes into generational rings
+    const elders = otherNodes.filter((n) => n.generation < 0) // Parents, Grandparents, Uncles
+    const peers = otherNodes.filter((n) => n.generation === 0) // Siblings, Spouse, Cousins
+    const youngers = otherNodes.filter((n) => n.generation > 0) // Children, Grandchildren
+
+    // Helper to assign visual gradient & theme by relation
+    const getTheme = (node: FamilyTreeNode) => {
+      const gen = node.generation
+      if (gen === -2) {
+        return {
+          gradient: 'from-purple-500 via-indigo-500 to-purple-600',
+          borderColor: 'border-purple-400 dark:border-purple-500',
+          accentColor: '#a855f7',
+          ringCategory: lang === 'bn' ? 'দাদা-দাদী' : 'Grandparents',
+        }
       }
+      if (gen === -1) {
+        return {
+          gradient: 'from-sky-500 via-cyan-500 to-teal-500',
+          borderColor: 'border-sky-400 dark:border-sky-500',
+          accentColor: '#0ea5e9',
+          ringCategory: lang === 'bn' ? 'মা-বাবা' : 'Parents & Elders',
+        }
+      }
+      if (gen === 0) {
+        return {
+          gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
+          borderColor: 'border-emerald-400 dark:border-emerald-500',
+          accentColor: '#10b981',
+          ringCategory: lang === 'bn' ? 'সহোদর / সমবয়সী' : 'Peers',
+        }
+      }
+      if (gen === 1) {
+        return {
+          gradient: 'from-amber-400 via-orange-500 to-amber-500',
+          borderColor: 'border-amber-400 dark:border-amber-500',
+          accentColor: '#f59e0b',
+          ringCategory: lang === 'bn' ? 'সন্তান' : 'Children',
+        }
+      }
+      return {
+        gradient: 'from-pink-400 via-rose-500 to-pink-500',
+        borderColor: 'border-pink-400 dark:border-pink-500',
+        accentColor: '#ec4899',
+        ringCategory: lang === 'bn' ? 'নাতি-নাতনি' : 'Grandchildren',
+      }
+    }
 
-      const step = (endAngle - startAngle) / (items.length - 1 || 1)
-      items.forEach((item, i) => {
-        const deg = startAngle + step * i
-        const rad = (deg * Math.PI) / 180
-        nodesList.push({
-          node: item,
+    // Distribute Elders in top hemisphere (-160° to -20°)
+    if (elders.length > 0) {
+      const startAngle = -160
+      const endAngle = -20
+      const step = elders.length === 1 ? 0 : (endAngle - startAngle) / (elders.length - 1)
+
+      elders.forEach((node, i) => {
+        // Stagger grandparents vs parents radius so they never collide
+        const r = node.generation === -2 ? rOuter : rInner
+        // Offset angle slightly if both generations are present
+        const angle = elders.length === 1
+          ? (node.generation === -2 ? -65 : -115) // Spread single elder nodes across two distinct angles!
+          : startAngle + step * i
+
+        const rad = (angle * Math.PI) / 180
+        const theme = getTheme(node)
+
+        list.push({
+          node,
           x: cx + r * Math.cos(rad),
           y: cy + r * Math.sin(rad),
           radius: r,
-          angleDeg: deg,
-          tier,
-          avatarGradient: gradient,
+          angleDeg: angle,
+          ...theme,
         })
       })
     }
 
-    // 1. Grandparents (Outer Top Arc: -155° to -25°)
-    placeSector(grandparents, -155, -25, rOuter, 'grandparents', 'from-purple-500 to-indigo-500')
-
-    // 2. Parents & Elders (Inner Top Arc: -160° to -20°)
-    placeSector(parents, -160, -20, rInner, 'parents', 'from-sky-500 to-teal-500')
-
-    // 3. Peers & Siblings (Inner Flanks: Left 145° to 195°, Right -15° to 35°)
+    // Distribute Peers in horizontal quadrants (Left: 145° to 195°, Right: -15° to 35°)
     if (peers.length > 0) {
-      const half = Math.ceil(peers.length / 2)
-      placeSector(peers.slice(0, half), 145, 195, rInner, 'peers', 'from-emerald-500 to-teal-500')
-      placeSector(peers.slice(half), -15, 35, rInner, 'peers', 'from-emerald-500 to-teal-500')
+      const leftPeers = peers.slice(0, Math.ceil(peers.length / 2))
+      const rightPeers = peers.slice(Math.ceil(peers.length / 2))
+
+      const placePeerSector = (items: FamilyTreeNode[], start: number, end: number) => {
+        const step = items.length === 1 ? 0 : (end - start) / (items.length - 1)
+        items.forEach((node, i) => {
+          const angle = items.length === 1 ? (start + end) / 2 : start + step * i
+          const rad = (angle * Math.PI) / 180
+          const theme = getTheme(node)
+          list.push({
+            node,
+            x: cx + rInner * Math.cos(rad),
+            y: cy + rInner * Math.sin(rad),
+            radius: rInner,
+            angleDeg: angle,
+            ...theme,
+          })
+        })
+      }
+
+      if (leftPeers.length > 0) placePeerSector(leftPeers, 145, 195)
+      if (rightPeers.length > 0) placePeerSector(rightPeers, -15, 35)
     }
 
-    // 4. Children (Inner Bottom Arc: 50° to 130°)
-    placeSector(children, 50, 130, rInner, 'children', 'from-amber-400 to-orange-500')
+    // Distribute Youngers in bottom hemisphere (40° to 140°)
+    if (youngers.length > 0) {
+      const startAngle = 45
+      const endAngle = 135
+      const step = youngers.length === 1 ? 0 : (endAngle - startAngle) / (youngers.length - 1)
 
-    // 5. Grandchildren (Outer Bottom Arc: 35° to 145°)
-    placeSector(grandchildren, 35, 145, rOuter, 'grandchildren', 'from-pink-400 to-rose-500')
+      youngers.forEach((node, i) => {
+        const r = node.generation === 2 ? rOuter : rInner
+        const angle = youngers.length === 1
+          ? (node.generation === 2 ? 65 : 115)
+          : startAngle + step * i
 
-    // Catch-all unplaced (Distribute uniformly)
-    const placed = new Set(nodesList.map((n) => n.node.userId))
-    const unplaced = otherNodes.filter((n) => !placed.has(n.userId))
-    if (unplaced.length > 0) {
-      placeSector(unplaced, 0, 360, rOuter, 'extended', 'from-sky-400 to-blue-600')
+        const rad = (angle * Math.PI) / 180
+        const theme = getTheme(node)
+
+        list.push({
+          node,
+          x: cx + r * Math.cos(rad),
+          y: cy + r * Math.sin(rad),
+          radius: r,
+          angleDeg: angle,
+          ...theme,
+        })
+      })
     }
 
-    return nodesList
-  }, [grandparents, parents, peers, children, grandchildren, otherNodes, cx, cy, rInner, rOuter])
+    return list
+  }, [otherNodes, cx, cy, rInner, rOuter, lang])
 
   return (
-    <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-slate-50/70 via-sky-50/20 to-white dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 shadow-sm overflow-hidden flex flex-col transition-all">
-      {/* Subtle Mesh Grid */}
-      <div className="absolute inset-0 bg-[radial-gradient(#0284c712_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-sky-400/5 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
+    <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/25 to-slate-50/60 dark:from-gray-950 dark:via-gray-900/90 dark:to-gray-950 shadow-xs overflow-hidden flex flex-col transition-all">
+      {/* Subtle Dot Mesh Background */}
+      <div className="absolute inset-0 bg-[radial-gradient(#0284c714_1px,transparent_1px)] [background-size:22px_22px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-sky-400/8 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Responsive Top Bar */}
-      <div className="relative z-20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200/60 dark:border-gray-800/80 backdrop-blur-md bg-white/70 dark:bg-gray-900/70">
+      {/* Top Header Controls Bar */}
+      <div className="relative z-20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200/60 dark:border-gray-800/80 backdrop-blur-md bg-white/75 dark:bg-gray-900/75">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-sky-500/15 shrink-0">
             <HeartPulse className="h-5 w-5" />
@@ -214,7 +257,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
-                {lang === 'bn' ? 'পারিবারিক বৃত্তাকার নেটওয়ার্ক' : 'Family Health Circle'}
+                {lang === 'bn' ? 'পারিবারিক বৃত্তাকার নেটওয়ার্ক' : 'Family Health Network'}
               </h3>
               <Badge variant="outline" className="text-[10px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 rounded-full px-2 py-0.5">
                 {totalMembers} {lang === 'bn' ? 'সদস্য' : 'Members'}
@@ -222,8 +265,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {lang === 'bn'
-                ? 'পরিবারের প্রতিটি বৃত্তে ক্লিক করে ওষুধের রুটিন ও স্বাস্থ্য পর্যবেক্ষণ করুন'
-                : 'Click any circular node to monitor medication schedules and reports'}
+                ? 'পরিবারের প্রতিটি বৃত্তাকার সদস্যে ক্লিক করে ওষুধের রুটিন ও স্বাস্থ্য রিপোর্ট দেখুন'
+                : 'Click on any circular member to monitor medication schedules & health reports'}
             </p>
           </div>
         </div>
@@ -274,92 +317,74 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         </div>
       </div>
 
-      {/* Main Dynamic Auto-Adjusting Canvas */}
+      {/* Main Responsive Circular Stage */}
       <div
         ref={containerRef}
-        className="relative flex-1 w-full overflow-hidden flex items-center justify-center p-2 sm:p-4 min-h-[520px]"
+        className="relative flex-1 w-full overflow-hidden flex items-center justify-center min-h-[540px]"
       >
         <motion.div
           animate={{ scale: zoomLevel }}
           transition={{ type: 'spring', damping: 26, stiffness: 220 }}
           className="relative origin-center select-none w-full h-full flex items-center justify-center"
-          style={{ width: width, height: height }}
+          style={{ width, height }}
         >
-          {/* SVG Orbit Tracks & Responsive Connection Curves */}
+          {/* SVG Orbit Tracks & Clean Connector Curves */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${width} ${height}`}>
             <defs>
-              <linearGradient id="orbitLineGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.3" />
+              <linearGradient id="orbitGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0.4" />
               </linearGradient>
-              <linearGradient id="urgentLineGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.6" />
+              <linearGradient id="urgentGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.7" />
               </linearGradient>
             </defs>
 
-            {/* Inner Generation Ring */}
+            {/* Inner Generation Track Circle */}
             <circle
               cx={cx}
               cy={cy}
               r={rInner}
               fill="none"
               stroke="currentColor"
-              className="text-sky-400/25 dark:text-sky-500/20"
+              className="text-sky-400/20 dark:text-sky-500/15"
               strokeWidth="1.5"
               strokeDasharray="4 4"
             />
 
-            {/* Outer Generation Ring */}
+            {/* Outer Generation Track Circle */}
             <circle
               cx={cx}
               cy={cy}
               r={rOuter}
               fill="none"
               stroke="currentColor"
-              className="text-purple-400/20 dark:text-purple-500/20"
+              className="text-purple-400/15 dark:text-purple-500/15"
               strokeWidth="1.5"
               strokeDasharray="6 6"
             />
 
-            {/* Orbit Ring Labels */}
-            <text
-              x={cx}
-              y={cy - rInner + 14}
-              textAnchor="middle"
-              className="fill-sky-600/40 dark:fill-sky-400/30 text-[9px] font-bold uppercase tracking-widest pointer-events-none"
-            >
-              {lang === 'bn' ? 'মা-বাবা ও স্বজন রিং' : 'Parents & Elders Ring'}
-            </text>
-            <text
-              x={cx}
-              y={cy - rOuter + 14}
-              textAnchor="middle"
-              className="fill-purple-600/40 dark:fill-purple-400/30 text-[9px] font-bold uppercase tracking-widest pointer-events-none"
-            >
-              {lang === 'bn' ? 'দাদা-দাদী ও কনিষ্ঠ প্রজন্ম রিং' : 'Grandparents & Descendants Ring'}
-            </text>
+            {/* Smooth Quadratic Bezier Curves Connecting Center to Each Circular Orb */}
+            {positionedNodes.map((pn) => {
+              const isHovered = hoveredNodeId === pn.node.userId
+              const isUrgent = pn.node.healthSummary?.hasUrgentCondition
 
-            {/* Smooth Curved Connections from Center to Circular Nodes */}
-            {dynamicNodes.map((cn) => {
-              const isHovered = hoveredNodeId === cn.node.userId
-              const isUrgent = cn.node.healthSummary?.hasUrgentCondition
-
-              // Smooth Quadratic Curve
-              const midX = (cx + cn.x) / 2
-              const midY = (cy + cn.y) / 2
-              const curveStrength = 0.12
-              const dx = cn.x - cx
-              const dy = cn.y - cy
+              // Smooth curved trajectory
+              const midX = (cx + pn.x) / 2
+              const midY = (cy + pn.y) / 2
+              const curveStrength = 0.1
+              const dx = pn.x - cx
+              const dy = pn.y - cy
               const cpX = midX - dy * curveStrength
               const cpY = midY + dx * curveStrength
 
               return (
-                <g key={`curve-${cn.node.userId}`}>
+                <g key={`curve-${pn.node.userId}`}>
                   <path
-                    d={`M ${cx} ${cy} Q ${cpX} ${cpY} ${cn.x} ${cn.y}`}
+                    d={`M ${cx} ${cy} Q ${cpX} ${cpY} ${pn.x} ${pn.y}`}
                     fill="none"
-                    stroke={isUrgent ? 'url(#urgentLineGlow)' : 'url(#orbitLineGlow)'}
+                    stroke={isUrgent ? 'url(#urgentGlowGradient)' : 'url(#orbitGlowGradient)'}
                     strokeWidth={isHovered ? 2.5 : 1.5}
                     strokeDasharray={isUrgent ? 'none' : '3 3'}
                     className="transition-all duration-300"
@@ -368,7 +393,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                     cx={cpX}
                     cy={cpY}
                     r={isHovered ? 3.5 : 2}
-                    fill={isUrgent ? '#f43f5e' : '#0ea5e9'}
+                    fill={isUrgent ? '#f43f5e' : pn.accentColor}
                     className="animate-pulse"
                   />
                 </g>
@@ -377,7 +402,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           </svg>
 
           {/* ============================================================= */}
-          {/* CENTER CIRCULAR NODE: SELF (YOU)                             */}
+          {/* CENTER CIRCULAR ORB: SELF (YOU)                              */}
           {/* ============================================================= */}
           <motion.div
             style={{
@@ -393,14 +418,14 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
             onClick={() => self && onSelectMember(self.userId)}
             className="absolute z-30 flex flex-col items-center justify-center cursor-pointer group"
           >
-            {/* Halo Pulsing Aura */}
+            {/* Center Pulsing Glow Ring */}
             <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-25 blur-lg group-hover:opacity-45 animate-pulse transition-opacity" />
             <div className="absolute -inset-1 rounded-full border-2 border-dashed border-sky-400/40 animate-[spin_24s_linear_infinite]" />
 
-            {/* Circular Glass Core */}
+            {/* Circular Disc Core */}
             <div className="relative w-full h-full rounded-full bg-white dark:bg-gray-900 border-2 border-sky-400 dark:border-sky-500 shadow-lg shadow-sky-500/20 p-1 flex items-center justify-center">
               <div className="w-full h-full rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-inner">
-                <span className="text-lg sm:text-xl font-black tracking-tight leading-none">
+                <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
                   {self?.name?.[0]?.toUpperCase() || 'Y'}
                 </span>
                 <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90">
@@ -413,16 +438,19 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
               </div>
             </div>
 
-            <p className="text-[11px] font-bold text-gray-800 dark:text-gray-200 mt-2.5 text-center truncate max-w-[120px]">
-              {self?.name || (lang === 'bn' ? 'আপনি' : 'You')}
-            </p>
+            {/* Central Name Badge */}
+            <div className="mt-2.5 px-2.5 py-0.5 rounded-full bg-white/90 dark:bg-gray-800/90 border border-sky-200 dark:border-sky-800 shadow-xs pointer-events-none">
+              <p className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px] text-center">
+                {self?.name || (lang === 'bn' ? 'আপনি (স্বয়ং)' : 'You (Self)')}
+              </p>
+            </div>
           </motion.div>
 
           {/* ============================================================= */}
-          {/* ORBITING PURE CIRCULAR FAMILY NODES                          */}
+          {/* ORBITING PURE CIRCULAR FAMILY MEMBER ORBS                     */}
           {/* ============================================================= */}
-          {dynamicNodes.map((cn, idx) => {
-            const node = cn.node
+          {positionedNodes.map((pn, idx) => {
+            const node = pn.node
             const health = node.healthSummary
             const isHovered = hoveredNodeId === node.userId
             const isUrgent = health?.hasUrgentCondition
@@ -436,8 +464,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
               <motion.div
                 key={node.id}
                 style={{
-                  left: cn.x - nodeSize / 2,
-                  top: cn.y - nodeSize / 2,
+                  left: pn.x - nodeSize / 2,
+                  top: pn.y - nodeSize / 2,
                   width: nodeSize,
                   height: nodeSize,
                 }}
@@ -448,10 +476,10 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                   y: [0, -3, 0],
                 }}
                 transition={{
-                  scale: { type: 'spring', damping: 22, stiffness: 220, delay: idx * 0.04 },
+                  scale: { type: 'spring', damping: 22, stiffness: 220, delay: idx * 0.05 },
                   y: { repeat: Infinity, duration: 4 + (idx % 3), ease: 'easeInOut', delay: idx * 0.2 },
                 }}
-                whileHover={{ scale: 1.14, zIndex: 40 }}
+                whileHover={{ scale: 1.15, zIndex: 40 }}
                 onHoverStart={() => setHoveredNodeId(node.userId)}
                 onHoverEnd={() => setHoveredNodeId(null)}
                 onClick={() => onSelectMember(node.userId)}
@@ -462,27 +490,27 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                   <div className="absolute inset-0 rounded-full bg-rose-500 opacity-35 blur-md animate-ping pointer-events-none" />
                 )}
 
-                {/* Pure Circular Disc */}
+                {/* Pure Circular Disc with Gradient Avatar Ring */}
                 <div
                   className={`relative w-full h-full rounded-full p-1 transition-all duration-300 shadow-md ${
                     isUrgent
-                      ? 'bg-rose-500/20 border-2 border-rose-500 shadow-rose-500/20'
+                      ? 'bg-rose-500/20 border-2 border-rose-500 shadow-rose-500/25'
                       : isHovered
                       ? 'bg-sky-500/20 border-2 border-sky-400 shadow-sky-500/30'
-                      : 'bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-700 shadow-gray-200/50 dark:shadow-none hover:border-sky-400'
+                      : 'bg-white dark:bg-gray-900 border-2 ' + pn.borderColor + ' shadow-gray-200/50 dark:shadow-none hover:border-sky-400'
                   }`}
                 >
                   {/* Inside Avatar Circle */}
                   <div
-                    className={`w-full h-full rounded-full bg-gradient-to-br ${cn.avatarGradient} flex items-center justify-center text-white text-sm sm:text-base font-black shadow-inner`}
+                    className={`w-full h-full rounded-full bg-gradient-to-br ${pn.gradient} flex items-center justify-center text-white text-base sm:text-lg font-black shadow-inner`}
                   >
                     {node.name?.[0]?.toUpperCase() || 'U'}
                   </div>
 
-                  {/* Top-Right Medicine Micro-Badge */}
+                  {/* Top-Right Medicine Pill Badge */}
                   {medCount > 0 ? (
                     <div
-                      className="absolute -top-1 -right-1 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 shadow-xs flex items-center gap-0.5"
+                      className="absolute -top-1.5 -right-1.5 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 shadow-xs flex items-center gap-0.5"
                       title={`${medCount} active medications`}
                     >
                       <Pill className="h-2.5 w-2.5" />
@@ -502,20 +530,17 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                   )}
                 </div>
 
-                {/* Floating Name & Relation Pill Label */}
-                <div className="mt-1 flex flex-col items-center pointer-events-none">
-                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate max-w-[95px] text-center drop-shadow-xs group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                {/* Attached Compact Pill for Name & Relation */}
+                <div className="mt-1.5 px-2 py-0.5 rounded-full bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col items-center pointer-events-none max-w-[110px]">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate w-full text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                     {node.name}
                   </span>
-                  <Badge
-                    variant="outline"
-                    className={`text-[8px] sm:text-[9px] px-1.5 py-0 rounded-md font-medium truncate max-w-[90px] border shadow-2xs ${meta.badgeColor}`}
-                  >
+                  <span className="text-[8px] sm:text-[9px] font-medium text-gray-500 dark:text-gray-400 truncate w-full text-center">
                     {getRelationLabel(node.relation, lang)}
-                  </Badge>
+                  </span>
                 </div>
 
-                {/* Rich Hover Floating Tooltip */}
+                {/* Floating Rich Tooltip on Hover */}
                 <AnimatePresence>
                   {isHovered && (
                     <motion.div
@@ -524,16 +549,21 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                       exit={{ opacity: 0, y: 6, scale: 0.94 }}
                       className="absolute bottom-full mb-3 p-3 rounded-2xl bg-gray-900/95 dark:bg-gray-800/95 text-white backdrop-blur-md shadow-xl border border-gray-700/60 w-48 text-left z-50 pointer-events-none"
                     >
-                      <p className="text-xs font-bold truncate">{node.name}</p>
-                      <p className="text-[10px] text-sky-400 font-mono">
-                        {node.email || (node.username ? `@${node.username}` : getRelationLabel(node.relation, lang))}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold truncate">{node.name}</p>
+                        <Badge variant="outline" className={`text-[8px] px-1 py-0 ${meta.badgeColor}`}>
+                          {getRelationLabel(node.relation, lang)}
+                        </Badge>
+                      </div>
+                      <p className="text-[10px] text-sky-400 font-mono mt-0.5 truncate">
+                        {node.email || (node.username ? `@${node.username}` : '')}
                       </p>
                       <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between text-[10px] text-gray-300">
                         <span>{lang === 'bn' ? 'ওষুধ রুটিন:' : 'Medications:'}</span>
                         <span className="font-bold text-white">{medCount} {lang === 'bn' ? 'টি' : 'items'}</span>
                       </div>
                       <p className="text-[9px] text-gray-400 mt-1 text-center font-medium">
-                        {lang === 'bn' ? 'ক্লিক করে রিপোর্ট দেখুন' : 'Click to inspect health panel'}
+                        {lang === 'bn' ? 'ক্লিক করে সম্পূর্ণ স্বাস্থ্য রেকর্ড দেখুন' : 'Click to inspect full health routine'}
                       </p>
                     </motion.div>
                   )}
@@ -570,7 +600,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
       </div>
 
       {/* Orbit Legend & Status Bar */}
-      <div className="relative z-20 px-5 py-3 border-t border-gray-200/60 dark:border-gray-800 bg-white/70 dark:bg-gray-900/70 backdrop-blur-md flex items-center justify-between gap-4 flex-wrap text-[11px] text-gray-500 dark:text-gray-400">
+      <div className="relative z-20 px-5 py-3 border-t border-gray-200/60 dark:border-gray-800 bg-white/75 dark:bg-gray-900/75 backdrop-blur-md flex items-center justify-between gap-4 flex-wrap text-[11px] text-gray-500 dark:text-gray-400">
         <div className="flex items-center gap-3 flex-wrap">
           <span className="font-bold text-gray-800 dark:text-gray-200">{lang === 'bn' ? 'প্রজন্ম বৃত্ত:' : 'Generations:'}</span>
           <span className="flex items-center gap-1.5">
