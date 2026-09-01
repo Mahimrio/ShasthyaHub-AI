@@ -201,7 +201,8 @@ export function convertScriptGuardToScheduleItems(
   schedule: MedicationSchedule,
   userId: string,
   settings: UserReminderSettings,
-  prescriptionId?: string
+  prescriptionId?: string,
+  quantitiesMap?: Record<string, number>
 ): MedicationScheduleItem[] {
   const slotTimes = resolveSlotTimes(settings)
   const items: MedicationScheduleItem[] = []
@@ -240,7 +241,17 @@ export function convertScriptGuardToScheduleItems(
 
       const id = `med-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
-      const totalQty = duration * 2 // standard estimation baseline
+      const drugKeyEn = (drug.drug_en || '').toLowerCase()
+      const drugKeyBn = (drug.drug_bn || '').toLowerCase()
+      const matchedCustomQty = quantitiesMap
+        ? quantitiesMap[drugKeyEn] ??
+          quantitiesMap[drugKeyBn] ??
+          Object.entries(quantitiesMap).find(
+            ([k]) => drugKeyEn.includes(k) || k.includes(drugKeyEn) || drugKeyBn.includes(k)
+          )?.[1]
+        : undefined
+
+      const totalQty = matchedCustomQty ?? Math.max(10, duration * 2)
       const remainingQty = totalQty
 
       items.push({

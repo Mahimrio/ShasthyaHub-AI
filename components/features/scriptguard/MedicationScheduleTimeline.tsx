@@ -252,8 +252,8 @@ export default function MedicationScheduleTimeline({
         >
           <CalendarClock className="mr-1.5 h-3.5 w-3.5 text-sky-500" />
           {lang === 'bn'
-            ? `${durationDays} দিনের সম্পূর্ণ কোর্স`
-            : `${durationDays}-day total course`}
+            ? `${durationDays > 0 ? durationDays : 7} দিনের সম্পূর্ণ কোর্স`
+            : `${durationDays > 0 ? durationDays : 7}-day total course`}
         </Badge>
 
         <div className="flex items-center gap-2 flex-wrap">

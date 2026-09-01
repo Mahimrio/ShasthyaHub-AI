@@ -9,7 +9,6 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { PillAvatar } from '@/components/shared/PillAvatar'
 import { inferPillAvatar } from '@/lib/services/medication-reminder'
@@ -18,7 +17,6 @@ import {
   Check,
   CheckCircle2,
   ExternalLink,
-  Package,
   Pill,
   ShieldCheck,
 } from 'lucide-react'
@@ -126,6 +124,16 @@ export function SaveToCabinetModal({
       ),
     }
 
+    const quantitiesMap: Record<string, number> = {}
+    selectedIndices.forEach((idx) => {
+      const drug = drugs[idx]
+      const brand = (drug.brand_name || drug.written_text || '').toLowerCase().trim()
+      const generic = (drug.generic_name || '').toLowerCase().trim()
+      const count = stockCounts[idx] ?? 14
+      if (brand) quantitiesMap[brand] = count
+      if (generic) quantitiesMap[generic] = count
+    })
+
     try {
       await saveMutation.mutateAsync({
         prescription_id: prescriptionId || `rx_${Date.now()}`,
@@ -136,6 +144,7 @@ export function SaveToCabinetModal({
           special_instructions_bn: [],
           audio_script_bn: '',
         },
+        quantities_map: quantitiesMap,
       })
 
       setSavedSuccess(true)
@@ -213,73 +222,138 @@ export function SaveToCabinetModal({
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Selection Toolbar */}
+            <div className="flex items-center justify-between gap-2 px-1">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                {isBn
+                  ? `নির্বাচিত: ${selectedIndices.size}/${drugs.length}টি ওষুধ`
+                  : `Selected: ${selectedIndices.size}/${drugs.length} medicines`}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndices(new Set(drugs.map((_, i) => i)))}
+                  className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline"
+                >
+                  {isBn ? 'সব নির্বাচন' : 'Select All'}
+                </button>
+                <span className="text-gray-300 dark:text-gray-700">•</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedIndices(new Set())}
+                  className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:underline"
+                >
+                  {isBn ? 'সব বাদ' : 'Clear All'}
+                </button>
+              </div>
+            </div>
+
             {/* Medications checklist */}
-            <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-[340px] overflow-y-auto pr-1">
               {drugs.map((drug, i) => {
                 const isSelected = selectedIndices.has(i)
                 const avatar = inferPillAvatar(
                   drug.brand_name || drug.written_text,
                   drug.dosage
                 )
+                const currentStock = stockCounts[i] ?? 14
 
                 return (
                   <div
                     key={`${drug.written_text}-${i}`}
-                    className={`p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
+                    className={`p-3.5 rounded-2xl border transition-all space-y-2.5 ${
                       isSelected
                         ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 shadow-2xs'
                         : 'bg-gray-50/60 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 opacity-60'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleSelect(i)}
-                        className="h-4 w-4 rounded-md text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded cursor-pointer"
-                      />
-
-                      <div className="p-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0">
-                        <PillAvatar
-                          shape={avatar.shape}
-                          color={avatar.color}
-                          colorSecondary={avatar.colorSecondary}
-                          size="sm"
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(i)}
+                          className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
                         />
-                      </div>
 
-                      <div className="min-w-0">
-                        <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
-                          {drug.brand_name || drug.written_text}
-                        </h4>
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                          <span>{drug.dosage || '1 unit'}</span>
-                          <span>•</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                            {avatar.descriptorBn}
-                          </span>
+                        <div className="p-1 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shrink-0">
+                          <PillAvatar
+                            shape={avatar.shape}
+                            color={avatar.color}
+                            colorSecondary={avatar.colorSecondary}
+                            size="sm"
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
+                            {drug.brand_name || drug.written_text}
+                          </h4>
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                            <span>{drug.dosage || '1 unit'}</span>
+                            <span>•</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                              {avatar.descriptorBn}
+                            </span>
+                          </div>
                         </div>
                       </div>
+
+                      {/* Stock Pill Counter */}
+                      {isSelected && (
+                        <div className="flex items-center gap-1 shrink-0 bg-white dark:bg-gray-800 px-2 py-1 rounded-xl border border-gray-200 dark:border-gray-700 shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleStockChange(i, currentStock - 1)}
+                            className="w-5 h-5 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center justify-center"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={180}
+                            value={currentStock}
+                            onChange={(e) =>
+                              handleStockChange(i, parseInt(e.target.value, 10) || 1)
+                            }
+                            className="w-10 text-center text-xs font-mono font-bold bg-transparent text-gray-900 dark:text-gray-100 border-none focus:outline-none p-0"
+                            title={isBn ? 'প্রাথমিক স্টক সংখ্যা' : 'Stock quantity'}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleStockChange(i, currentStock + 1)}
+                            className="w-5 h-5 rounded-md bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-xs font-bold flex items-center justify-center"
+                          >
+                            +
+                          </button>
+                          <span className="text-[10px] text-gray-400 pl-0.5">
+                            {isBn ? 'টি' : 'pills'}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Stock pill input */}
+                    {/* Quick quantity chips */}
                     {isSelected && (
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <Package className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-                        <Input
-                          type="number"
-                          min={1}
-                          max={120}
-                          value={stockCounts[i] ?? 14}
-                          onChange={(e) =>
-                            handleStockChange(i, parseInt(e.target.value, 10) || 14)
-                          }
-                          className="h-7 w-16 text-center text-xs font-mono font-bold rounded-lg border-gray-200 dark:border-gray-700 p-1"
-                          title={isBn ? 'প্রাথমিক স্টক সংখ্যা' : 'Starting stock count'}
-                        />
-                        <span className="text-[10px] text-gray-400">
-                          {isBn ? 'টি' : 'pills'}
+                      <div className="flex items-center gap-1.5 pl-7 pt-1 border-t border-gray-100 dark:border-gray-800/80">
+                        <span className="text-[10px] text-gray-400 font-medium">
+                          {isBn ? 'পরিমাণ সেট:' : 'Quick stock:'}
                         </span>
+                        {[7, 10, 14, 20, 30].map((qty) => (
+                          <button
+                            key={qty}
+                            type="button"
+                            onClick={() => handleStockChange(i, qty)}
+                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold transition-all ${
+                              currentStock === qty
+                                ? 'bg-emerald-600 text-white shadow-2xs'
+                                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            }`}
+                          >
+                            {qty}{isBn ? 'টি' : ''}
+                          </button>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -292,8 +366,8 @@ export function SaveToCabinetModal({
               <ShieldCheck className="h-4 w-4 text-sky-600 shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed">
                 {isBn
-                  ? 'সংরক্ষণ করলে নির্বাচিত ওষুধগুলোর জন্য সকাল, দুপুর, রাত অনুযায়ী নোটিফিকেশন রিমাইন্ডার ও স্টক কাউন্টডাউন স্বয়ংক্রিয়ভাবে সক্রিয় হবে।'
-                  : 'Importing will automatically activate daily dosing time alarms and pill inventory countdown in your virtual cabinet.'}
+                  ? 'সংরক্ষণ করলে নির্বাচিত ওষুধগুলোর জন্য নির্ধারিত পরিমাণ স্টক এবং সকাল, দুপুর, রাত অনুযায়ী অ্যালার্ম চালু হবে।'
+                  : 'Importing will set exact initial pill stocks and activate daily alarms in your virtual cabinet.'}
               </p>
             </div>
 

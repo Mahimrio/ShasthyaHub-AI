@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/tooltip'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Pill } from 'lucide-react'
 import { PillAvatar } from '@/components/shared/PillAvatar'
 import { inferPillAvatar } from '@/lib/services/medication-reminder'
 import { cn } from '@/lib/utils'
@@ -23,6 +24,7 @@ interface ExtractedMedsTableProps {
   onEditDrug?: (index: number) => void
   onAddDrug?: () => void
   onDeleteDrug?: (index: number) => void
+  onSaveToCabinet?: () => void
 }
 
 const container = {
@@ -69,6 +71,7 @@ export default function ExtractedMedsTable({
   onEditDrug,
   onAddDrug,
   onDeleteDrug,
+  onSaveToCabinet,
 }: ExtractedMedsTableProps) {
   const [expanded, setExpanded] = useState<number | null>(null)
   const isBn = lang === 'bn'
@@ -87,18 +90,32 @@ export default function ExtractedMedsTable({
             </span>
           </div>
 
-          {onAddDrug && (
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={onAddDrug}
-              className="h-8 text-xs font-bold rounded-xl border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 px-3 shadow-2xs"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              <span>{isBn ? 'অনুপস্থিত ওষুধ যোগ করুন' : 'Add Missing Drug'}</span>
-            </Button>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {onSaveToCabinet && drugs.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                onClick={onSaveToCabinet}
+                className="h-8 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-3 shadow-2xs"
+              >
+                <Pill className="h-3.5 w-3.5 mr-1" />
+                <span>{isBn ? 'ঔষধ তালিকায় সেভ করুন' : 'Save to My Medicines'}</span>
+              </Button>
+            )}
+
+            {onAddDrug && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onAddDrug}
+                className="h-8 text-xs font-bold rounded-xl border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 px-3 shadow-2xs"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                <span>{isBn ? 'অনুপস্থিত ওষুধ যোগ করুন' : 'Add Missing Drug'}</span>
+              </Button>
+            )}
+          </div>
         </div>
 
         {drugs.length === 0 ? (

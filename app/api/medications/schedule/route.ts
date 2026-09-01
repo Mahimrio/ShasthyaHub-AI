@@ -67,7 +67,8 @@ export async function POST(request: Request) {
         schedule,
         userId,
         settings,
-        body.prescription_id
+        body.prescription_id,
+        body.quantities_map
       )
 
       if (user?.id) {

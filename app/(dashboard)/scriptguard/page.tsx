@@ -32,6 +32,7 @@ import AudioGuide from '@/components/features/scriptguard/AudioGuide'
 import { MyMedicinesCabinet } from '@/components/features/scriptguard/MyMedicinesCabinet'
 import { EditMedicationModal } from '@/components/features/scriptguard/EditMedicationModal'
 import { AddMissingMedicationModal } from '@/components/features/scriptguard/AddMissingMedicationModal'
+import { SaveToCabinetModal } from '@/components/features/scriptguard/SaveToCabinetModal'
 import { buildScheduleLocally } from '@/lib/services/schedule'
 import type { ExtractedMedication, MealTimingType, DrugInteraction } from '@/types'
 
@@ -55,6 +56,7 @@ export default function ScriptGuardPage() {
   // HITL Modals State
   const [editingDrugIndex, setEditingDrugIndex] = useState<number | null>(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [isSaveToCabinetOpen, setIsSaveToCabinetOpen] = useState(false)
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null)
 
   // SSR-safe: closed during prerender (window undefined), opens after mount
@@ -426,6 +428,7 @@ export default function ScriptGuardPage() {
                         onEditDrug={(idx) => setEditingDrugIndex(idx)}
                         onAddDrug={() => setIsAddModalOpen(true)}
                         onDeleteDrug={handleDeleteDrug}
+                        onSaveToCabinet={() => setIsSaveToCabinetOpen(true)}
                       />
                     </div>
                   </ResultCard>
@@ -495,6 +498,18 @@ export default function ScriptGuardPage() {
           onOpenChange={setIsAddModalOpen}
           existingDrugs={result.extracted_drugs}
           onAdd={handleAddMissingDrug}
+        />
+      )}
+
+      {result && (
+        <SaveToCabinetModal
+          open={isSaveToCabinetOpen}
+          onOpenChange={setIsSaveToCabinetOpen}
+          drugs={result.extracted_drugs}
+          schedule={result.schedule}
+          durationDays={result.duration_days}
+          prescriptionId={result.id}
+          onSwitchToCabinet={() => setActiveTab('cabinet')}
         />
       )}
     </>

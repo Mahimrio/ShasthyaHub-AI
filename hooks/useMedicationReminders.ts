@@ -143,9 +143,11 @@ export function useSavePrescriptionToReminders() {
     mutationFn: async ({
       digital_schedule,
       prescription_id,
+      quantities_map,
     }: {
       digital_schedule: MedicationSchedule
       prescription_id?: string
+      quantities_map?: Record<string, number>
     }) => {
       const res = await fetch('/api/medications/schedule', {
         method: 'POST',
@@ -154,6 +156,7 @@ export function useSavePrescriptionToReminders() {
           from_scriptguard: true,
           digital_schedule,
           prescription_id,
+          quantities_map,
         }),
       })
       const json = await res.json()
