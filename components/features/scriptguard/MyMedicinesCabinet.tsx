@@ -10,6 +10,7 @@ import {
   Flame,
   Package,
   PackagePlus,
+  Palette,
   Pill,
   Plus,
   Search,
@@ -21,6 +22,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { PillAvatar } from '@/components/shared/PillAvatar'
 import {
   useMedicationDoses,
   useRecordDoseAction,
@@ -34,7 +36,8 @@ import {
 import { AddManualMedicationModal } from '@/components/features/medications/AddManualMedicationModal'
 import { MedicationSettingsModal } from '@/components/features/medications/MedicationSettingsModal'
 import { MissedDoseAlertModal } from '@/components/features/medications/MissedDoseAlertModal'
-import type { ActiveDoseWithStatus } from '@/types'
+import { PillCustomizerModal } from '@/components/features/medications/PillCustomizerModal'
+import type { ActiveDoseWithStatus, MedicationScheduleItem } from '@/types'
 
 function drugCardColor(name: string) {
   const colors = [
@@ -78,6 +81,11 @@ export function MyMedicinesCabinet() {
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [selectedMissedDose, setSelectedMissedDose] = useState<ActiveDoseWithStatus | null>(null)
   const [refillSuccessId, setRefillSuccessId] = useState<string | null>(null)
+  const [customizerItem, setCustomizerItem] = useState<{
+    schedule: MedicationScheduleItem
+    drugNameEn: string
+    drugNameBn: string
+  } | null>(null)
 
   const { data: dosesData, isLoading } = useMedicationDoses()
   const recordAction = useRecordDoseAction()
@@ -323,14 +331,31 @@ export function MyMedicinesCabinet() {
                 animate={{ opacity: 1, y: 0 }}
                 className="rounded-3xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-xs hover:shadow-md transition-all space-y-4"
               >
-                {/* Card Header: Drug Identity */}
+                {/* Card Header: Drug Identity with Visual Pill Avatar */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3">
-                    <div
-                      className={`w-10 h-10 rounded-2xl bg-gradient-to-br ${colors.iconBg} flex items-center justify-center text-white shrink-0 shadow-sm`}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCustomizerItem({
+                          schedule: schedules.find((s) => s.id === item.primaryScheduleId) || item as unknown as MedicationScheduleItem,
+                          drugNameEn: item.drugNameEn,
+                          drugNameBn: item.drugNameBn,
+                        })
+                      }
+                      className="p-1 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200/60 dark:border-gray-700/60 hover:border-purple-400 dark:hover:border-purple-500 transition-all group/pill shrink-0 shadow-xs relative"
+                      title={isBn ? 'রঙ ও রূপ পরিবর্তন করুন' : 'Click to customize appearance'}
                     >
-                      <Pill className="h-5 w-5" />
-                    </div>
+                      <PillAvatar
+                        shape={item.pillShape}
+                        color={item.pillColor}
+                        colorSecondary={item.pillColorSecondary}
+                        size="md"
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center opacity-0 group-hover/pill:opacity-100 transition-opacity shadow-xs">
+                        <Palette className="h-2.5 w-2.5" />
+                      </span>
+                    </button>
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
@@ -340,9 +365,15 @@ export function MyMedicinesCabinet() {
                           {item.dosage}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                        {item.drugNameEn}
-                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                          {item.drugNameEn}
+                        </span>
+                        <span className="text-gray-300 dark:text-gray-700">•</span>
+                        <span className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-2 py-0.2 rounded-md border border-purple-200/60 dark:border-purple-800/60">
+                          {isBn ? item.pillDescriptorBn : item.pillDescriptorEn}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -529,6 +560,16 @@ export function MyMedicinesCabinet() {
         open={!!selectedMissedDose}
         onOpenChange={(open) => !open && setSelectedMissedDose(null)}
       />
+
+      {customizerItem && (
+        <PillCustomizerModal
+          open={!!customizerItem}
+          onOpenChange={(open) => !open && setCustomizerItem(null)}
+          schedule={customizerItem.schedule}
+          drugNameEn={customizerItem.drugNameEn}
+          drugNameBn={customizerItem.drugNameBn}
+        />
+      )}
     </div>
   )
 }

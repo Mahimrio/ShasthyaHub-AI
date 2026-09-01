@@ -5,11 +5,11 @@ import { motion } from 'framer-motion'
 import {
   CheckCircle2,
   HelpCircle,
-  Pill,
   RotateCcw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { PillAvatar } from '@/components/shared/PillAvatar'
 import {
   useMedicationDoses,
   useRecordDoseAction,
@@ -46,16 +46,13 @@ export function TodayMedicationStrip() {
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-start gap-3.5">
-            <div
-              className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-md ${
-                dueDose
-                  ? 'bg-gradient-to-br from-amber-500 to-orange-500 animate-pulse'
-                  : missedDose
-                  ? 'bg-gradient-to-br from-red-500 to-rose-500'
-                  : 'bg-gradient-to-br from-sky-500 to-teal-500'
-              }`}
-            >
-              <Pill className="h-5 w-5" />
+            <div className="p-1 rounded-2xl bg-gray-50 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700/60 shrink-0 shadow-xs">
+              <PillAvatar
+                shape={nextDose.schedule.pill_shape}
+                color={nextDose.schedule.pill_color}
+                colorSecondary={nextDose.schedule.pill_color_secondary}
+                size="md"
+              />
             </div>
 
             <div className="space-y-1">

@@ -86,6 +86,115 @@ export function inferDrugIndication(drugName: string): { en: string; bn: string 
   return { en: 'Prescribed Therapy', bn: 'প্রেসক্রিপশন থেরাপি' }
 }
 
+// ── Helper: Infer Physical Pill Avatar (Shape & Colors) ──────
+
+export function inferPillAvatar(
+  drugName: string,
+  dosage?: string
+): {
+  shape: import('@/types').PillShapeType
+  color: string
+  colorSecondary?: string
+  descriptorBn: string
+  descriptorEn: string
+} {
+  const name = (drugName || '').toLowerCase()
+  const dose = (dosage || '').toLowerCase()
+
+  if (name.includes('syrup') || name.includes('suspension') || dose.includes('tsp') || dose.includes('ml')) {
+    return {
+      shape: 'syrup_liquid',
+      color: '#F59E0B',
+      descriptorBn: 'সিরাপ / তরল বোতল',
+      descriptorEn: 'Liquid Syrup',
+    }
+  }
+
+  if (name.includes('drop') || name.includes('eye') || name.includes('ear')) {
+    return {
+      shape: 'drops',
+      color: '#0284C7',
+      descriptorBn: 'আই / এয়ার ড্রপ',
+      descriptorEn: 'Eye/Ear Drops',
+    }
+  }
+
+  if (name.includes('inhaler') || name.includes('salbutamol') || name.includes('bexitrol') || name.includes('puff')) {
+    return {
+      shape: 'inhaler',
+      color: '#0D9488',
+      descriptorBn: 'রেসপিরেটরি ইনহেলার',
+      descriptorEn: 'Inhaler',
+    }
+  }
+
+  if (name.includes('insulin') || name.includes('lantus') || name.includes('novorapid') || name.includes('injection')) {
+    return {
+      shape: 'injection_pen',
+      color: '#8B5CF6',
+      descriptorBn: 'ইনসুলিন / ইনজেকশন পেন',
+      descriptorEn: 'Insulin Pen',
+    }
+  }
+
+  if (
+    name.includes('seclo') ||
+    name.includes('sergel') ||
+    name.includes('prazole') ||
+    name.includes('capsule') ||
+    name.includes('pantodac') ||
+    name.includes('maxpro')
+  ) {
+    return {
+      shape: 'capsule',
+      color: '#FFFFFF',
+      colorSecondary: '#0284C7',
+      descriptorBn: 'নীল-সাদা ক্যাপসুল',
+      descriptorEn: 'Blue-White Capsule',
+    }
+  }
+
+  if (
+    name.includes('metformin') ||
+    name.includes('azithromycin') ||
+    name.includes('cefixime') ||
+    name.includes('amoxicillin')
+  ) {
+    return {
+      shape: 'caplet_oval',
+      color: '#FFFFFF',
+      descriptorBn: 'সাদা লম্বাটে ক্যাপলেট',
+      descriptorEn: 'White Oval Caplet',
+    }
+  }
+
+  if (name.includes('montelukast') || name.includes('monas') || name.includes('odmon')) {
+    return {
+      shape: 'round_tablet',
+      color: '#EC4899',
+      descriptorBn: 'গোলাপি গোল ট্যাবলেট',
+      descriptorEn: 'Pink Round Tablet',
+    }
+  }
+
+  if (name.includes('amlodipine') || name.includes('biso') || name.includes('angilock')) {
+    return {
+      shape: 'round_tablet',
+      color: '#F59E0B',
+      descriptorBn: 'হলুদ গোল ট্যাবলেট',
+      descriptorEn: 'Yellow Round Tablet',
+    }
+  }
+
+  // Default: White round scored tablet (Napa, Paracetamol, etc.)
+  return {
+    shape: 'round_tablet',
+    color: '#FFFFFF',
+    descriptorBn: 'সাদা গোল ট্যাবলেট',
+    descriptorEn: 'White Round Tablet',
+  }
+}
+
 // ── 2. Convert ScriptGuard Schedule into MedicationScheduleItems ─
 
 export function convertScriptGuardToScheduleItems(
@@ -127,6 +236,7 @@ export function convertScriptGuardToScheduleItems(
       const baseTime = slotTimes[slot.key as keyof typeof slotTimes] || '08:00'
       const finalTime = applyMealOffset(baseTime, mealTiming)
       const indication = inferDrugIndication(drug.drug_en || drug.drug_bn)
+      const pillAvatar = inferPillAvatar(drug.drug_en || drug.drug_bn, drug.dosage)
 
       const id = `med-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
 
@@ -147,6 +257,9 @@ export function convertScriptGuardToScheduleItems(
         instructions_bn: drug.instructions_bn,
         indication_en: indication.en,
         indication_bn: indication.bn,
+        pill_shape: pillAvatar.shape,
+        pill_color: pillAvatar.color,
+        pill_color_secondary: pillAvatar.colorSecondary,
         total_prescribed_quantity: totalQty,
         remaining_quantity: remainingQty,
         refill_threshold: 4,
@@ -176,6 +289,11 @@ export function groupSchedulesIntoCabinetSummaries(
   mealTiming: MealTimingType
   times: string[]
   durationDays: number
+  pillShape: import('@/types').PillShapeType
+  pillColor: string
+  pillColorSecondary?: string
+  pillDescriptorBn: string
+  pillDescriptorEn: string
   totalPrescribed: number
   remainingQuantity: number
   daysRemaining: number
@@ -227,6 +345,11 @@ export function groupSchedulesIntoCabinetSummaries(
         ? { en: primary.indication_en, bn: primary.indication_bn }
         : inferDrugIndication(primary.drug_name_en)
 
+    const avatar = inferPillAvatar(primary.drug_name_en, primary.dosage)
+    const pillShape = primary.pill_shape || avatar.shape
+    const pillColor = primary.pill_color || avatar.color
+    const pillColorSecondary = primary.pill_color_secondary || avatar.colorSecondary
+
     return {
       drugKey: key,
       drugNameEn: primary.drug_name_en,
@@ -237,6 +360,11 @@ export function groupSchedulesIntoCabinetSummaries(
       mealTiming: primary.meal_timing,
       times,
       durationDays,
+      pillShape,
+      pillColor,
+      pillColorSecondary,
+      pillDescriptorBn: avatar.descriptorBn,
+      pillDescriptorEn: avatar.descriptorEn,
       totalPrescribed,
       remainingQuantity,
       daysRemaining,

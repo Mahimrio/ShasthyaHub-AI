@@ -233,3 +233,44 @@ export function useMemberHealthReports(memberId: string | null) {
     },
   })
 }
+
+export const MEMBER_MEDICATIONS_KEY = ['member-medications'] as const
+
+// 10. Fetch family member live medication status
+export function useFamilyMemberMedications(memberId: string | null) {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: [...MEMBER_MEDICATIONS_KEY, memberId ?? 'none'],
+    enabled: !!user && !!memberId,
+    refetchInterval: 30_000, // auto-refresh every 30s
+    queryFn: async () => {
+      if (!memberId) return null
+      const res = await fetch(`/api/family/medications?member_id=${memberId}`)
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        return null
+      }
+      return json.data as import('@/types').FamilyMemberMedicationStatus
+    },
+  })
+}
+
+// 11. Send caregiver reminder nudge
+export function useSendCaregiverNudge() {
+  return useMutation({
+    mutationFn: async ({ memberId }: { memberId: string }) => {
+      const res = await fetch('/api/family/medications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: memberId }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to send nudge')
+      }
+      return json
+    },
+  })
+}
+

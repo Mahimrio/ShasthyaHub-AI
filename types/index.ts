@@ -487,6 +487,14 @@ export interface UserSearchResult {
 export type MealTimingType = 'before_meal' | 'after_meal' | 'with_meal' | 'empty_stomach' | 'anytime'
 export type SlotType = 'morning' | 'afternoon' | 'evening' | 'night' | 'custom'
 export type DoseStatus = 'pending' | 'taken' | 'snoozed' | 'missed' | 'skipped'
+export type PillShapeType =
+  | 'round_tablet'
+  | 'capsule'
+  | 'caplet_oval'
+  | 'syrup_liquid'
+  | 'drops'
+  | 'inhaler'
+  | 'injection_pen'
 
 export interface MedicationScheduleItem {
   id: string
@@ -505,6 +513,9 @@ export interface MedicationScheduleItem {
   instructions_bn?: string
   indication_en?: string // e.g. "Acidity & Reflux", "Fever & Pain"
   indication_bn?: string
+  pill_shape?: PillShapeType
+  pill_color?: string // Hex code or tailwind color
+  pill_color_secondary?: string // for 2-tone capsules
   total_prescribed_quantity?: number // e.g. 30
   remaining_quantity?: number // e.g. 14
   refill_threshold?: number // e.g. 4
@@ -520,6 +531,11 @@ export interface CabinetMedicineSummary {
   schedule: MedicationScheduleItem
   times: string[] // all daily times for this drug e.g. ["08:00", "20:00"]
   frequency: string // e.g. "1+0+1 (Twice Daily)"
+  pillShape: PillShapeType
+  pillColor: string
+  pillColorSecondary?: string
+  pillDescriptorBn: string
+  pillDescriptorEn: string
   remainingPills: number
   totalPills: number
   daysRemaining: number
@@ -529,6 +545,27 @@ export interface CabinetMedicineSummary {
   missedCount: number
   adherenceRate: number
   todayStatus: DoseStatus
+}
+
+export interface FamilyMemberMedicationStatus {
+  memberId: string
+  totalMeds: number
+  totalDosesToday: number
+  takenDosesToday: number
+  missedDosesToday: number
+  complianceRate: number
+  status: 'all_taken' | 'upcoming' | 'missed' | 'none'
+  nextDoseTime?: string
+  activePills: Array<{
+    drugNameEn: string
+    drugNameBn: string
+    dosage: string
+    shape: PillShapeType
+    color: string
+    colorSecondary?: string
+    descriptorBn: string
+    isDueNow?: boolean
+  }>
 }
 
 export interface DoseLog {

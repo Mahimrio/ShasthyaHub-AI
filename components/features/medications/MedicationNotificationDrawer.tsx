@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { PillAvatar } from '@/components/shared/PillAvatar'
 import {
   useMedicationDoses,
   useRecordDoseAction,
@@ -239,33 +240,43 @@ export function MedicationNotificationDrawer() {
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-2">
-                                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
-                                  {isBn ? dose.schedule.drug_name_bn : dose.schedule.drug_name_en}
-                                </h4>
-                                <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
-                                  {dose.schedule.dosage}
-                                </span>
+                            <div className="flex items-start gap-2.5">
+                              <div className="p-1 rounded-xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200/60 dark:border-gray-700/60 shrink-0">
+                                <PillAvatar
+                                  shape={dose.schedule.pill_shape}
+                                  color={dose.schedule.pill_color}
+                                  colorSecondary={dose.schedule.pill_color_secondary}
+                                  size="sm"
+                                />
                               </div>
-                              <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                                <Clock className="h-3 w-3 text-sky-500" />
-                                <span>{dose.dueTime}</span>
-                                <span>•</span>
-                                <span>
-                                  {dose.schedule.meal_timing === 'before_meal'
-                                    ? isBn
-                                      ? 'খাবার আগে'
-                                      : 'Before meal'
-                                    : dose.schedule.meal_timing === 'empty_stomach'
-                                    ? isBn
-                                      ? 'খালি পেটে'
-                                      : 'Empty stomach'
-                                    : isBn
-                                    ? 'খাবার পর'
-                                    : 'After meal'}
-                                </span>
-                              </p>
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                    {isBn ? dose.schedule.drug_name_bn : dose.schedule.drug_name_en}
+                                  </h4>
+                                  <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                    {dose.schedule.dosage}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                                  <Clock className="h-3 w-3 text-sky-500" />
+                                  <span>{dose.dueTime}</span>
+                                  <span>•</span>
+                                  <span>
+                                    {dose.schedule.meal_timing === 'before_meal'
+                                      ? isBn
+                                        ? 'খাবার আগে'
+                                        : 'Before meal'
+                                      : dose.schedule.meal_timing === 'empty_stomach'
+                                      ? isBn
+                                        ? 'খালি পেটে'
+                                        : 'Empty stomach'
+                                      : isBn
+                                      ? 'খাবার পর'
+                                      : 'After meal'}
+                                  </span>
+                                </p>
+                              </div>
                             </div>
 
                             {/* Status Pill */}
