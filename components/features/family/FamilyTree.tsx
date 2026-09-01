@@ -134,6 +134,114 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
 
   const hasFamily = generationRows.some((r) => r.nodes.length > 0 || r.isSelf)
 
+  // Reusable member node component
+  const renderMemberNode = (node: FamilyTreeNode, nodeIdx: number, rowIndex: number, gradient: string) => {
+    const health = node.healthSummary
+    const isHovered = hoveredNodeId === node.userId
+    const isUrgent = health?.hasUrgentCondition
+    const medCount = health?.activeMedications?.length || 0
+    const meta = RELATIONS_MAP[node.relation] || {
+      badgeColor: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+    }
+
+    return (
+      <motion.div
+        key={node.id}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{
+          type: 'spring',
+          damping: 20,
+          stiffness: 200,
+          delay: rowIndex * 0.08 + nodeIdx * 0.05,
+        }}
+        whileHover={{ scale: 1.1, zIndex: 40 }}
+        onHoverStart={() => setHoveredNodeId(node.userId)}
+        onHoverEnd={() => setHoveredNodeId(null)}
+        onClick={() => onSelectMember(node.userId)}
+        className="flex flex-col items-center gap-2 cursor-pointer group relative shrink-0"
+      >
+        {/* Circular Avatar Node */}
+        <div className="relative">
+          {/* Urgent Ping */}
+          {isUrgent && (
+            <div className="absolute inset-0 rounded-full bg-rose-500 opacity-35 blur-md animate-ping pointer-events-none" />
+          )}
+
+          {/* Pure Circular Gradient Node */}
+          <div
+            className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${gradient} flex flex-col items-center justify-center text-white text-center shadow-lg transition-all duration-300 ${
+              isUrgent ? 'shadow-rose-500/30' : 'shadow-gray-400/20 dark:shadow-none'
+            } ${isHovered ? 'shadow-sky-500/30 ring-2 ring-sky-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}`}
+          >
+            <span className="text-xl font-black leading-none">{node.name?.[0]?.toUpperCase() || 'U'}</span>
+            <span className="text-[9px] font-semibold mt-0.5 opacity-90 truncate px-1 max-w-full">
+              {getRelationLabel(node.relation, lang)}
+            </span>
+          </div>
+
+          {/* Medicine Badge */}
+          {medCount > 0 ? (
+            <div
+              className="absolute -top-1 -right-1 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] font-bold px-1.5 py-0.5 shadow-xs flex items-center gap-0.5"
+              title={`${medCount} active medications`}
+            >
+              <Pill className="h-2 w-2" />
+              <span>{medCount}</span>
+            </div>
+          ) : (
+            <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
+              <CheckCircle2 className="h-2.5 w-2.5" />
+            </div>
+          )}
+
+          {/* Urgent Badge */}
+          {isUrgent && (
+            <div className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-xs animate-bounce">
+              <AlertTriangle className="h-2.5 w-2.5" />
+            </div>
+          )}
+        </div>
+
+        {/* Name Below Node */}
+        <div className="flex flex-col items-center">
+          <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[100px] text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+            {node.name}
+          </span>
+        </div>
+
+        {/* Rich Tooltip on Hover */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.94 }}
+              className="absolute bottom-full mb-3 p-3 rounded-2xl bg-gray-900/95 dark:bg-gray-800/95 text-white backdrop-blur-md shadow-xl border border-gray-700/60 w-48 text-left z-50 pointer-events-none"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold truncate">{node.name}</p>
+                <Badge variant="outline" className={`text-[8px] px-1 py-0 ${meta.badgeColor}`}>
+                  {getRelationLabel(node.relation, lang)}
+                </Badge>
+              </div>
+              <p className="text-[10px] text-sky-400 font-mono mt-0.5 truncate">
+                {node.email || (node.username ? `@${node.username}` : '')}
+              </p>
+              <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between text-[10px] text-gray-300">
+                <span>{lang === 'bn' ? 'ওষুধ রুটিন:' : 'Medications:'}</span>
+                <span className="font-bold text-white">{medCount} {lang === 'bn' ? 'টি' : 'items'}</span>
+              </div>
+              <p className="text-[9px] text-gray-400 mt-1 text-center font-medium">
+                {lang === 'bn' ? 'ক্লিক করে সম্পূর্ণ স্বাস্থ্য রেকর্ড দেখুন' : 'Click to inspect full health routine'}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    )
+  }
+
   return (
     <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/20 to-slate-50/50 dark:from-gray-950 dark:via-gray-900/90 dark:to-gray-950 shadow-xs overflow-hidden flex flex-col transition-all">
       {/* Subtle Dot Mesh Background */}
@@ -221,8 +329,11 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
 
           {/* Render Generational Rows */}
           {generationRows.map((row, rowIndex) => {
-
             const showConnector = rowIndex > 0
+
+            // Symmetrically partition generation 0 peers around Self
+            const leftPeers = row.isSelf ? row.nodes.filter((_, i) => i % 2 === 1) : []
+            const rightPeers = row.isSelf ? row.nodes.filter((_, i) => i % 2 === 0) : []
 
             return (
               <div key={`row-${row.level}`} className="flex flex-col items-center w-full">
@@ -265,148 +376,63 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                 </motion.div>
 
                 {/* Nodes in this Generation Row */}
-                <div className="flex flex-row flex-wrap items-center justify-center gap-6 w-full">
-                  {/* Self node always appears in Generation 0 row */}
-                  {row.isSelf && self && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ type: 'spring', damping: 18, stiffness: 200, delay: rowIndex * 0.08 }}
-                      whileHover={{ scale: 1.08 }}
-                      onClick={() => onSelectMember(self.userId)}
-                      className="flex flex-col items-center gap-2 cursor-pointer group"
-                    >
-                      {/* Self Circular Node — Larger & Highlighted */}
-                      <div className="relative">
-                        {/* Pulsing Aura */}
-                        <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-20 blur-lg group-hover:opacity-40 animate-pulse transition-opacity" />
-                        <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-xl shadow-sky-500/25 ring-4 ring-white dark:ring-gray-900">
-                          <span className="text-2xl font-black leading-none">{self.name?.[0]?.toUpperCase() || 'Y'}</span>
-                          <span className="text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90">
-                            {lang === 'bn' ? 'আপনি' : 'YOU'}
-                          </span>
-                        </div>
-                        {/* Center Core Badge */}
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
-                          {lang === 'bn' ? 'মূল কেন্দ্র' : 'Center'}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center mt-1">
-                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate max-w-[110px] text-center">
-                          {self.name || (lang === 'bn' ? 'আপনি' : 'You')}
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
+                {row.isSelf && self ? (
+                  /* Generation 0: 3-column layout guaranteeing Self is ALWAYS perfectly centered! */
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-6 w-full max-w-2xl">
+                    {/* Left Peers (Siblings/Spouse) */}
+                    <div className="flex flex-wrap items-center justify-end gap-6">
+                      {leftPeers.map((node, nodeIdx) =>
+                        renderMemberNode(node, nodeIdx, rowIndex, row.gradient)
+                      )}
+                    </div>
 
-                  {/* Other Member Nodes in this Row */}
-                  {row.nodes.map((node, nodeIdx) => {
-                    const health = node.healthSummary
-                    const isHovered = hoveredNodeId === node.userId
-                    const isUrgent = health?.hasUrgentCondition
-                    const medCount = health?.activeMedications?.length || 0
-                    const meta = RELATIONS_MAP[node.relation] || {
-                      badgeColor: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800',
-                    }
-
-                    return (
+                    {/* Self Circular Node — Centered Exactly on the Tree Centerline */}
+                    <div className="flex justify-center shrink-0">
                       <motion.div
-                        key={node.id}
                         initial={{ scale: 0, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        transition={{
-                          type: 'spring',
-                          damping: 20,
-                          stiffness: 200,
-                          delay: rowIndex * 0.08 + nodeIdx * 0.05,
-                        }}
-                        whileHover={{ scale: 1.1, zIndex: 40 }}
-                        onHoverStart={() => setHoveredNodeId(node.userId)}
-                        onHoverEnd={() => setHoveredNodeId(null)}
-                        onClick={() => onSelectMember(node.userId)}
-                        className="flex flex-col items-center gap-2 cursor-pointer group relative"
+                        transition={{ type: 'spring', damping: 18, stiffness: 200, delay: rowIndex * 0.08 }}
+                        whileHover={{ scale: 1.08 }}
+                        onClick={() => onSelectMember(self.userId)}
+                        className="flex flex-col items-center gap-2 cursor-pointer group"
                       >
-                        {/* Circular Avatar Node — NO outer ring border */}
                         <div className="relative">
-                          {/* Urgent Ping */}
-                          {isUrgent && (
-                            <div className="absolute inset-0 rounded-full bg-rose-500 opacity-35 blur-md animate-ping pointer-events-none" />
-                          )}
-
-                          {/* Pure Circular Gradient Node (no outer border ring!) */}
-                          <div
-                            className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${row.gradient} flex flex-col items-center justify-center text-white text-center shadow-lg transition-all duration-300 ${
-                              isUrgent ? 'shadow-rose-500/30' : 'shadow-gray-400/20 dark:shadow-none'
-                            } ${isHovered ? 'shadow-sky-500/30 ring-2 ring-sky-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}`}
-                          >
-                            <span className="text-xl font-black leading-none">{node.name?.[0]?.toUpperCase() || 'U'}</span>
-                            <span className="text-[9px] font-semibold mt-0.5 opacity-90 truncate px-1 max-w-full">
-                              {getRelationLabel(node.relation, lang)}
+                          {/* Pulsing Aura */}
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-20 blur-lg group-hover:opacity-40 animate-pulse transition-opacity" />
+                          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-xl shadow-sky-500/25 ring-4 ring-white dark:ring-gray-900">
+                            <span className="text-2xl font-black leading-none">{self.name?.[0]?.toUpperCase() || 'Y'}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90">
+                              {lang === 'bn' ? 'আপনি' : 'YOU'}
                             </span>
                           </div>
-
-                          {/* Medicine Badge */}
-                          {medCount > 0 ? (
-                            <div
-                              className="absolute -top-1 -right-1 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] font-bold px-1.5 py-0.5 shadow-xs flex items-center gap-0.5"
-                              title={`${medCount} active medications`}
-                            >
-                              <Pill className="h-2 w-2" />
-                              <span>{medCount}</span>
-                            </div>
-                          ) : (
-                            <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
-                              <CheckCircle2 className="h-2.5 w-2.5" />
-                            </div>
-                          )}
-
-                          {/* Urgent Badge */}
-                          {isUrgent && (
-                            <div className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-xs animate-bounce">
-                              <AlertTriangle className="h-2.5 w-2.5" />
-                            </div>
-                          )}
+                          {/* Center Core Badge */}
+                          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+                            {lang === 'bn' ? 'মূল কেন্দ্র' : 'Center'}
+                          </div>
                         </div>
-
-                        {/* Name Below Node */}
-                        <div className="flex flex-col items-center">
-                          <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[100px] text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                            {node.name}
+                        <div className="flex flex-col items-center mt-1">
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate max-w-[110px] text-center">
+                            {self.name || (lang === 'bn' ? 'আপনি' : 'You')}
                           </span>
                         </div>
-
-                        {/* Rich Tooltip on Hover */}
-                        <AnimatePresence>
-                          {isHovered && (
-                            <motion.div
-                              initial={{ opacity: 0, y: 6, scale: 0.94 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: 6, scale: 0.94 }}
-                              className="absolute bottom-full mb-3 p-3 rounded-2xl bg-gray-900/95 dark:bg-gray-800/95 text-white backdrop-blur-md shadow-xl border border-gray-700/60 w-48 text-left z-50 pointer-events-none"
-                            >
-                              <div className="flex items-center justify-between">
-                                <p className="text-xs font-bold truncate">{node.name}</p>
-                                <Badge variant="outline" className={`text-[8px] px-1 py-0 ${meta.badgeColor}`}>
-                                  {getRelationLabel(node.relation, lang)}
-                                </Badge>
-                              </div>
-                              <p className="text-[10px] text-sky-400 font-mono mt-0.5 truncate">
-                                {node.email || (node.username ? `@${node.username}` : '')}
-                              </p>
-                              <div className="mt-2 pt-2 border-t border-gray-800 flex items-center justify-between text-[10px] text-gray-300">
-                                <span>{lang === 'bn' ? 'ওষুধ রুটিন:' : 'Medications:'}</span>
-                                <span className="font-bold text-white">{medCount} {lang === 'bn' ? 'টি' : 'items'}</span>
-                              </div>
-                              <p className="text-[9px] text-gray-400 mt-1 text-center font-medium">
-                                {lang === 'bn' ? 'ক্লিক করে সম্পূর্ণ স্বাস্থ্য রেকর্ড দেখুন' : 'Click to inspect full health routine'}
-                              </p>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
                       </motion.div>
-                    )
-                  })}
-                </div>
+                    </div>
+
+                    {/* Right Peers (Siblings/Spouse) */}
+                    <div className="flex flex-wrap items-center justify-start gap-6">
+                      {rightPeers.map((node, nodeIdx) =>
+                        renderMemberNode(node, nodeIdx, rowIndex, row.gradient)
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Other Generational Rows (Grandparents, Parents, Children) */
+                  <div className="flex flex-row flex-wrap items-center justify-center gap-6 w-full">
+                    {row.nodes.map((node, nodeIdx) =>
+                      renderMemberNode(node, nodeIdx, rowIndex, row.gradient)
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
