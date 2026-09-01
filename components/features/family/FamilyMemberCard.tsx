@@ -2,13 +2,27 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, ChevronRight, Trash2, HeartPulse } from 'lucide-react'
+import {
+  Activity,
+  Bell,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  HeartPulse,
+  Trash2,
+} from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useDeleteFamilyConnection } from '@/hooks/useFamily'
+import {
+  useDeleteFamilyConnection,
+  useFamilyMemberMedications,
+  useSendCaregiverNudge,
+} from '@/hooks/useFamily'
 import { RELATIONS_MAP, getRelationLabel } from '@/lib/family/relations'
 import type { FamilyConnection } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { PillAvatar } from '@/components/shared/PillAvatar'
+import { formatTimeDisplay } from '@/lib/services/medication-reminder'
 
 interface FamilyMemberCardProps {
   connection: FamilyConnection
@@ -17,23 +31,35 @@ interface FamilyMemberCardProps {
 
 export function FamilyMemberCard({ connection, onViewHealth }: FamilyMemberCardProps) {
   const { lang } = useLanguage()
+  const isBn = lang === 'bn'
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [nudgeSent, setNudgeSent] = useState(false)
+
   const deleteMutation = useDeleteFamilyConnection()
+  const nudgeMutation = useSendCaregiverNudge()
 
   const meta = RELATIONS_MAP[connection.relation_type] || {
     badgeColor: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
   }
   const member = connection.other_user
 
+  const { data: medStatus } = useFamilyMemberMedications(member.id)
+
   const handleDelete = async () => {
     await deleteMutation.mutateAsync(connection.id)
+  }
+
+  const handleNudge = async () => {
+    await nudgeMutation.mutateAsync({ memberId: member.id })
+    setNudgeSent(true)
+    setTimeout(() => setNudgeSent(false), 3500)
   }
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="p-4 rounded-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-all group"
+      className="p-4 rounded-3xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 shadow-xs hover:shadow-md transition-all group space-y-3"
     >
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         {/* Member Identity */}
@@ -111,6 +137,87 @@ export function FamilyMemberCard({ connection, onViewHealth }: FamilyMemberCardP
           </Button>
         </div>
       </div>
+
+      {/* Medfriend Live Adherence Status Bar */}
+      {medStatus && medStatus.totalDosesToday > 0 && (
+        <div className="p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            {/* Status Chip */}
+            {medStatus.status === 'all_taken' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/90 px-2.5 py-1 rounded-xl">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>
+                  {isBn
+                    ? `আজকের সব ঔষধ গৃহীত (${medStatus.takenDosesToday}/${medStatus.totalDosesToday})`
+                    : `All Doses Taken Today (${medStatus.takenDosesToday}/${medStatus.totalDosesToday})`}
+                </span>
+              </span>
+            ) : medStatus.status === 'missed' ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-red-700 dark:text-red-300 bg-red-100/80 dark:bg-red-950/90 px-2.5 py-1 rounded-xl">
+                <Clock className="h-3.5 w-3.5 text-red-500" />
+                <span>
+                  {isBn
+                    ? `⚠️ ${medStatus.missedDosesToday}টি ডোজ দেরি হয়েছে`
+                    : `⚠️ ${medStatus.missedDosesToday} dose(s) missed`}
+                </span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100/80 dark:bg-sky-950/90 px-2.5 py-1 rounded-xl">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {isBn
+                    ? `পরবর্তী ডোজ: ${formatTimeDisplay(medStatus.nextDoseTime || '08:00', lang)} (${medStatus.takenDosesToday}/${medStatus.totalDosesToday} সম্পন্ন)`
+                    : `Next Dose: ${formatTimeDisplay(medStatus.nextDoseTime || '08:00', lang)} (${medStatus.takenDosesToday}/${medStatus.totalDosesToday})`}
+                </span>
+              </span>
+            )}
+
+            {/* Visual Pill Avatars Preview */}
+            <div className="flex items-center gap-1">
+              {medStatus.activePills.slice(0, 4).map((p, idx) => (
+                <div
+                  key={`${p.drugNameEn}-${idx}`}
+                  title={`${p.drugNameEn} (${p.descriptorBn})`}
+                  className="p-1 rounded-lg bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shadow-2xs"
+                >
+                  <PillAvatar
+                    shape={p.shape}
+                    color={p.color}
+                    colorSecondary={p.colorSecondary}
+                    size="xs"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Caregiver Nudge Button */}
+          {medStatus.status !== 'all_taken' && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleNudge}
+              disabled={nudgeMutation.isPending || nudgeSent}
+              className={`h-7.5 text-xs font-bold rounded-xl px-2.5 shrink-0 transition-all ${
+                nudgeSent
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-300'
+                  : 'text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800 hover:bg-amber-50'
+              }`}
+            >
+              <Bell className="h-3 w-3 mr-1" />
+              <span>
+                {nudgeSent
+                  ? isBn
+                    ? 'মনে করিয়ে দেওয়া হয়েছে! ✓'
+                    : 'Nudged! ✓'
+                  : isBn
+                  ? 'মনে করিয়ে দিন'
+                  : 'Send Nudge'}
+              </span>
+            </Button>
+          )}
+        </div>
+      )}
     </motion.div>
   )
 }

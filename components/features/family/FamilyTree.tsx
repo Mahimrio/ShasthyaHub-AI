@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useCaregiverAlerts } from '@/hooks/useFamily'
 import { RELATIONS_MAP, getRelationLabel } from '@/lib/family/relations'
 import type { FamilyTreeNode } from '@/types'
 import { Button } from '@/components/ui/button'
@@ -132,6 +133,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
 
   const hasFamily = generationRows.some((r) => r.nodes.length > 0 || r.isSelf)
 
+  const { data: caregiverData } = useCaregiverAlerts()
+
   // Reusable member node component
   const renderMemberNode = (node: FamilyTreeNode, nodeIdx: number, rowIndex: number, gradient: string) => {
     const health = node.healthSummary
@@ -141,6 +144,10 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
     const meta = RELATIONS_MAP[node.relation] || {
       badgeColor: 'bg-sky-50 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border-sky-200 dark:border-sky-800',
     }
+
+    const memberAlert = caregiverData?.alerts.find((a) => a.memberId === node.userId)
+    const hasMissedDose = (memberAlert?.missedDoses.length || 0) > 0
+    const missedCount = memberAlert?.missedDoses.length || 0
 
     return (
       <motion.div
@@ -161,15 +168,25 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
       >
         {/* Circular Avatar Node */}
         <div className="relative">
-          {/* Urgent Ping */}
-          {isUrgent && (
-            <div className="absolute inset-0 rounded-full bg-rose-500 opacity-35 blur-md animate-ping pointer-events-none" />
+          {/* Urgent Ping or Missed Dose Halo */}
+          {(isUrgent || hasMissedDose) && (
+            <div
+              className={`absolute inset-0 rounded-full opacity-40 blur-md animate-ping pointer-events-none ${
+                hasMissedDose ? 'bg-red-500' : 'bg-rose-500'
+              }`}
+            />
           )}
 
           {/* Pure Circular Gradient Node */}
           <div
-            className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${gradient} flex flex-col items-center justify-center text-white text-center shadow-lg transition-all duration-300 ${
-              isUrgent ? 'shadow-rose-500/30' : 'shadow-sky-900/15 dark:shadow-none'
+            className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${
+              hasMissedDose ? 'from-rose-500 via-red-500 to-amber-600' : gradient
+            } flex flex-col items-center justify-center text-white text-center shadow-lg transition-all duration-300 ${
+              hasMissedDose
+                ? 'shadow-red-500/40 ring-2 ring-red-400'
+                : isUrgent
+                ? 'shadow-rose-500/30'
+                : 'shadow-sky-900/15 dark:shadow-none'
             } ${isHovered ? 'shadow-sky-500/40 ring-4 ring-sky-400/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}`}
           >
             <span className="text-xl font-black leading-none">{node.name?.[0]?.toUpperCase() || 'U'}</span>
@@ -178,8 +195,16 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
             </span>
           </div>
 
-          {/* Medicine Badge */}
-          {medCount > 0 ? (
+          {/* Missed Dose Alert Badge or Medicine Count */}
+          {hasMissedDose ? (
+            <div
+              className="absolute -top-2 -right-1 bg-red-600 text-white border border-white dark:border-gray-900 rounded-full text-[8px] font-black px-1.5 py-0.5 shadow-md flex items-center gap-0.5 animate-bounce"
+              title={lang === 'bn' ? `${missedCount}টি ঔষধের নির্ধারিত সময় পার হয়েছে` : `${missedCount} missed doses`}
+            >
+              <AlertTriangle className="h-2 w-2" />
+              <span>{lang === 'bn' ? 'মিসড' : 'Missed'}</span>
+            </div>
+          ) : medCount > 0 ? (
             <div
               className="absolute -top-1 -right-1 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] font-bold px-1.5 py-0.5 shadow-xs flex items-center gap-0.5"
               title={`${medCount} active medications`}
@@ -194,7 +219,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           )}
 
           {/* Urgent Badge */}
-          {isUrgent && (
+          {isUrgent && !hasMissedDose && (
             <div className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-xs animate-bounce">
               <AlertTriangle className="h-2.5 w-2.5" />
             </div>

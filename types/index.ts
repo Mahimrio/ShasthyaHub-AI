@@ -480,4 +480,148 @@ export interface UserSearchResult {
   existingConnectionId?: string
 }
 
+// ============================================================
+// Medication Reminders & Adherence Tracking Types
+// ============================================================
+
+export type MealTimingType = 'before_meal' | 'after_meal' | 'with_meal' | 'empty_stomach' | 'anytime'
+export type SlotType = 'morning' | 'afternoon' | 'evening' | 'night' | 'custom'
+export type DoseStatus = 'pending' | 'taken' | 'snoozed' | 'missed' | 'skipped'
+export type PillShapeType =
+  | 'round_tablet'
+  | 'capsule'
+  | 'caplet_oval'
+  | 'syrup_liquid'
+  | 'drops'
+  | 'inhaler'
+  | 'injection_pen'
+
+export interface MedicationScheduleItem {
+  id: string
+  user_id: string
+  prescription_id?: string | null
+  drug_name_en: string
+  drug_name_bn: string
+  generic_name?: string
+  dosage: string
+  meal_timing: MealTimingType
+  scheduled_time: string // e.g. "08:00" (24hr format HH:mm)
+  slot_type: SlotType
+  frequency_code?: string // e.g. "1+0+1", "TDS", "Every 8 hrs"
+  interval_hours?: number | null // e.g. 8 for 8-hour intervals
+  instructions_en?: string
+  instructions_bn?: string
+  indication_en?: string // e.g. "Acidity & Reflux", "Fever & Pain"
+  indication_bn?: string
+  pill_shape?: PillShapeType
+  pill_color?: string // Hex code or tailwind color
+  pill_color_secondary?: string // for 2-tone capsules
+  total_prescribed_quantity?: number // e.g. 30
+  remaining_quantity?: number // e.g. 14
+  refill_threshold?: number // e.g. 4
+  start_date: string // YYYY-MM-DD
+  end_date?: string | null
+  duration_days?: number
+  is_active: boolean
+  is_archived?: boolean
+  created_at: string
+}
+
+export interface CabinetMedicineSummary {
+  schedule: MedicationScheduleItem
+  times: string[] // all daily times for this drug e.g. ["08:00", "20:00"]
+  frequency: string // e.g. "1+0+1 (Twice Daily)"
+  pillShape: PillShapeType
+  pillColor: string
+  pillColorSecondary?: string
+  pillDescriptorBn: string
+  pillDescriptorEn: string
+  remainingPills: number
+  totalPills: number
+  daysRemaining: number
+  isLowStock: boolean
+  courseProgressPercent: number
+  takenCount: number
+  missedCount: number
+  adherenceRate: number
+  todayStatus: DoseStatus
+}
+
+export interface FamilyMemberMedicationStatus {
+  memberId: string
+  totalMeds: number
+  totalDosesToday: number
+  takenDosesToday: number
+  missedDosesToday: number
+  complianceRate: number
+  status: 'all_taken' | 'upcoming' | 'missed' | 'none'
+  nextDoseTime?: string
+  activePills: Array<{
+    drugNameEn: string
+    drugNameBn: string
+    dosage: string
+    shape: PillShapeType
+    color: string
+    colorSecondary?: string
+    descriptorBn: string
+    isDueNow?: boolean
+  }>
+}
+
+export interface DoseLog {
+  id: string
+  schedule_id: string
+  user_id: string
+  scheduled_for: string // ISO timestamp of target dose time
+  scheduled_time: string // HH:mm
+  status: DoseStatus
+  logged_at?: string | null // ISO timestamp when user marked action
+  snoozed_until?: string | null // ISO timestamp if snoozed
+  notes?: string | null
+  created_at: string
+}
+
+export interface UserReminderSettings {
+  id?: string
+  user_id: string
+  breakfast_time: string // "08:00"
+  lunch_time: string // "13:30"
+  dinner_time: string // "21:30"
+  bedtime: string // "22:30"
+  notifications_enabled: boolean
+  sound_enabled: boolean
+  notify_caregivers_on_missed: boolean
+  grace_period_minutes: number // default 45 minutes
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ActiveDoseWithStatus {
+  schedule: MedicationScheduleItem
+  todayLog: DoseLog | null
+  status: DoseStatus
+  dueTime: string // "08:00 AM"
+  isDueNow: boolean
+  isMissed: boolean
+  timeDiffMinutes: number // positive = in future, negative = in past
+  clinicalMissedAdvice?: {
+    action: 'take_now' | 'skip' | 'consult'
+    advice_en: string
+    advice_bn: string
+    reason_en: string
+    reason_bn: string
+  }
+}
+
+export interface MedicationAdherenceSummary {
+  totalDosesToday: number
+  takenToday: number
+  missedToday: number
+  pendingToday: number
+  adherencePercentage: number
+  weeklyStreakDays: number
+  nextDose?: ActiveDoseWithStatus | null
+}
+
+
 

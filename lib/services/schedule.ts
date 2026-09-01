@@ -168,7 +168,7 @@ function parseDurationDays(duration: string): number {
  * Parses frequency codes, derives duration, and emits a generic audio line that
  * is safe to speak aloud.
  */
-function buildScheduleLocally(mappedDrugs: ExtractedMedication[]): MedicationSchedule {
+export function buildScheduleLocally(mappedDrugs: ExtractedMedication[]): MedicationSchedule {
   const slots: Record<SlotKey, ScheduleSlot[]> = {
     morning: [],
     afternoon: [],

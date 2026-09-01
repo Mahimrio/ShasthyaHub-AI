@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { MedicationNotificationDrawer } from '@/components/features/medications/MedicationNotificationDrawer'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Footer } from '@/components/layout/Footer'
 import { ChatWidget } from '@/components/chat/ChatWidget'
@@ -63,6 +64,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">ShasthyaHub</span>
           </Link>
           <div className="flex items-center gap-1">
+            <MedicationNotificationDrawer />
             <ThemeToggle />
             <LanguageToggle />
           </div>
@@ -188,7 +190,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               ShasthyaHub
             </span>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <MedicationNotificationDrawer />
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Desktop Sidebar Nav Links */}

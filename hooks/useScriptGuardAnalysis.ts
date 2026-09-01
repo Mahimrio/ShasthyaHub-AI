@@ -15,6 +15,7 @@ interface State {
 type Action =
   | { type: 'START_LOADING' }
   | { type: 'SET_RESULT'; result: ScriptGuardResult }
+  | { type: 'UPDATE_RESULT'; result: ScriptGuardResult }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'RESET' }
 
@@ -24,6 +25,8 @@ function reducer(state: State, action: Action): State {
       return { ...state, isLoading: true, isError: false, error: null, result: null }
     case 'SET_RESULT':
       return { ...state, result: action.result, isLoading: false, mode: 'online' }
+    case 'UPDATE_RESULT':
+      return { ...state, result: action.result }
     case 'SET_ERROR':
       return { ...state, error: action.error, isError: true, isLoading: false }
     case 'RESET':
@@ -132,6 +135,10 @@ export function useScriptGuardAnalysis() {
     [clearTimer]
   )
 
+  const updateResult = useCallback((newResult: ScriptGuardResult) => {
+    dispatch({ type: 'UPDATE_RESULT', result: newResult })
+  }, [])
+
   return {
     analyze,
     result: state.result,
@@ -140,5 +147,7 @@ export function useScriptGuardAnalysis() {
     error: state.error,
     reset,
     mode: state.mode,
+    updateResult,
   }
 }
+

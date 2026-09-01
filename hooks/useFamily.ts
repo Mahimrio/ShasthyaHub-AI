@@ -233,3 +233,98 @@ export function useMemberHealthReports(memberId: string | null) {
     },
   })
 }
+
+export const MEMBER_MEDICATIONS_KEY = ['member-medications'] as const
+
+// 10. Fetch family member live medication status
+export function useFamilyMemberMedications(memberId: string | null) {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: [...MEMBER_MEDICATIONS_KEY, memberId ?? 'none'],
+    enabled: !!user && !!memberId,
+    refetchInterval: 30_000, // auto-refresh every 30s
+    queryFn: async () => {
+      if (!memberId) return null
+      const res = await fetch(`/api/family/medications?member_id=${memberId}`)
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        return null
+      }
+      return json.data as import('@/types').FamilyMemberMedicationStatus
+    },
+  })
+}
+
+// 11. Send caregiver reminder nudge
+export function useSendCaregiverNudge() {
+  return useMutation({
+    mutationFn: async ({ memberId }: { memberId: string }) => {
+      const res = await fetch('/api/family/medications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: memberId }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to send nudge')
+      }
+      return json
+    },
+  })
+}
+
+export const CAREGIVER_ALERTS_KEY = ['caregiver-alerts'] as const
+
+// 12. Fetch aggregated caregiver alerts for all family members
+export function useCaregiverAlerts() {
+  const { user } = useAuth()
+
+  return useQuery({
+    queryKey: [...CAREGIVER_ALERTS_KEY, user?.id ?? 'anon'],
+    enabled: !!user,
+    refetchInterval: 25_000, // refresh every 25s for real-time alerts
+    queryFn: async () => {
+      const res = await fetch('/api/family/caregiver-alerts')
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        return {
+          alerts: [] as Array<import('@/app/api/family/caregiver-alerts/route').CaregiverMemberAlert>,
+          subscriptions: {} as Record<string, boolean>,
+        }
+      }
+      return json.data as {
+        alerts: Array<import('@/app/api/family/caregiver-alerts/route').CaregiverMemberAlert>
+        subscriptions: Record<string, boolean>
+      }
+    },
+  })
+}
+
+// 13. Toggle caregiver alert subscription for a relative
+export function useToggleCaregiverAlertSubscription() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({ memberId, enabled }: { memberId: string; enabled: boolean }) => {
+      const res = await fetch('/api/family/caregiver-alerts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: memberId, enabled }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to update subscription')
+      }
+      return json.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...CAREGIVER_ALERTS_KEY, user?.id ?? 'anon'],
+      })
+    },
+  })
+}
+
+

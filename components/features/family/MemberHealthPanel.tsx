@@ -1,27 +1,38 @@
 'use client'
 
+import { useState } from 'react'
 import {
   X,
   Eye,
   FileText,
   Utensils,
   AlertTriangle,
+  Bell,
   Sun,
   Sunset,
   Moon,
   Coffee,
   CheckCircle2,
+  Clock,
   Loader2,
   Pill,
+  ShieldAlert,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-import { useMemberHealthReports } from '@/hooks/useFamily'
+import {
+  useMemberHealthReports,
+  useCaregiverAlerts,
+  useToggleCaregiverAlertSubscription,
+  useSendCaregiverNudge,
+} from '@/hooks/useFamily'
 import { RELATIONS_MAP, getRelationLabel } from '@/lib/family/relations'
 import type { RelationType, MedicationSchedule } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { PillAvatar } from '@/components/shared/PillAvatar'
+import { formatTimeDisplay } from '@/lib/services/medication-reminder'
 
 interface ExtractedDrugItem {
   brand_name?: string
@@ -65,6 +76,17 @@ interface MemberHealthPanelProps {
 export function MemberHealthPanel({ memberId, onClose }: MemberHealthPanelProps) {
   const { lang } = useLanguage()
   const { data: healthData, isLoading, error } = useMemberHealthReports(memberId)
+  const { data: caregiverData } = useCaregiverAlerts()
+  const toggleSubscription = useToggleCaregiverAlertSubscription()
+  const nudgeMutation = useSendCaregiverNudge()
+  const [nudgeSent, setNudgeSent] = useState(false)
+
+  const handleNudge = async () => {
+    if (!memberId) return
+    await nudgeMutation.mutateAsync({ memberId })
+    setNudgeSent(true)
+    setTimeout(() => setNudgeSent(false), 3500)
+  }
 
   if (!memberId) return null
 
@@ -187,6 +209,133 @@ export function MemberHealthPanel({ memberId, onClose }: MemberHealthPanelProps)
                   </p>
                 </div>
               </div>
+
+              {/* Caregiver Missed Dose Alerts & Subscription Controller */}
+              {(() => {
+                const memberAlert = caregiverData?.alerts.find((a) => a.memberId === memberId)
+                const missedDoses = memberAlert?.missedDoses || []
+                const isSubscribed =
+                  caregiverData?.subscriptions[memberId] !== undefined
+                    ? caregiverData.subscriptions[memberId]
+                    : ['Father', 'Mother', 'Grandfather', 'Grandmother', 'Child'].includes(
+                        member?.relation || ''
+                      )
+
+                return (
+                  <div className="space-y-3">
+                    {/* Active Missed Dose Warning Banner */}
+                    {missedDoses.length > 0 && (
+                      <div className="p-4 rounded-3xl bg-gradient-to-br from-red-500/15 via-rose-500/10 to-amber-500/10 border border-red-300/80 dark:border-red-800/60 shadow-xs space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-start gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                              <ShieldAlert className="h-4 w-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-red-900 dark:text-red-200">
+                                {lang === 'bn'
+                                  ? `${member?.name || 'এই সদস্যের'} ${missedDoses.length}টি ওষুধের নির্ধারিত সময় পার হয়েছে`
+                                  : `${member?.name || 'Member'} missed ${missedDoses.length} scheduled dose(s)`}
+                              </h4>
+                              <p className="text-[11px] text-red-700/80 dark:text-red-300/80 mt-0.5">
+                                {lang === 'bn'
+                                  ? 'নির্ধারিত সময়ের ৪৫ মিনিট অতিবাহিত হয়েছে। অনুগ্রহ করে মনে করিয়ে দিন।'
+                                  : 'Scheduled time passed by 45+ minutes. Send a gentle reminder.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            onClick={handleNudge}
+                            disabled={nudgeMutation.isPending || nudgeSent}
+                            className={`h-8 text-xs font-bold rounded-xl px-3 shrink-0 shadow-sm transition-all ${
+                              nudgeSent
+                                ? 'bg-emerald-500 text-white'
+                                : 'bg-red-600 hover:bg-red-700 text-white'
+                            }`}
+                          >
+                            <Bell className="h-3.5 w-3.5 mr-1" />
+                            <span>
+                              {nudgeSent
+                                ? lang === 'bn'
+                                  ? 'মনে করিয়ে দেওয়া হয়েছে! ✓'
+                                  : 'Nudged! ✓'
+                                : lang === 'bn'
+                                ? 'মনে করিয়ে দিন'
+                                : 'Send Nudge'}
+                            </span>
+                          </Button>
+                        </div>
+
+                        {/* Missed drugs preview list */}
+                        <div className="space-y-1.5 pt-1 border-t border-red-200/60 dark:border-red-900/40">
+                          {missedDoses.map((m) => (
+                            <div
+                              key={m.scheduleId}
+                              className="flex items-center justify-between p-2 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-red-100 dark:border-red-900/30 text-xs"
+                            >
+                              <div className="flex items-center gap-2">
+                                <div className="p-0.5 rounded-lg bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shrink-0">
+                                  <PillAvatar
+                                    shape={m.pillShape}
+                                    color={m.pillColor}
+                                    colorSecondary={m.pillColorSecondary}
+                                    size="xs"
+                                  />
+                                </div>
+                                <span className="font-bold text-gray-800 dark:text-gray-200">
+                                  {lang === 'bn' ? m.drugNameBn : m.drugNameEn} ({m.dosage})
+                                </span>
+                              </div>
+                              <span className="text-[11px] font-mono text-red-600 dark:text-red-400 font-bold flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatTimeDisplay(m.scheduledTime, lang)}</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Per-Node Caregiver Notification Subscription Controller */}
+                    <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700/60 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                          <Bell className="h-3.5 w-3.5" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                            {lang === 'bn'
+                              ? 'মিসড ডোজের নোটিফিকেশন পান'
+                              : 'Receive Missed Dose Alerts'}
+                          </p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                            {lang === 'bn'
+                              ? 'চালু রাখলে এই সদস্যের কোনো ওষুধ মিস হলে আপনার মূল নোটিফিকেশন বারে সতর্কবার্তা পাবেন।'
+                              : 'Get alerts in your top navigation bar when this family member misses a dose.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={isSubscribed}
+                          onChange={(e) =>
+                            toggleSubscription.mutate({
+                              memberId,
+                              enabled: e.target.checked,
+                            })
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500" />
+                      </label>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {/* Elderly Care Feature Highlight: Daily Medication Schedule */}
               <div className="space-y-3">
