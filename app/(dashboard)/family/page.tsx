@@ -10,6 +10,8 @@ import {
   Mail,
   Copy,
   Check,
+  AtSign,
+  Edit3,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -23,6 +25,7 @@ import { FamilyMemberCard } from '@/components/features/family/FamilyMemberCard'
 import { InvitationCard } from '@/components/features/family/InvitationCard'
 import { AddFamilyMember } from '@/components/features/family/AddFamilyMember'
 import { MemberHealthPanel } from '@/components/features/family/MemberHealthPanel'
+import { UpdateUsernameDialog } from '@/components/features/family/UpdateUsernameDialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -32,6 +35,7 @@ export default function FamilyPage() {
   const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<'tree' | 'members' | 'invitations'>('tree')
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [usernameModalOpen, setUsernameModalOpen] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState(false)
 
@@ -92,7 +96,7 @@ export default function FamilyPage() {
               className="inline-flex items-center gap-1.5 text-xs font-mono font-semibold text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/80 px-3 py-2 rounded-2xl border border-gray-200 dark:border-gray-700 transition-colors shadow-2xs"
             >
               <Mail className="h-3.5 w-3.5 text-sky-500" />
-              <span className="truncate max-w-[140px] sm:max-w-[180px]">{userEmail}</span>
+              <span className="truncate max-w-[130px] sm:max-w-[160px]">{userEmail}</span>
               {copiedId ? (
                 <Check className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
               ) : (
@@ -101,6 +105,20 @@ export default function FamilyPage() {
             </button>
           )}
 
+          {/* Update Username Button */}
+          <Button
+            variant="outline"
+            onClick={() => setUsernameModalOpen(true)}
+            className="rounded-2xl border-gray-200 dark:border-gray-700 text-xs font-semibold h-9 px-3 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <AtSign className="h-3.5 w-3.5 mr-1 text-emerald-500" />
+            <span>
+              {currentUsername ? `@${currentUsername}` : (lang === 'bn' ? 'ইউজারনেম' : 'Set Username')}
+            </span>
+            <Edit3 className="h-3 w-3 ml-1.5 text-gray-400" />
+          </Button>
+
+          {/* Add Member Button */}
           <Button
             onClick={() => setAddModalOpen(true)}
             className="rounded-2xl bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white text-xs font-bold h-9 px-4 shadow-sm"
@@ -246,6 +264,15 @@ export default function FamilyPage() {
       <AddFamilyMember
         open={addModalOpen}
         onOpenChange={setAddModalOpen}
+      />
+
+      {/* Update Username Dialog */}
+      <UpdateUsernameDialog
+        open={usernameModalOpen}
+        onOpenChange={setUsernameModalOpen}
+        currentUsername={currentUsername}
+        userEmail={userEmail}
+        userName={profile?.name || null}
       />
 
       {/* Member Health & Medication Timeline Panel Modal */}

@@ -169,8 +169,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           {/* Pure Circular Gradient Node */}
           <div
             className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${gradient} flex flex-col items-center justify-center text-white text-center shadow-lg transition-all duration-300 ${
-              isUrgent ? 'shadow-rose-500/30' : 'shadow-gray-400/20 dark:shadow-none'
-            } ${isHovered ? 'shadow-sky-500/30 ring-2 ring-sky-400 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}`}
+              isUrgent ? 'shadow-rose-500/30' : 'shadow-sky-900/15 dark:shadow-none'
+            } ${isHovered ? 'shadow-sky-500/40 ring-4 ring-sky-400/40 ring-offset-2 ring-offset-white dark:ring-offset-gray-900' : ''}`}
           >
             <span className="text-xl font-black leading-none">{node.name?.[0]?.toUpperCase() || 'U'}</span>
             <span className="text-[9px] font-semibold mt-0.5 opacity-90 truncate px-1 max-w-full">
@@ -203,7 +203,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
 
         {/* Name Below Node */}
         <div className="flex flex-col items-center">
-          <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[100px] text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+          <span className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[105px] text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors drop-shadow-2xs">
             {node.name}
           </span>
         </div>
@@ -241,9 +241,11 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   }
 
   return (
-    <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/20 to-slate-50/50 dark:from-gray-950 dark:via-gray-900/90 dark:to-gray-950 shadow-xs overflow-hidden flex flex-col transition-all">
-      {/* Subtle Dot Mesh Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(#0284c710_1px,transparent_1px)] [background-size:22px_22px] pointer-events-none" />
+    <div className="relative w-full rounded-3xl border border-sky-100/80 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm overflow-hidden flex flex-col transition-all">
+      {/* Professional Architectural Blueprint Grid System */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(14,165,233,0.07)_1px,transparent_1px),linear-gradient(to_bottom,rgba(14,165,233,0.07)_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(rgba(14,165,233,0.12)_1px,transparent_1px)] bg-[size:14px_14px] opacity-40 pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-80 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(14,165,233,0.12),transparent_75%)] pointer-events-none" />
 
       {/* Floating Canvas Zoom Controls */}
       <div className="absolute top-4 right-4 z-30 flex items-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl border border-gray-200/80 dark:border-gray-700/80 p-0.5 shadow-sm">
@@ -264,7 +266,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
       {/* Main Generational Tree Stage */}
       <div
         ref={containerRef}
-        className="relative flex-1 w-full overflow-x-auto flex items-start justify-center py-8 px-4 min-h-[500px]"
+        className="relative flex-1 w-full overflow-x-auto flex items-start justify-center py-10 px-4 min-h-[520px]"
       >
         <motion.div
           animate={{ scale: zoomLevel }}
@@ -274,7 +276,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           {/* Empty State */}
           {!hasFamily && (
             <div className="flex flex-col items-center justify-center text-center py-16 px-4">
-              <div className="p-4 rounded-2xl bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border border-gray-200 dark:border-gray-800 max-w-sm shadow-lg">
+              <div className="p-4 rounded-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border border-gray-200 dark:border-gray-800 max-w-sm shadow-lg">
                 <Sparkles className="h-6 w-6 text-sky-500 mx-auto mb-1.5" />
                 <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
                   {lang === 'bn' ? 'আপনার পারিবারিক বৃক্ষ তৈরি করুন' : 'Start Your Family Tree'}
@@ -324,16 +326,16 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                   className="mb-4 flex items-center gap-2"
                 >
                   <div className={`h-px flex-1 min-w-[30px] bg-gradient-to-r from-transparent ${row.level < 0 ? 'to-sky-200 dark:to-sky-800' : row.level === 0 ? 'to-emerald-200 dark:to-emerald-800' : 'to-amber-200 dark:to-amber-800'}`} />
-                  <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border backdrop-blur-sm ${
+                  <span className={`text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border backdrop-blur-sm shadow-2xs ${
                     row.level === -2
-                      ? 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
+                      ? 'text-purple-700 dark:text-purple-300 bg-purple-50/90 dark:bg-purple-950/50 border-purple-200 dark:border-purple-800'
                       : row.level === -1
-                      ? 'text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800'
+                      ? 'text-sky-700 dark:text-sky-300 bg-sky-50/90 dark:bg-sky-950/50 border-sky-200 dark:border-sky-800'
                       : row.level === 0
-                      ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
+                      ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/50 border-emerald-200 dark:border-emerald-800'
                       : row.level === 1
-                      ? 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800'
-                      : 'text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/50 border-pink-200 dark:border-pink-800'
+                      ? 'text-amber-700 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800'
+                      : 'text-pink-700 dark:text-pink-300 bg-pink-50/90 dark:bg-pink-950/50 border-pink-200 dark:border-pink-800'
                   }`}>
                     {lang === 'bn' ? row.labelBn : row.label}
                   </span>
@@ -363,8 +365,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                       >
                         <div className="relative">
                           {/* Pulsing Aura */}
-                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-20 blur-lg group-hover:opacity-40 animate-pulse transition-opacity" />
-                          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-xl shadow-sky-500/25 ring-4 ring-white dark:ring-gray-900">
+                          <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-25 blur-lg group-hover:opacity-45 animate-pulse transition-opacity" />
+                          <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-xl shadow-sky-500/30 ring-4 ring-white dark:ring-gray-900">
                             <span className="text-2xl font-black leading-none">{self.name?.[0]?.toUpperCase() || 'Y'}</span>
                             <span className="text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90">
                               {lang === 'bn' ? 'আপনি' : 'YOU'}
@@ -376,7 +378,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                           </div>
                         </div>
                         <div className="flex flex-col items-center mt-1">
-                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate max-w-[110px] text-center">
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate max-w-[110px] text-center drop-shadow-2xs">
                             {self.name || (lang === 'bn' ? 'আপনি' : 'You')}
                           </span>
                         </div>
@@ -404,31 +406,11 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         </motion.div>
       </div>
 
-      {/* Status Legend Bar */}
-      <div className="relative z-20 px-5 py-3 border-t border-gray-200/60 dark:border-gray-800 bg-white/75 dark:bg-gray-900/75 backdrop-blur-md flex items-center justify-between gap-4 flex-wrap text-[11px] text-gray-500 dark:text-gray-400">
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="font-bold text-gray-800 dark:text-gray-200">{lang === 'bn' ? 'প্রজন্ম:' : 'Generations:'}</span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
-            <span>{lang === 'bn' ? 'দাদা-দাদী (-২)' : 'Grandparents'}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500" />
-            <span>{lang === 'bn' ? 'মা-বাবা (-১)' : 'Parents'}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span>{lang === 'bn' ? 'আপনার প্রজন্ম (০)' : 'Your Gen'}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span>{lang === 'bn' ? 'সন্তান (+১)' : 'Children'}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-pink-500" />
-            <span>{lang === 'bn' ? 'নাতি-নাতনি (+২)' : 'Grandchildren'}</span>
-          </span>
-        </div>
+      {/* Clean Bottom Status Bar (Removed redundant generation color mentioning per request!) */}
+      <div className="relative z-20 px-5 py-2.5 border-t border-sky-100/80 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md flex items-center justify-between gap-4 text-[11px] text-gray-500 dark:text-gray-400">
+        <span className="text-[10px] text-gray-400 font-medium">
+          {lang === 'bn' ? 'স্বাস্থ্য ও ওষুধের বিবরণ দেখতে যেকোনো সদস্যের নোডে ক্লিক করুন' : 'Click any member node to view health routine & prescriptions'}
+        </span>
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
             <CheckCircle2 className="h-3 w-3" />
