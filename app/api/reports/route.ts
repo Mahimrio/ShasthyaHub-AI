@@ -118,3 +118,61 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    if (authError || !user) {
+      return NextResponse.json<ApiError>(
+        { success: false, error: 'Unauthorized', code: 'UNAUTHORIZED' },
+        { status: 401 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const id = searchParams.get('id')
+    const type = searchParams.get('type')
+
+    if (!id || !type) {
+      return NextResponse.json<ApiError>(
+        { success: false, error: 'Report ID and type are required', code: 'INVALID_INPUT' },
+        { status: 400 }
+      )
+    }
+
+    let tableName: string | null = null
+    if (type === 'eye') tableName = 'eye_analyses'
+    else if (type === 'prescription') tableName = 'prescription_analyses'
+    else if (type === 'food') tableName = 'food_analyses'
+
+    if (!tableName) {
+      return NextResponse.json<ApiError>(
+        { success: false, error: 'Invalid report type', code: 'INVALID_TYPE' },
+        { status: 400 }
+      )
+    }
+
+    const { error: deleteError } = await supabase
+      .from(tableName)
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id)
+
+    if (deleteError) {
+      console.error(`[reports] delete error on ${tableName}:`, deleteError)
+      return NextResponse.json<ApiError>(
+        { success: false, error: 'Failed to delete report', code: 'DELETE_ERROR' },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, message: 'Report deleted successfully' })
+  } catch (error) {
+    console.error('[reports] DELETE handler error:', error)
+    return NextResponse.json<ApiError>(
+      { success: false, error: 'Failed to delete report', code: 'INTERNAL_ERROR' },
+      { status: 500 }
+    )
+  }
+}

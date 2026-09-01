@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
-  Info,
   Lightbulb,
   RotateCcw,
   Search,
@@ -22,7 +21,6 @@ import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { ResultCard } from '@/components/shared/ResultCard'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import { AnalysisModeBadge } from '@/components/shared/AnalysisModeBadge'
 import ExtractedMedsTable from '@/components/features/scriptguard/ExtractedMedsTable'
 import DrugInteractionAlert from '@/components/features/scriptguard/DrugInteractionAlert'
 import MedicationScheduleTimeline from '@/components/features/scriptguard/MedicationScheduleTimeline'
@@ -33,7 +31,7 @@ const DISCLAIMER_KEY = 'scriptguard_disclaimer_seen'
 export default function ScriptGuardPage() {
   const { lang } = useLanguage()
   const { isOnline } = useNetworkStatus()
-  const { analyze, result, isLoading, isError, error, reset, mode, offlineStatus } =
+  const { analyze, result, isLoading, isError, error, reset } =
     useScriptGuardAnalysis()
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -108,7 +106,7 @@ export default function ScriptGuardPage() {
         {/* Ambient Radial Gradient Blobs */}
         <div className="absolute -left-32 top-10 h-[700px] w-[700px] rounded-full bg-emerald-300/40 dark:bg-emerald-500/20 blur-[140px] motion-reduce:hidden animate-float-1" />
         <div className="absolute -right-32 top-40 h-[700px] w-[700px] rounded-full bg-teal-300/35 dark:bg-teal-500/20 blur-[140px] motion-reduce:hidden animate-float-2" />
-        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:bg-cyan-600/15 blur-[160px] motion-reduce:hidden animate-float-3" />
+        <div className="absolute left-1/2 -translate-x-1/2 bottom-0 h-[500px] w-[800px] rounded-full bg-cyan-200/25 dark:cyan-600/15 blur-[160px] motion-reduce:hidden animate-float-3" />
       </div>
 
       <div className="relative min-h-screen z-10">
@@ -144,23 +142,17 @@ export default function ScriptGuardPage() {
           </div>
         )}
 
-        {/* Offline fallback info */}
-        {!isOnline && offlineStatus !== 'idle' && offlineStatus !== 'ready' && !result && (
+        {/* Offline notification */}
+        {!isOnline && !result && (
           <Alert className="rounded-2xl border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20">
             <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-              {lang === 'bn' ? 'অফলাইন অবস্থা' : 'Offline Status'}
+              {lang === 'bn' ? 'ইন্টারনেট সংযোগ প্রয়োজন' : 'Internet Connection Required'}
             </AlertTitle>
             <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
-              {offlineStatus === 'missing'
-                ? lang === 'bn'
-                  ? 'অফলাইন OCR এই ডিভাইসে সেট আপ করা হয়নি — ইন্টারনেটে সংযুক্ত হন।'
-                  : 'Offline OCR isn\'t set up on this device yet — connect to the internet for analysis.'
-                : offlineStatus === 'unsupported'
-                  ? lang === 'bn'
-                    ? 'অফলাইন AI এই ডিভাইসে সমর্থিত নয় — অনুগ্রহ করে বিশ্লেষণের জন্য ইন্টারনেটে সংযুক্ত হন।'
-                    : 'Offline AI isn\'t supported on this device — please connect to the internet for analysis.'
-                  : ''}
+              {lang === 'bn'
+                ? 'প্রেসক্রিপশন বিশ্লেষণ এবং ওষুধের মিথস্ক্রিয়া যাচাই করার জন্য সক্রিয় ইন্টারনেট সংযোগ প্রয়োজন।'
+                : 'Prescription analysis and drug interaction verification require an active internet connection.'}
             </AlertDescription>
           </Alert>
         )}
@@ -175,7 +167,7 @@ export default function ScriptGuardPage() {
             />
             <Button
               onClick={handleAnalyzeClick}
-              disabled={!selectedFile || isLoading}
+              disabled={!selectedFile || isLoading || !isOnline}
               className="mt-4 w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x py-6 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Search className="mr-2 h-5 w-5" />
@@ -216,17 +208,11 @@ export default function ScriptGuardPage() {
             transition={{ duration: 0.4 }}
             className="space-y-4"
           >
-            {/* Mode badge */}
-            <div className="flex justify-end">
-              {mode && <AnalysisModeBadge mode={mode} />}
-            </div>
-
             {/* 1. Drug interactions (FIRST for safety) */}
             <DrugInteractionAlert
               interactions={result.interaction_warnings}
               hasDangerous={result.has_dangerous_interactions}
               lang={lang}
-              unavailable={mode === 'offline'}
             />
 
             {/* 2. Extracted medications */}
@@ -240,7 +226,7 @@ export default function ScriptGuardPage() {
               }}
             >
               <div className="pt-3">
-                <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} mode={mode ?? undefined} />
+                <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} />
               </div>
             </ResultCard>
 
@@ -259,29 +245,25 @@ export default function ScriptGuardPage() {
               </div>
             </ResultCard>
 
-            {/* 4. Audio guide */}
-            <AudioGuide audioScriptBn={result.audio_script_bn} lang={lang} />
+            {/* 4. Audio guide (Bengali voice overview) */}
+            <AudioGuide
+              audioScriptBn={result.audio_script_bn}
+              lang={lang}
+            />
 
-            {/* Reset */}
-            <Button
-              onClick={handleReset}
-              className="w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
-            >
-              <RotateCcw className="mr-2 h-4 w-4" />
-              {lang === 'bn'
-                ? 'নতুন প্রেসক্রিপশন স্ক্যান করুন'
-                : 'Scan New Prescription'}
-            </Button>
+            {/* Reset / New prescription button */}
+            <div className="pt-2">
+              <Button
+                onClick={handleReset}
+                variant="outline"
+                className="w-full rounded-xl py-5 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                {lang === 'bn' ? 'নতুন প্রেসক্রিপশন পরীক্ষা করুন' : 'Scan Another Prescription'}
+              </Button>
+            </div>
           </motion.div>
         )}
-
-        {/* Bottom disclaimer */}
-        <p className="flex items-center justify-center gap-1.5 text-center text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
-          <Info className="h-3.5 w-3.5 shrink-0" />
-          {lang === 'bn'
-            ? 'ScriptGuard একটি সহায়ক টুল, চিকিৎসকের পরামর্শের বিকল্প নয়। ওষুধ পরিবর্তনের আগে অবশ্যই ডাক্তারের সাথে পরামর্শ করুন।'
-            : 'ScriptGuard is a supportive tool, not a substitute for a doctor. Always consult a physician before changing any medication.'}
-        </p>
       </div>
       </div>
     </>

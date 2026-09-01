@@ -7,6 +7,8 @@ export type MappingConfidence = 'high' | 'medium' | 'low'
 export interface Profile {
   id: string
   name: string | null
+  email?: string | null
+  username?: string | null
   phone: string | null
   district: string | null
   preferred_language: Language
@@ -381,3 +383,101 @@ export const BANGLADESH_DISTRICTS = [
   'Rangpur', 'Satkhira', 'Shariatpur', 'Sherpur', 'Sirajganj', 'Sunamganj',
   'Sylhet', 'Tangail', 'Thakurgaon',
 ] as const
+
+// --- Family System (Poribar / পরিবার) types ---
+
+export type RelationType =
+  | 'Father'
+  | 'Mother'
+  | 'Son'
+  | 'Daughter'
+  | 'Husband'
+  | 'Wife'
+  | 'Brother'
+  | 'Sister'
+  | 'Grandfather'
+  | 'Grandmother'
+  | 'Grandson'
+  | 'Granddaughter'
+  | 'Uncle'
+  | 'Aunt'
+  | 'Cousin'
+  | 'Guardian'
+  | 'Caregiver'
+  | 'Other'
+  | (string & {})
+
+export type FamilyConnectionStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface FamilyConnection {
+  id: string
+  requester_id: string
+  target_id: string
+  relation_type: RelationType
+  reverse_relation_type: RelationType
+  status: FamilyConnectionStatus
+  created_at: string
+  accepted_at: string | null
+  // Associated profile of the other member
+  other_user: {
+    id: string
+    name: string | null
+    email?: string | null
+    username: string | null
+    district: string | null
+  }
+  is_requester: boolean
+}
+
+export interface FamilyMemberHealthSummary {
+  userId: string
+  name: string
+  email?: string | null
+  username: string | null
+  relation: RelationType
+  relationBn: string
+  district: string | null
+  isCurrentUser: boolean
+  totalPrescriptions: number
+  totalEyeAnalyses: number
+  totalFoodAnalyses: number
+  hasUrgentCondition: boolean
+  lastActive: string | null
+  activeMedications: {
+    name: string
+    dosage: string
+    frequency: string
+    scheduleSlot?: 'morning' | 'afternoon' | 'evening' | 'night'
+  }[]
+  latestHealthStatus?: {
+    eyeSeverity?: Severity | null
+    dietRisk?: RiskLevel | null
+    hasDangerousInteraction?: boolean
+  }
+}
+
+export interface FamilyTreeNode {
+  id: string
+  userId: string
+  name: string
+  email?: string | null
+  username: string | null
+  relation: RelationType
+  relationBn: string
+  generation: number // -2 (grandparents), -1 (parents/uncles), 0 (self/spouse/siblings), 1 (children), 2 (grandchildren)
+  isCurrentUser: boolean
+  healthSummary?: FamilyMemberHealthSummary
+  children?: FamilyTreeNode[]
+}
+
+export interface UserSearchResult {
+  id: string
+  name: string | null
+  email?: string | null
+  username: string | null
+  district: string | null
+  connectionStatus?: FamilyConnectionStatus | 'none'
+  existingConnectionId?: string
+}
+
+

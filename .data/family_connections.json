@@ -1,0 +1,32 @@
+[
+  {
+    "id": "914d6d54-0b81-4fc7-b80c-918d04e21bdf",
+    "requester_id": "1bd06ead-99ad-40b0-ab22-496de2120a6d",
+    "target_id": "51451f3c-85e6-4327-bed2-a5eaa39773b2",
+    "relation_type": "Brother",
+    "reverse_relation_type": "Brother",
+    "status": "accepted",
+    "created_at": "2026-09-01T08:22:03.627Z",
+    "accepted_at": "2026-09-01T08:22:27.225Z"
+  },
+  {
+    "id": "41bf89cd-4940-44ec-ac19-0547dbbb5f7e",
+    "requester_id": "51451f3c-85e6-4327-bed2-a5eaa39773b2",
+    "target_id": "a75152b5-1c72-45b1-9b72-444f7102aa54",
+    "relation_type": "Father",
+    "reverse_relation_type": "Father",
+    "status": "accepted",
+    "created_at": "2026-09-01T08:24:25.756Z",
+    "accepted_at": "2026-09-01T08:25:38.627Z"
+  },
+  {
+    "id": "d15f736f-afb8-4890-8e4a-a2b2e24ac8a1",
+    "requester_id": "51451f3c-85e6-4327-bed2-a5eaa39773b2",
+    "target_id": "6dadd3db-df75-44d2-8b5e-00afdbce4edc",
+    "relation_type": "Grandfather",
+    "reverse_relation_type": "Grandfather",
+    "status": "accepted",
+    "created_at": "2026-09-01T08:25:04.787Z",
+    "accepted_at": "2026-09-01T08:26:38.894Z"
+  }
+]
