@@ -34,7 +34,7 @@ interface FamilyTreeProps {
   onAddMember: () => void
 }
 
-interface PositionedOrbNode {
+interface CircularMemberNode {
   node: FamilyTreeNode
   x: number
   y: number
@@ -42,7 +42,6 @@ interface PositionedOrbNode {
   angleDeg: number
   gradient: string
   borderColor: string
-  accentColor: string
   ringCategory: string
 }
 
@@ -88,42 +87,37 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   const handleResetZoom = () => setZoomLevel(1)
 
   // =========================================================================
-  // DYNAMIC BALANCED RADIAL CONSTELLATION ALGORITHM (NO OVERLAPPING)
+  // RESPONSIVE CALCULATION (PERFECT CIRCLES & BALANCED ARCS)
   // =========================================================================
   const { width, height } = dimensions
   const cx = width / 2
   const cy = height / 2
 
   const minDim = Math.min(width, height)
-  const scale = Math.max(0.75, Math.min(1.2, minDim / 660))
+  const scale = Math.max(0.8, Math.min(1.2, minDim / 660))
 
-  const nodeSize = Math.round(Math.max(64, Math.min(88, 76 * scale)))
-  const selfSize = Math.round(Math.max(88, Math.min(116, 98 * scale)))
+  // True circular sizes (Diameter in px)
+  const orbSize = Math.round(Math.max(90, Math.min(124, 108 * scale)))
+  const selfOrbSize = Math.round(Math.max(110, Math.min(148, 132 * scale)))
 
   // Concentric Orbit Radii
-  const rInner = Math.round(Math.max(130, Math.min(210, minDim * 0.29)))
-  const rOuter = Math.round(Math.max(200, Math.min(320, minDim * 0.44)))
+  const rInner = Math.round(Math.max(145, Math.min(220, minDim * 0.3)))
+  const rOuter = Math.round(Math.max(220, Math.min(335, minDim * 0.45)))
 
   const totalMembers = treeData?.totalMembers ?? (otherNodes.length + (self ? 1 : 0))
 
-  // Balanced radial positioning ensuring distinct angles per node
-  const positionedNodes = useMemo(() => {
-    const list: PositionedOrbNode[] = []
+  // Calculate circular coordinates with symmetric non-overlapping distribution
+  const circularNodes = useMemo(() => {
+    const list: CircularMemberNode[] = []
     if (otherNodes.length === 0) return list
 
-    // Group nodes into generational rings
-    const elders = otherNodes.filter((n) => n.generation < 0) // Parents, Grandparents, Uncles
-    const peers = otherNodes.filter((n) => n.generation === 0) // Siblings, Spouse, Cousins
-    const youngers = otherNodes.filter((n) => n.generation > 0) // Children, Grandchildren
-
-    // Helper to assign visual gradient & theme by relation
+    // Theme assigner by generation
     const getTheme = (node: FamilyTreeNode) => {
       const gen = node.generation
       if (gen === -2) {
         return {
           gradient: 'from-purple-500 via-indigo-500 to-purple-600',
           borderColor: 'border-purple-400 dark:border-purple-500',
-          accentColor: '#a855f7',
           ringCategory: lang === 'bn' ? 'দাদা-দাদী' : 'Grandparents',
         }
       }
@@ -131,7 +125,6 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         return {
           gradient: 'from-sky-500 via-cyan-500 to-teal-500',
           borderColor: 'border-sky-400 dark:border-sky-500',
-          accentColor: '#0ea5e9',
           ringCategory: lang === 'bn' ? 'মা-বাবা' : 'Parents & Elders',
         }
       }
@@ -139,7 +132,6 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         return {
           gradient: 'from-emerald-500 via-teal-500 to-cyan-500',
           borderColor: 'border-emerald-400 dark:border-emerald-500',
-          accentColor: '#10b981',
           ringCategory: lang === 'bn' ? 'সহোদর / সমবয়সী' : 'Peers',
         }
       }
@@ -147,106 +139,98 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         return {
           gradient: 'from-amber-400 via-orange-500 to-amber-500',
           borderColor: 'border-amber-400 dark:border-amber-500',
-          accentColor: '#f59e0b',
           ringCategory: lang === 'bn' ? 'সন্তান' : 'Children',
         }
       }
       return {
         gradient: 'from-pink-400 via-rose-500 to-pink-500',
         borderColor: 'border-pink-400 dark:border-pink-500',
-        accentColor: '#ec4899',
         ringCategory: lang === 'bn' ? 'নাতি-নাতনি' : 'Grandchildren',
       }
     }
 
-    // Distribute Elders in top hemisphere (-160° to -20°)
-    if (elders.length > 0) {
-      const startAngle = -160
-      const endAngle = -20
-      const step = elders.length === 1 ? 0 : (endAngle - startAngle) / (elders.length - 1)
+    const grandparents = otherNodes.filter((n) => n.generation === -2)
+    const parents = otherNodes.filter((n) => n.generation === -1)
+    const peers = otherNodes.filter((n) => n.generation === 0)
+    const children = otherNodes.filter((n) => n.generation === 1)
+    const grandchildren = otherNodes.filter((n) => n.generation === 2)
 
-      elders.forEach((node, i) => {
-        // Stagger grandparents vs parents radius so they never collide
-        const r = node.generation === -2 ? rOuter : rInner
-        // Offset angle slightly if both generations are present
-        const angle = elders.length === 1
-          ? (node.generation === -2 ? -65 : -115) // Spread single elder nodes across two distinct angles!
-          : startAngle + step * i
-
+    // Helper to distribute items along an angular arc
+    const distributeArc = (
+      items: FamilyTreeNode[],
+      radius: number,
+      startAngle: number,
+      endAngle: number,
+      singleAngleOffset: number
+    ) => {
+      if (items.length === 0) return
+      if (items.length === 1) {
+        const angle = singleAngleOffset
         const rad = (angle * Math.PI) / 180
-        const theme = getTheme(node)
-
+        const theme = getTheme(items[0])
         list.push({
-          node,
-          x: cx + r * Math.cos(rad),
-          y: cy + r * Math.sin(rad),
-          radius: r,
+          node: items[0],
+          x: cx + radius * Math.cos(rad),
+          y: cy + radius * Math.sin(rad),
+          radius,
+          angleDeg: angle,
+          ...theme,
+        })
+        return
+      }
+
+      const step = (endAngle - startAngle) / (items.length - 1)
+      items.forEach((item, idx) => {
+        const angle = startAngle + step * idx
+        const rad = (angle * Math.PI) / 180
+        const theme = getTheme(item)
+        list.push({
+          node: item,
+          x: cx + radius * Math.cos(rad),
+          y: cy + radius * Math.sin(rad),
+          radius,
           angleDeg: angle,
           ...theme,
         })
       })
     }
 
-    // Distribute Peers in horizontal quadrants (Left: 145° to 195°, Right: -15° to 35°)
+    // 1. Grandparents (Outer Top Arc: -150° to -30°, single placed at -60°)
+    distributeArc(grandparents, rOuter, -150, -30, -55)
+
+    // 2. Parents & Elders (Inner Top Arc: -155° to -25°, single placed at -125°)
+    distributeArc(parents, rInner, -155, -25, -125)
+
+    // 3. Peers & Siblings (Inner Sides: Left 145° to 195°, Right -15° to 35°)
     if (peers.length > 0) {
       const leftPeers = peers.slice(0, Math.ceil(peers.length / 2))
       const rightPeers = peers.slice(Math.ceil(peers.length / 2))
 
-      const placePeerSector = (items: FamilyTreeNode[], start: number, end: number) => {
-        const step = items.length === 1 ? 0 : (end - start) / (items.length - 1)
-        items.forEach((node, i) => {
-          const angle = items.length === 1 ? (start + end) / 2 : start + step * i
-          const rad = (angle * Math.PI) / 180
-          const theme = getTheme(node)
-          list.push({
-            node,
-            x: cx + rInner * Math.cos(rad),
-            y: cy + rInner * Math.sin(rad),
-            radius: rInner,
-            angleDeg: angle,
-            ...theme,
-          })
-        })
-      }
-
-      if (leftPeers.length > 0) placePeerSector(leftPeers, 145, 195)
-      if (rightPeers.length > 0) placePeerSector(rightPeers, -15, 35)
+      distributeArc(leftPeers, rInner, 145, 195, 170)
+      distributeArc(rightPeers, rInner, -15, 35, 10)
     }
 
-    // Distribute Youngers in bottom hemisphere (40° to 140°)
-    if (youngers.length > 0) {
-      const startAngle = 45
-      const endAngle = 135
-      const step = youngers.length === 1 ? 0 : (endAngle - startAngle) / (youngers.length - 1)
+    // 4. Children (Inner Bottom Arc: 45° to 135°, single placed at 70°)
+    distributeArc(children, rInner, 45, 135, 70)
 
-      youngers.forEach((node, i) => {
-        const r = node.generation === 2 ? rOuter : rInner
-        const angle = youngers.length === 1
-          ? (node.generation === 2 ? 65 : 115)
-          : startAngle + step * i
+    // 5. Grandchildren (Outer Bottom Arc: 35° to 145°, single placed at 115°)
+    distributeArc(grandchildren, rOuter, 35, 145, 115)
 
-        const rad = (angle * Math.PI) / 180
-        const theme = getTheme(node)
-
-        list.push({
-          node,
-          x: cx + r * Math.cos(rad),
-          y: cy + r * Math.sin(rad),
-          radius: r,
-          angleDeg: angle,
-          ...theme,
-        })
-      })
+    // Catch-all unplaced
+    const placed = new Set(list.map((n) => n.node.userId))
+    const unplaced = otherNodes.filter((n) => !placed.has(n.userId))
+    if (unplaced.length > 0) {
+      distributeArc(unplaced, rOuter, 0, 360, 0)
     }
 
     return list
   }, [otherNodes, cx, cy, rInner, rOuter, lang])
 
   return (
-    <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/25 to-slate-50/60 dark:from-gray-950 dark:via-gray-900/90 dark:to-gray-950 shadow-xs overflow-hidden flex flex-col transition-all">
+    <div className="relative w-full rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/20 to-slate-50/50 dark:from-gray-950 dark:via-gray-900/90 dark:to-gray-950 shadow-xs overflow-hidden flex flex-col transition-all">
       {/* Subtle Dot Mesh Background */}
-      <div className="absolute inset-0 bg-[radial-gradient(#0284c714_1px,transparent_1px)] [background-size:22px_22px] pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-sky-400/8 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(#0284c710_1px,transparent_1px)] [background-size:22px_22px] pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[460px] h-[460px] bg-sky-400/5 dark:bg-sky-500/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Top Header Controls Bar */}
       <div className="relative z-20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200/60 dark:border-gray-800/80 backdrop-blur-md bg-white/75 dark:bg-gray-900/75">
@@ -257,7 +241,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
-                {lang === 'bn' ? 'পারিবারিক বৃত্তাকার নেটওয়ার্ক' : 'Family Health Network'}
+                {lang === 'bn' ? 'পারিবারিক বৃত্তাকার নেটওয়ার্ক' : 'Family Health Circle'}
               </h3>
               <Badge variant="outline" className="text-[10px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 rounded-full px-2 py-0.5">
                 {totalMembers} {lang === 'bn' ? 'সদস্য' : 'Members'}
@@ -265,7 +249,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {lang === 'bn'
-                ? 'পরিবারের প্রতিটি বৃত্তাকার সদস্যে ক্লিক করে ওষুধের রুটিন ও স্বাস্থ্য রিপোর্ট দেখুন'
+                ? 'পরিবারের প্রতিটি বৃত্তাকার সদস্যে ক্লিক করে ওষুধের রুটিন ও স্বাস্থ্য পর্যবেক্ষণ করুন'
                 : 'Click on any circular member to monitor medication schedules & health reports'}
             </p>
           </div>
@@ -328,20 +312,9 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
           className="relative origin-center select-none w-full h-full flex items-center justify-center"
           style={{ width, height }}
         >
-          {/* SVG Orbit Tracks & Clean Connector Curves */}
+          {/* Subtle Clean Orbit Circles (No Text, No Lines!) */}
           <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox={`0 0 ${width} ${height}`}>
-            <defs>
-              <linearGradient id="orbitGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0.4" />
-              </linearGradient>
-              <linearGradient id="urgentGlowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f43f5e" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#fbbf24" stopOpacity="0.7" />
-              </linearGradient>
-            </defs>
-
-            {/* Inner Generation Track Circle */}
+            {/* Inner Generation Ring */}
             <circle
               cx={cx}
               cy={cy}
@@ -353,7 +326,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
               strokeDasharray="4 4"
             />
 
-            {/* Outer Generation Track Circle */}
+            {/* Outer Generation Ring */}
             <circle
               cx={cx}
               cy={cy}
@@ -364,93 +337,51 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
               strokeWidth="1.5"
               strokeDasharray="6 6"
             />
-
-            {/* Smooth Quadratic Bezier Curves Connecting Center to Each Circular Orb */}
-            {positionedNodes.map((pn) => {
-              const isHovered = hoveredNodeId === pn.node.userId
-              const isUrgent = pn.node.healthSummary?.hasUrgentCondition
-
-              // Smooth curved trajectory
-              const midX = (cx + pn.x) / 2
-              const midY = (cy + pn.y) / 2
-              const curveStrength = 0.1
-              const dx = pn.x - cx
-              const dy = pn.y - cy
-              const cpX = midX - dy * curveStrength
-              const cpY = midY + dx * curveStrength
-
-              return (
-                <g key={`curve-${pn.node.userId}`}>
-                  <path
-                    d={`M ${cx} ${cy} Q ${cpX} ${cpY} ${pn.x} ${pn.y}`}
-                    fill="none"
-                    stroke={isUrgent ? 'url(#urgentGlowGradient)' : 'url(#orbitGlowGradient)'}
-                    strokeWidth={isHovered ? 2.5 : 1.5}
-                    strokeDasharray={isUrgent ? 'none' : '3 3'}
-                    className="transition-all duration-300"
-                  />
-                  <circle
-                    cx={cpX}
-                    cy={cpY}
-                    r={isHovered ? 3.5 : 2}
-                    fill={isUrgent ? '#f43f5e' : pn.accentColor}
-                    className="animate-pulse"
-                  />
-                </g>
-              )
-            })}
           </svg>
 
           {/* ============================================================= */}
-          {/* CENTER CIRCULAR ORB: SELF (YOU)                              */}
+          {/* CENTER 100% PURE ROUND CIRCULAR NODE: SELF (YOU)             */}
           {/* ============================================================= */}
           <motion.div
             style={{
-              left: cx - selfSize / 2,
-              top: cy - selfSize / 2,
-              width: selfSize,
-              height: selfSize,
+              left: cx - selfOrbSize / 2,
+              top: cy - selfOrbSize / 2,
+              width: selfOrbSize,
+              height: selfOrbSize,
             }}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-            whileHover={{ scale: 1.08 }}
+            whileHover={{ scale: 1.06 }}
             onClick={() => self && onSelectMember(self.userId)}
-            className="absolute z-30 flex flex-col items-center justify-center cursor-pointer group"
+            className="absolute z-30 cursor-pointer group flex items-center justify-center"
           >
-            {/* Center Pulsing Glow Ring */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-25 blur-lg group-hover:opacity-45 animate-pulse transition-opacity" />
-            <div className="absolute -inset-1 rounded-full border-2 border-dashed border-sky-400/40 animate-[spin_24s_linear_infinite]" />
+            {/* Glowing Pulse Aura */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-sky-400 via-teal-400 to-emerald-400 opacity-25 blur-lg group-hover:opacity-45 animate-pulse transition-opacity pointer-events-none" />
+            <div className="absolute -inset-1 rounded-full border-2 border-dashed border-sky-400/40 animate-[spin_24s_linear_infinite] pointer-events-none" />
 
-            {/* Circular Disc Core */}
-            <div className="relative w-full h-full rounded-full bg-white dark:bg-gray-900 border-2 border-sky-400 dark:border-sky-500 shadow-lg shadow-sky-500/20 p-1 flex items-center justify-center">
-              <div className="w-full h-full rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex flex-col items-center justify-center text-white text-center shadow-inner">
-                <span className="text-xl sm:text-2xl font-black tracking-tight leading-none">
-                  {self?.name?.[0]?.toUpperCase() || 'Y'}
-                </span>
-                <span className="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90">
-                  {lang === 'bn' ? 'আপনি' : 'YOU'}
-                </span>
+            {/* Perfect Round Circle Card */}
+            <div className="relative w-full h-full rounded-full bg-white/95 dark:bg-gray-900/95 border-2 border-sky-400 dark:border-sky-500 shadow-xl shadow-sky-500/15 p-2 flex flex-col items-center justify-center text-center overflow-hidden">
+              {/* Inner Avatar Ring */}
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex items-center justify-center text-white text-base sm:text-lg font-black shadow-inner shrink-0">
+                {self?.name?.[0]?.toUpperCase() || 'Y'}
               </div>
 
-              <div className="absolute -bottom-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[8px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                {lang === 'bn' ? 'মূল কেন্দ্র' : 'Center'}
-              </div>
-            </div>
-
-            {/* Central Name Badge */}
-            <div className="mt-2.5 px-2.5 py-0.5 rounded-full bg-white/90 dark:bg-gray-800/90 border border-sky-200 dark:border-sky-800 shadow-xs pointer-events-none">
-              <p className="text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate max-w-[120px] text-center">
-                {self?.name || (lang === 'bn' ? 'আপনি (স্বয়ং)' : 'You (Self)')}
+              {/* Name & Core Role directly INSIDE circle */}
+              <p className="text-[11px] sm:text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full px-1.5 mt-1 leading-tight">
+                {self?.name || (lang === 'bn' ? 'আপনি' : 'You')}
               </p>
+              <span className="text-[8px] sm:text-[9px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-tight">
+                {lang === 'bn' ? 'মূল কেন্দ্র' : 'Center Core'}
+              </span>
             </div>
           </motion.div>
 
           {/* ============================================================= */}
-          {/* ORBITING PURE CIRCULAR FAMILY MEMBER ORBS                     */}
+          {/* ORBITING 100% PURE ROUND CIRCULAR FAMILY NODES                */}
           {/* ============================================================= */}
-          {positionedNodes.map((pn, idx) => {
-            const node = pn.node
+          {circularNodes.map((cn, idx) => {
+            const node = cn.node
             const health = node.healthSummary
             const isHovered = hoveredNodeId === node.userId
             const isUrgent = health?.hasUrgentCondition
@@ -464,10 +395,10 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
               <motion.div
                 key={node.id}
                 style={{
-                  left: pn.x - nodeSize / 2,
-                  top: pn.y - nodeSize / 2,
-                  width: nodeSize,
-                  height: nodeSize,
+                  left: cn.x - orbSize / 2,
+                  top: cn.y - orbSize / 2,
+                  width: orbSize,
+                  height: orbSize,
                 }}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{
@@ -479,65 +410,65 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                   scale: { type: 'spring', damping: 22, stiffness: 220, delay: idx * 0.05 },
                   y: { repeat: Infinity, duration: 4 + (idx % 3), ease: 'easeInOut', delay: idx * 0.2 },
                 }}
-                whileHover={{ scale: 1.15, zIndex: 40 }}
+                whileHover={{ scale: 1.12, zIndex: 40 }}
                 onHoverStart={() => setHoveredNodeId(node.userId)}
                 onHoverEnd={() => setHoveredNodeId(null)}
                 onClick={() => onSelectMember(node.userId)}
-                className="absolute z-20 flex flex-col items-center justify-center cursor-pointer group"
+                className="absolute z-20 cursor-pointer group flex items-center justify-center"
               >
                 {/* Urgent Ring Halo */}
                 {isUrgent && (
                   <div className="absolute inset-0 rounded-full bg-rose-500 opacity-35 blur-md animate-ping pointer-events-none" />
                 )}
 
-                {/* Pure Circular Disc with Gradient Avatar Ring */}
+                {/* 100% PERFECT ROUND CIRCULAR ORB */}
                 <div
-                  className={`relative w-full h-full rounded-full p-1 transition-all duration-300 shadow-md ${
+                  className={`relative w-full h-full rounded-full p-2 flex flex-col items-center justify-center text-center transition-all duration-300 shadow-lg overflow-hidden ${
                     isUrgent
-                      ? 'bg-rose-500/20 border-2 border-rose-500 shadow-rose-500/25'
+                      ? 'bg-rose-500/10 dark:bg-rose-950/40 border-2 border-rose-500 shadow-rose-500/20'
                       : isHovered
-                      ? 'bg-sky-500/20 border-2 border-sky-400 shadow-sky-500/30'
-                      : 'bg-white dark:bg-gray-900 border-2 ' + pn.borderColor + ' shadow-gray-200/50 dark:shadow-none hover:border-sky-400'
+                      ? 'bg-sky-500/10 dark:bg-sky-950/40 border-2 border-sky-400 shadow-sky-500/30'
+                      : 'bg-white/95 dark:bg-gray-900/95 border-2 ' + cn.borderColor + ' shadow-gray-200/60 dark:shadow-none hover:border-sky-400'
                   }`}
                 >
                   {/* Inside Avatar Circle */}
                   <div
-                    className={`w-full h-full rounded-full bg-gradient-to-br ${pn.gradient} flex items-center justify-center text-white text-base sm:text-lg font-black shadow-inner`}
+                    className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br ${cn.gradient} flex items-center justify-center text-white text-sm sm:text-base font-black shadow-inner shrink-0`}
                   >
                     {node.name?.[0]?.toUpperCase() || 'U'}
                   </div>
 
+                  {/* Name inside round circle */}
+                  <p className="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate w-full px-1 mt-1 leading-tight group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    {node.name}
+                  </p>
+
+                  {/* Relation label inside round circle */}
+                  <span className="text-[8px] sm:text-[9px] font-semibold text-gray-500 dark:text-gray-400 truncate w-full px-1">
+                    {getRelationLabel(node.relation, lang)}
+                  </span>
+
                   {/* Top-Right Medicine Pill Badge */}
                   {medCount > 0 ? (
                     <div
-                      className="absolute -top-1.5 -right-1.5 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 shadow-xs flex items-center gap-0.5"
+                      className="absolute top-1 right-1 bg-white dark:bg-gray-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-700 rounded-full text-[8px] sm:text-[9px] font-bold px-1.5 py-0.2 shadow-xs flex items-center gap-0.5"
                       title={`${medCount} active medications`}
                     >
-                      <Pill className="h-2.5 w-2.5" />
+                      <Pill className="h-2 w-2" />
                       <span>{medCount}</span>
                     </div>
                   ) : (
-                    <div className="absolute -top-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
+                    <div className="absolute top-1 right-1 bg-emerald-500 text-white rounded-full p-0.5 shadow-xs">
                       <CheckCircle2 className="h-2.5 w-2.5" />
                     </div>
                   )}
 
                   {/* Urgent Warning Flag */}
                   {isUrgent && (
-                    <div className="absolute -bottom-1 -right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-xs animate-bounce">
-                      <AlertTriangle className="h-3 w-3" />
+                    <div className="absolute bottom-1 right-1 bg-rose-500 text-white rounded-full p-0.5 shadow-xs animate-bounce">
+                      <AlertTriangle className="h-2.5 w-2.5" />
                     </div>
                   )}
-                </div>
-
-                {/* Attached Compact Pill for Name & Relation */}
-                <div className="mt-1.5 px-2 py-0.5 rounded-full bg-white/95 dark:bg-gray-800/95 border border-gray-200 dark:border-gray-700 shadow-xs flex flex-col items-center pointer-events-none max-w-[110px]">
-                  <span className="text-[10px] sm:text-[11px] font-bold text-gray-900 dark:text-gray-100 truncate w-full text-center group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
-                    {node.name}
-                  </span>
-                  <span className="text-[8px] sm:text-[9px] font-medium text-gray-500 dark:text-gray-400 truncate w-full text-center">
-                    {getRelationLabel(node.relation, lang)}
-                  </span>
                 </div>
 
                 {/* Floating Rich Tooltip on Hover */}
