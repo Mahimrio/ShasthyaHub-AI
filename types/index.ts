@@ -7,6 +7,7 @@ export type MappingConfidence = 'high' | 'medium' | 'low'
 export interface Profile {
   id: string
   name: string | null
+  email?: string | null
   username?: string | null
   phone: string | null
   district: string | null
@@ -420,6 +421,7 @@ export interface FamilyConnection {
   other_user: {
     id: string
     name: string | null
+    email?: string | null
     username: string | null
     district: string | null
   }
@@ -429,6 +431,7 @@ export interface FamilyConnection {
 export interface FamilyMemberHealthSummary {
   userId: string
   name: string
+  email?: string | null
   username: string | null
   relation: RelationType
   relationBn: string
@@ -456,6 +459,7 @@ export interface FamilyTreeNode {
   id: string
   userId: string
   name: string
+  email?: string | null
   username: string | null
   relation: RelationType
   relationBn: string
@@ -468,9 +472,11 @@ export interface FamilyTreeNode {
 export interface UserSearchResult {
   id: string
   name: string | null
+  email?: string | null
   username: string | null
   district: string | null
   connectionStatus?: FamilyConnectionStatus | 'none'
   existingConnectionId?: string
 }
+
 

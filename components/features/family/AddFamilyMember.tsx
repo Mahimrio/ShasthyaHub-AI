@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, UserPlus, X, Check, Loader2, HeartPulse, AtSign } from 'lucide-react'
+import { Search, UserPlus, X, Check, Loader2, HeartPulse, Mail } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useSearchFamilyUsers, useSendFamilyInvitation } from '@/hooks/useFamily'
 import { ALL_RELATION_OPTIONS, getReciprocalRelation, getRelationLabel } from '@/lib/family/relations'
@@ -49,8 +49,8 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
 
       setSuccessMessage(
         lang === 'bn'
-          ? `${selectedUser.name || 'সদস্য'} কে সফলভাবে আমন্ত্রণ পাঠানো হয়েছে!`
-          : `Invitation successfully sent to ${selectedUser.name || 'member'}!`
+          ? `${selectedUser.name || selectedUser.email || 'সদস্য'} কে সফলভাবে আমন্ত্রণ পাঠানো হয়েছে!`
+          : `Invitation successfully sent to ${selectedUser.name || selectedUser.email || 'member'}!`
       )
 
       setTimeout(() => {
@@ -82,8 +82,8 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
               </DialogTitle>
               <DialogDescription className="text-xs text-gray-500 dark:text-gray-400">
                 {lang === 'bn'
-                  ? 'ইউজারনেম বা নাম দিয়ে খুঁজে সদস্যকে আমন্ত্রণ পাঠান'
-                  : 'Search by username or name to send a family invite'}
+                  ? 'জিমেইল (Gmail) বা ইউজারনেম দিয়ে খুঁজে সদস্যকে আমন্ত্রণ পাঠান'
+                  : 'Search by Gmail (Default) or Username to send a family invite'}
               </DialogDescription>
             </div>
           </div>
@@ -96,7 +96,7 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={lang === 'bn' ? 'ইউজারনেম বা নাম লিখুন (যেমন: rahim_99)' : 'Enter username or name (e.g. rahim_99)'}
+              placeholder={lang === 'bn' ? 'জিমেইল বা ইউজারনেম লিখুন (যেমন: mugdho@gmail.com বা @rahim)' : 'Enter Gmail or username (e.g. parent@gmail.com or @rahim)'}
               className="pl-10 h-11 text-xs rounded-2xl bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 focus:bg-white dark:focus:bg-gray-900"
               autoFocus
             />
@@ -109,16 +109,16 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
           <div className="min-h-[160px] max-h-[220px] overflow-y-auto space-y-2 pr-1">
             {searchTerm.trim().length < 2 && !selectedUser && (
               <div className="flex flex-col items-center justify-center h-36 text-center text-gray-400 p-4">
-                <AtSign className="h-8 w-8 text-sky-400/50 mb-2" />
+                <Mail className="h-8 w-8 text-sky-400/50 mb-2" />
                 <p className="text-xs font-medium">
                   {lang === 'bn'
-                    ? 'সদস্যের ইউজারনেম দিয়ে সন্ধান করুন'
-                    : 'Search using the member\'s unique username'}
+                    ? 'সদস্যের জিমেইল (Gmail) বা ইউজারনেম দিয়ে সন্ধান করুন'
+                    : 'Search using member\'s Gmail address or username'}
                 </p>
                 <p className="text-[11px] text-gray-400/80 mt-0.5">
                   {lang === 'bn'
-                    ? 'অন্তত ২টি অক্ষর লিখুন'
-                    : 'Type at least 2 characters'}
+                    ? 'যেমন: mugdho@gmail.com বা rahim_99'
+                    : 'e.g. mugdho@gmail.com or rahim_99'}
                 </p>
               </div>
             )}
@@ -126,7 +126,7 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
             {searchTerm.trim().length >= 2 && !isSearching && (!searchResults || searchResults.length === 0) && !selectedUser && (
               <div className="flex flex-col items-center justify-center h-36 text-center text-gray-400 p-4">
                 <p className="text-xs">
-                  {lang === 'bn' ? 'কোনো ব্যবহারকারী পাওয়া যায়নি' : 'No user found with this name or username'}
+                  {lang === 'bn' ? 'কোনো ব্যবহারকারী পাওয়া যায়নি' : 'No user found with this Gmail or username'}
                 </p>
               </div>
             )}
@@ -152,15 +152,25 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-cyan-400 flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs">
-                          {user.name?.[0]?.toUpperCase() || 'U'}
+                          {user.name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || 'U'}
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">
-                            {user.name || 'User'}
+                            {user.name || (user.email ? user.email.split('@')[0] : 'User')}
                           </p>
-                          <p className="text-[11px] font-mono text-gray-400 truncate">
-                            {user.username ? `@${user.username}` : user.district || 'Member'}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {user.email && (
+                              <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
+                                <Mail className="h-3 w-3 text-gray-400" />
+                                {user.email}
+                              </span>
+                            )}
+                            {user.username && (
+                              <span className="text-[10px] font-mono text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-1.5 py-0.2 rounded border border-sky-200/50 dark:border-sky-800/50">
+                                @{user.username}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -193,16 +203,16 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
                 className="p-4 rounded-2xl bg-sky-50/50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-800 space-y-3"
               >
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-sky-500/20">
-                      {selectedUser.name?.[0]?.toUpperCase() || 'U'}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-cyan-500 flex items-center justify-center text-white text-sm font-bold shadow-md shadow-sky-500/20 shrink-0">
+                      {selectedUser.name?.[0]?.toUpperCase() || selectedUser.email?.[0]?.toUpperCase() || 'U'}
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
-                        {selectedUser.name || 'User'}
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate">
+                        {selectedUser.name || 'Family Member'}
                       </p>
-                      <p className="text-[11px] font-mono text-sky-600 dark:text-sky-400">
-                        @{selectedUser.username || 'user'} • {selectedUser.district || 'Bangladesh'}
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                        {selectedUser.email || (selectedUser.username ? `@${selectedUser.username}` : 'user')}
                       </p>
                     </div>
                   </div>

@@ -28,7 +28,7 @@ import { Badge } from '@/components/ui/badge'
 
 export default function FamilyPage() {
   const { lang } = useLanguage()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const [activeTab, setActiveTab] = useState<'tree' | 'members' | 'invitations'>('tree')
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null)
@@ -83,8 +83,12 @@ export default function FamilyPage() {
         </div>
       </div>
 
-      {/* Username Setup Banner */}
-      <SetUsername currentUsername={currentUsername} userName={profile?.name || null} />
+      {/* Username & Family ID Banner */}
+      <SetUsername
+        currentUsername={currentUsername}
+        userName={profile?.name || null}
+        userEmail={user?.email || null}
+      />
 
       {/* Quick Overview Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

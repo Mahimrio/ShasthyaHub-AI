@@ -2,15 +2,35 @@
 -- 004: Family System (Poribar / পরিবার) Migration
 -- ============================================================
 
--- 1. Add username to profiles
+-- 1. Add username and email to profiles
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS email TEXT;
 CREATE INDEX IF NOT EXISTS idx_profiles_username ON profiles (username);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles (email);
 
--- Allow authenticated users to search profiles by username/name
+-- Allow authenticated users to search profiles by username/email/name
 DROP POLICY IF EXISTS "Users can search profiles" ON profiles;
 CREATE POLICY "Users can search profiles"
   ON profiles FOR SELECT
   USING (TRUE);
+
+-- Update handle_new_user trigger to save email
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO profiles (id, name, email, preferred_language)
+  VALUES (
+    NEW.id,
+    NEW.raw_user_meta_data->>'name',
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'preferred_language', 'bn')
+  );
+  RETURN NEW;
+END;
+$$;
 
 -- 2. Family Connections Table
 CREATE TABLE IF NOT EXISTS family_connections (
