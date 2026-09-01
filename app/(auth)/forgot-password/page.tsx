@@ -5,21 +5,13 @@ import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { motion } from 'framer-motion'
-import { ArrowLeft, KeyRound, Loader2, MailCheck, Send } from 'lucide-react'
+import { motion, useReducedMotion } from 'framer-motion'
+import { ArrowLeft, KeyRound, Loader2, MailCheck, Send, Mail } from 'lucide-react'
 import { friendlyAuthError } from '@/lib/auth-errors'
-
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguageToggle } from '@/components/shared/LanguageToggle'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { WarmBackground } from '@/components/auth/WarmBackground'
 
 const forgotSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -27,20 +19,9 @@ const forgotSchema = z.object({
 
 type ForgotForm = z.infer<typeof forgotSchema>
 
-const container = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.07 },
-  },
-}
-
-const item = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 300, damping: 24 } },
-}
-
 export default function ForgotPasswordPage() {
+  const { lang } = useLanguage()
+  const shouldReduceMotion = useReducedMotion()
   const [apiError, setApiError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
 
@@ -75,123 +56,120 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="w-full max-w-sm"
-    >
-      <Card className="border-0 bg-white/80 backdrop-blur-xl shadow-[0_10px_40px_rgba(0,0,0,0.08),0_4px_12px_rgba(14,165,233,0.06)] dark:bg-gray-900/80 dark:backdrop-blur-xl dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(14,165,233,0.08)]">
-        <div className="h-1.5 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x rounded-t-xl" />
+    <div className="min-h-screen relative flex flex-col items-center justify-center p-4 bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-hidden transition-colors">
+      <WarmBackground />
 
-        <CardHeader className="text-center pb-2 pt-8">
-          <motion.div variants={item}>
-            <div className="mx-auto mb-4 h-14 w-14 rounded-2xl bg-gradient-to-br from-sky-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-sky-500/25 dark:shadow-sky-500/10">
-              <KeyRound className="h-7 w-7 text-white" />
+      {/* Top Controls */}
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-2">
+        <ThemeToggle />
+        <LanguageToggle />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative z-10 w-full max-w-md"
+      >
+        <div className="rounded-3xl overflow-hidden bg-white/85 dark:bg-gray-900/85 backdrop-blur-2xl border border-gray-200/70 dark:border-gray-800/70 shadow-[0_16px_48px_rgba(0,0,0,0.08)] dark:shadow-[0_16px_48px_rgba(0,0,0,0.5)] ring-1 ring-gray-900/5 dark:ring-white/10">
+          <div className="h-1.5 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x" />
+
+          {/* Header */}
+          <div className="text-center px-6 pt-8 pb-4">
+            <div className="mx-auto mb-4 w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-sky-500/25">
+              <KeyRound className="w-6 h-6 text-white" strokeWidth={2.4} />
             </div>
-          </motion.div>
-          <motion.div variants={item}>
-            <CardTitle className="text-2xl font-black tracking-tight text-gray-900 dark:text-gray-100">
-              Reset Password
-            </CardTitle>
-          </motion.div>
-          <motion.div variants={item}>
-            <CardDescription className="font-bengali text-base text-gray-500 dark:text-gray-400">
-              পাসওয়ার্ড পুনরুদ্ধার করুন
-            </CardDescription>
-          </motion.div>
-        </CardHeader>
 
-        <CardContent className="px-6 pb-8">
-          {sent ? (
-            <motion.div variants={item} className="text-center space-y-4 py-2">
-              <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center">
-                <MailCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                If an account exists for that email, a reset link is on its way — check your inbox and spam folder.
-              </p>
-              <p className="text-sm font-bengali text-gray-500 dark:text-gray-400 leading-relaxed">
-                এই ইমেইলে অ্যাকাউন্ট থাকলে একটি রিসেট লিঙ্ক পাঠানো হয়েছে — ইনবক্স ও স্প্যাম ফোল্ডার দেখুন।
-              </p>
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to login / লগইনে ফিরুন
-              </Link>
-            </motion.div>
-          ) : (
-            <>
-              {apiError && (
-                <motion.div variants={item}>
-                  <Alert variant="destructive" className="mb-5 rounded-xl border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30">
-                    <AlertDescription className="text-xs text-red-700 dark:text-red-400">
-                      {apiError}
-                    </AlertDescription>
-                  </Alert>
-                </motion.div>
-              )}
+            <h1 className="text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400">
+              {lang === 'bn' ? 'পাসওয়ার্ড রিসেট' : 'Reset Password'}
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 font-medium">
+              {lang === 'bn'
+                ? 'পাসওয়ার্ড পুনরুদ্ধার লিংক পেতে আপনার ইমেইল দিন'
+                : 'Enter your account email to receive a password reset link'}
+            </p>
+          </div>
 
-              <motion.div variants={item}>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
-                  Enter your account email and we&apos;ll send you a reset link.
-                  <span className="block font-bengali mt-1">
-                    আপনার ইমেইল লিখুন — আমরা একটি রিসেট লিঙ্ক পাঠাবো।
-                  </span>
+          <div className="px-6 pb-8">
+            {sent ? (
+              <div className="text-center space-y-4 py-2">
+                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+                  <MailCheck className="w-6 h-6" />
+                </div>
+                <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                  {lang === 'bn'
+                    ? 'এই ইমেইলে অ্যাকাউন্ট থাকলে একটি রিসেট লিঙ্ক পাঠানো হয়েছে — ইনবক্স ও স্প্যাম ফোল্ডার চেক করুন।'
+                    : 'If an account exists for that email, a password reset link has been dispatched — check your inbox and spam folder.'}
                 </p>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  {lang === 'bn' ? 'লগইনে ফিরুন' : 'Back to Sign In'}
+                </Link>
+              </div>
+            ) : (
+              <>
+                {apiError && (
+                  <div className="mb-4 text-xs px-3.5 py-2.5 rounded-xl bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-900/50 leading-relaxed font-medium">
+                    {apiError}
+                  </div>
+                )}
 
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                      Email / ইমেইল
-                    </Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      autoComplete="email"
-                      className="h-11 rounded-xl border-gray-200 bg-white/60 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-100 dark:placeholder:text-gray-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-500/20 transition-all"
-                      {...register('email')}
-                    />
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      {lang === 'bn' ? 'ইমেইল ঠিকানা' : 'Email Address'}
+                    </label>
+                    <div className="relative">
+                      <Mail className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
+                      <input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        autoComplete="email"
+                        required
+                        className="w-full h-11 pl-10 pr-3.5 rounded-xl text-sm transition-all bg-white/70 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none"
+                        {...register('email')}
+                      />
+                    </div>
                     {errors.email && (
-                      <p className="text-xs text-destructive mt-1">{errors.email.message}</p>
+                      <p className="text-xs text-red-500 mt-1 font-medium">{errors.email.message}</p>
                     )}
                   </div>
 
-                  <Button
+                  <motion.button
                     type="submit"
-                    className="w-full h-12 rounded-xl bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x text-white font-semibold text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={isSubmitting}
+                    whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }}
+                    whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+                    className="w-full h-12 rounded-xl font-bold text-sm text-white disabled:opacity-60 flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 bg-[length:200%_100%] animate-gradient-x shadow-md hover:shadow-lg shadow-sky-500/25 transition-all cursor-pointer"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        <Send className="h-4 w-4" />
-                        <span>Send Reset Link / লিঙ্ক পাঠান</span>
+                        <Send className="w-4 h-4" />
+                        <span>{lang === 'bn' ? 'রিসেট লিঙ্ক পাঠান' : 'Send Reset Link'}</span>
                       </>
                     )}
-                  </Button>
+                  </motion.button>
                 </form>
-              </motion.div>
 
-              <motion.div variants={item}>
-                <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                <div className="mt-6 text-center">
                   <Link
                     href="/login"
-                    className="inline-flex items-center gap-1.5 font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
                   >
-                    <ArrowLeft className="h-4 w-4" />
-                    Back to login / লগইনে ফিরুন
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    {lang === 'bn' ? 'লগইনে ফিরে যান' : 'Back to login'}
                   </Link>
-                </p>
-              </motion.div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
   )
 }
