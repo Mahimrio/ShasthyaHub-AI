@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug, HeartPulse } from 'lucide-react'
+import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug, HeartPulse, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -22,6 +22,7 @@ const sidebarLinks = [
   { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'স্ক্রিপ্টগার্ড' },
   { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'গ্লাইকোভিশন' },
   { href: '/lokhon', icon: Activity, labelEn: 'Lokhon', labelBn: 'লক্ষণ' },
+  { href: '/family', icon: Users, labelEn: 'Poribar', labelBn: 'পরিবার' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
   // Debug tooling stays out of production builds
   ...(process.env.NODE_ENV === 'development'

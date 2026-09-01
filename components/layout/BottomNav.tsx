@@ -3,15 +3,15 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Home, Eye, FileText, Utensils, BarChart3 } from 'lucide-react'
+import { Home, Eye, FileText, BarChart3, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
 
 const navItems = [
   { href: '/', icon: Home, labelEn: 'Home', labelBn: 'শুরু' },
-  { href: '/nayan-ai', icon: Eye, labelEn: 'NayanAI', labelBn: 'চোখের পরীক্ষা' },
-  { href: '/scriptguard', icon: FileText, labelEn: 'ScriptGuard', labelBn: 'প্রেসক্রিপশন' },
-  { href: '/glycovision', icon: Utensils, labelEn: 'GlycoVision', labelBn: 'খাদ্য বিশ্লেষণ' },
+  { href: '/nayan-ai', icon: Eye, labelEn: 'NayanAI', labelBn: 'চোখ' },
+  { href: '/scriptguard', icon: FileText, labelEn: 'RxGuard', labelBn: 'ওষুধ' },
+  { href: '/family', icon: Users, labelEn: 'Poribar', labelBn: 'পরিবার' },
   { href: '/reports', icon: BarChart3, labelEn: 'Reports', labelBn: 'রিপোর্ট' },
 ]
 

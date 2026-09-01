@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Eye, FileText, Utensils, Activity, ChevronRight, Loader2, RotateCcw, Target, Wifi, WifiOff } from 'lucide-react'
+import { Eye, FileText, Utensils, Activity, ChevronRight, Loader2, RotateCcw, Target, Wifi, WifiOff, TreeDeciduous } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
@@ -420,6 +420,41 @@ export default function DashboardHome() {
           )
         })}
         </div>
+      </motion.div>
+
+      {/* Poribar Family System Showcase Banner */}
+      <motion.div variants={fadeUp}>
+        <Link href="/family" className="block group">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-emerald-500/10 dark:from-sky-950/40 dark:via-indigo-950/30 dark:to-emerald-950/30 border border-sky-500/20 dark:border-sky-400/20 p-5 sm:p-6 transition-all duration-300 hover:shadow-lg hover:border-sky-500/40">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 via-indigo-500 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-sky-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                  <TreeDeciduous className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">
+                      {lang === 'bn' ? 'পরিবার স্বাস্থ্য কেন্দ্র (Poribar)' : 'Family Health System (Poribar)'}
+                    </h3>
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400">
+                      {lang === 'bn' ? 'পিতা-মাতার যত্ন' : 'Elder Care'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 max-w-xl">
+                    {lang === 'bn'
+                      ? 'বয়স্ক পিতামাতা ও স্বজনদের ফ্যামিলি ট্রিতে যুক্ত করুন — তাঁদের প্রতিদিনের ওষুধের রুটিন ও রিপোর্ট পর্যবেক্ষণ করুন।'
+                      : 'Connect your elderly parents in an interactive family tree to monitor their daily medication routines and health scans.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-sky-600 dark:text-sky-400 group-hover:gap-2.5 transition-all self-end sm:self-center">
+                <span>{lang === 'bn' ? 'ফ্যামিলি ট্রি দেখুন' : 'Explore Family Tree'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        </Link>
       </motion.div>
 
       {/* Why ShasthyaHub */}
