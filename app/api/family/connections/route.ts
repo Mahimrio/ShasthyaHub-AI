@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getReciprocalRelation } from '@/lib/family/relations'
+import {
+  getLocalConnections,
+  saveLocalConnections,
+  getLocalUsername,
+  type StoredFamilyConnection
+} from '@/lib/family/store'
 import type { ApiError, ApiSuccess, FamilyConnection, RelationType } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -20,27 +27,41 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const statusFilter = searchParams.get('status') // 'pending' | 'accepted' | undefined
 
-    let query = supabase
-      .from('family_connections')
-      .select('*')
-      .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`)
-      .order('created_at', { ascending: false })
+    let rawConnections: StoredFamilyConnection[] = []
+    let usedDb = false
 
-    if (statusFilter) {
-      query = query.eq('status', statusFilter)
+    try {
+      let query = supabase
+        .from('family_connections')
+        .select('*')
+        .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`)
+        .order('created_at', { ascending: false })
+
+      if (statusFilter) {
+        query = query.eq('status', statusFilter)
+      }
+
+      const { data: connections, error: fetchError } = await query
+
+      if (!fetchError && connections) {
+        rawConnections = connections as StoredFamilyConnection[]
+        usedDb = true
+      }
+    } catch {
+      // Table doesn't exist in Supabase DB yet
     }
 
-    const { data: connections, error: fetchError } = await query
-
-    if (fetchError) {
-      console.error('[family/connections] Fetch error:', fetchError)
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to fetch family connections', code: 'DB_ERROR' },
-        { status: 500 }
-      )
+    if (!usedDb) {
+      const allLocal = getLocalConnections()
+      rawConnections = allLocal.filter(c => {
+        const involvesUser = c.requester_id === user.id || c.target_id === user.id
+        if (!involvesUser) return false
+        if (statusFilter) return c.status === statusFilter
+        return true
+      })
     }
 
-    if (!connections || connections.length === 0) {
+    if (rawConnections.length === 0) {
       return NextResponse.json<ApiSuccess<FamilyConnection[]>>({
         success: true,
         data: []
@@ -50,25 +71,48 @@ export async function GET(request: NextRequest) {
     // Collect all other user IDs
     const otherUserIds = Array.from(
       new Set(
-        connections.map(c => (c.requester_id === user.id ? c.target_id : c.requester_id))
+        rawConnections.map(c => (c.requester_id === user.id ? c.target_id : c.requester_id))
       )
     )
 
+    // Fetch profiles from profiles table using select('*')
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, name, username, district')
+      .select('*')
       .in('id', otherUserIds)
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+    const profileMap = new Map((profiles || []).map(p => [p.id, p]))
 
-    const formatted: FamilyConnection[] = connections.map(c => {
+    // Also fetch auth users for emails/names if service key is present
+    const authMap = new Map<string, { email: string | null; name: string | null }>()
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (serviceKey && supabaseUrl) {
+      try {
+        const adminSupabase = createSupabaseClient(supabaseUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data: adminUsersRes } = await adminSupabase.auth.admin.listUsers({ perPage: 100 })
+        if (adminUsersRes?.users) {
+          for (const u of adminUsersRes.users) {
+            authMap.set(u.id, {
+              email: u.email || null,
+              name: u.user_metadata?.name || null,
+            })
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    const formatted: FamilyConnection[] = rawConnections.map(c => {
       const isRequester = c.requester_id === user.id
       const otherId = isRequester ? c.target_id : c.requester_id
       const profile = profileMap.get(otherId)
+      const authInfo = authMap.get(otherId)
+      const fallbackUsername = getLocalUsername(otherId)
 
-      // The relation as viewed from the current user's perspective:
-      // If current user is requester, relation_type is how they defined target (e.g. Target is my Father)
-      // If current user is target, reverse_relation_type is how they view requester (e.g. Requester is my Son)
       const userPerspectiveRelation = isRequester ? c.relation_type : c.reverse_relation_type
       const otherPerspectiveRelation = isRequester ? c.reverse_relation_type : c.relation_type
 
@@ -83,8 +127,9 @@ export async function GET(request: NextRequest) {
         accepted_at: c.accepted_at,
         other_user: {
           id: otherId,
-          name: profile?.name ?? null,
-          username: profile?.username ?? null,
+          name: profile?.name || authInfo?.name || (authInfo?.email ? authInfo.email.split('@')[0] : 'Family Member'),
+          email: profile?.email || authInfo?.email || null,
+          username: profile?.username || fallbackUsername || null,
           district: profile?.district ?? null,
         },
         is_requester: isRequester,
@@ -143,14 +188,47 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify target user exists
-    const { data: targetProfile, error: targetError } = await supabase
-      .from('profiles')
-      .select('id, name, username, district')
-      .eq('id', target_id)
-      .single()
+    // Verify target user exists in profiles or auth.users
+    let targetName: string | null = null
+    let targetEmail: string | null = null
+    let targetUsername: string | null = getLocalUsername(target_id)
+    let targetDistrict: string | null = null
 
-    if (targetError || !targetProfile) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', target_id)
+        .maybeSingle()
+
+      if (profile) {
+        targetName = profile.name
+        targetUsername = profile.username || targetUsername
+        targetDistrict = profile.district
+        targetEmail = profile.email
+      }
+    } catch {
+      // profiles query
+    }
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (serviceKey && supabaseUrl) {
+      try {
+        const adminSupabase = createSupabaseClient(supabaseUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data: targetAuthUser } = await adminSupabase.auth.admin.getUserById(target_id)
+        if (targetAuthUser?.user) {
+          if (!targetEmail) targetEmail = targetAuthUser.user.email || null
+          if (!targetName) targetName = targetAuthUser.user.user_metadata?.name || null
+        }
+      } catch {
+        // auth admin check
+      }
+    }
+
+    if (!targetName && !targetEmail) {
       return NextResponse.json<ApiError>(
         {
           success: false,
@@ -162,85 +240,142 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if an invitation or connection already exists
-    const { data: existing } = await supabase
-      .from('family_connections')
-      .select('id, status')
-      .or(
-        `and(requester_id.eq.${user.id},target_id.eq.${target_id}),and(requester_id.eq.${target_id},target_id.eq.${user.id})`
-      )
-      .maybeSingle()
+    // Check existing connections
+    const computedReverse = (reverse_relation_type || getReciprocalRelation(relation_type)) as RelationType
+    let newConnection: StoredFamilyConnection | null = null
+    let savedToDb = false
 
-    if (existing) {
-      if (existing.status === 'accepted') {
-        return NextResponse.json<ApiError>(
-          {
-            success: false,
-            error: 'You are already connected with this family member',
-            error_bn: 'আপনি ইতিমধ্যে এই পরিবারের সদস্যের সাথে সংযুক্ত',
-            code: 'ALREADY_CONNECTED'
-          },
-          { status: 409 }
+    try {
+      const { data: existing } = await supabase
+        .from('family_connections')
+        .select('*')
+        .or(
+          `and(requester_id.eq.${user.id},target_id.eq.${target_id}),and(requester_id.eq.${target_id},target_id.eq.${user.id})`
         )
-      } else if (existing.status === 'pending') {
-        return NextResponse.json<ApiError>(
-          {
-            success: false,
-            error: 'An invitation is already pending between you two',
-            error_bn: 'একটি আমন্ত্রণ ইতিমধ্যে অপেক্ষমান রয়েছে',
-            code: 'INVITATION_PENDING'
-          },
-          { status: 409 }
-        )
+        .maybeSingle()
+
+      if (existing) {
+        if (existing.status === 'accepted') {
+          return NextResponse.json<ApiError>(
+            {
+              success: false,
+              error: 'You are already connected with this family member',
+              error_bn: 'আপনি ইতিমধ্যে এই পরিবারের সদস্যের সাথে সংযুক্ত',
+              code: 'ALREADY_CONNECTED'
+            },
+            { status: 409 }
+          )
+        } else if (existing.status === 'pending') {
+          return NextResponse.json<ApiError>(
+            {
+              success: false,
+              error: 'An invitation is already pending between you two',
+              error_bn: 'একটি আমন্ত্রণ ইতিমধ্যে অপেক্ষমান রয়েছে',
+              code: 'INVITATION_PENDING'
+            },
+            { status: 409 }
+          )
+        }
       }
+
+      const { data: created, error: insertError } = await supabase
+        .from('family_connections')
+        .insert({
+          requester_id: user.id,
+          target_id,
+          relation_type,
+          reverse_relation_type: computedReverse,
+          status: 'pending',
+        })
+        .select()
+        .single()
+
+      if (!insertError && created) {
+        newConnection = created as StoredFamilyConnection
+        savedToDb = true
+      }
+    } catch {
+      // Table doesn't exist yet in Supabase
     }
 
-    const computedReverse = (reverse_relation_type || getReciprocalRelation(relation_type)) as RelationType
+    if (!savedToDb) {
+      const localConns = getLocalConnections()
+      const existingLocal = localConns.find(
+        c => (c.requester_id === user.id && c.target_id === target_id) ||
+             (c.requester_id === target_id && c.target_id === user.id)
+      )
 
-    const { data: created, error: insertError } = await supabase
-      .from('family_connections')
-      .insert({
+      if (existingLocal) {
+        if (existingLocal.status === 'accepted') {
+          return NextResponse.json<ApiError>(
+            {
+              success: false,
+              error: 'You are already connected with this family member',
+              error_bn: 'আপনি ইতিমধ্যে এই পরিবারের সদস্যের সাথে সংযুক্ত',
+              code: 'ALREADY_CONNECTED'
+            },
+            { status: 409 }
+          )
+        } else if (existingLocal.status === 'pending') {
+          return NextResponse.json<ApiError>(
+            {
+              success: false,
+              error: 'An invitation is already pending between you two',
+              error_bn: 'একটি আমন্ত্রণ ইতিমধ্যে অপেক্ষমান রয়েছে',
+              code: 'INVITATION_PENDING'
+            },
+            { status: 409 }
+          )
+        }
+      }
+
+      newConnection = {
+        id: crypto.randomUUID(),
         requester_id: user.id,
         target_id,
         relation_type,
         reverse_relation_type: computedReverse,
         status: 'pending',
-      })
-      .select()
-      .single()
+        created_at: new Date().toISOString(),
+        accepted_at: null,
+      }
 
-    if (insertError) {
-      console.error('[family/connections] Insert error:', insertError)
+      localConns.push(newConnection)
+      saveLocalConnections(localConns)
+    }
+
+    if (!newConnection) {
       return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to send family invitation', code: 'INSERT_FAILED' },
+        { success: false, error: 'Failed to send invitation', code: 'INSERT_FAILED' },
         { status: 500 }
       )
     }
 
     const result: FamilyConnection = {
-      id: created.id,
-      requester_id: created.requester_id,
-      target_id: created.target_id,
-      relation_type: created.relation_type as RelationType,
-      reverse_relation_type: created.reverse_relation_type as RelationType,
-      status: created.status,
-      created_at: created.created_at,
-      accepted_at: created.accepted_at,
+      id: newConnection.id,
+      requester_id: newConnection.requester_id,
+      target_id: newConnection.target_id,
+      relation_type: newConnection.relation_type,
+      reverse_relation_type: newConnection.reverse_relation_type,
+      status: newConnection.status,
+      created_at: newConnection.created_at,
+      accepted_at: newConnection.accepted_at,
       other_user: {
-        id: targetProfile.id,
-        name: targetProfile.name,
-        username: targetProfile.username,
-        district: targetProfile.district,
+        id: target_id,
+        name: targetName || (targetEmail ? targetEmail.split('@')[0] : 'Family Member'),
+        email: targetEmail,
+        username: targetUsername,
+        district: targetDistrict,
       },
       is_requester: true,
     }
 
     return NextResponse.json<ApiSuccess<FamilyConnection>>({
       success: true,
-      data: result
+      data: result,
     })
   } catch (error) {
-    console.error('[family/connections] POST error:', error)
+    console.error('[family/connections] Unhandled error on POST:', error)
     return NextResponse.json<ApiError>(
       { success: false, error: 'Internal server error', code: 'INTERNAL_ERROR' },
       { status: 500 }

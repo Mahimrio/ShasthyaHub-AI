@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import {
+  getLocalUsername,
+  saveLocalUsername,
+  isLocalUsernameAvailable
+} from '@/lib/family/store'
 import type { ApiError, ApiSuccess } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -29,30 +34,50 @@ export async function GET(request: NextRequest) {
         })
       }
 
-      const { data: existing } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', checkUsername)
-        .neq('id', user.id)
-        .maybeSingle()
+      let isAvailable = true
+      try {
+        const { data: existing } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('username', checkUsername)
+          .neq('id', user.id)
+          .maybeSingle()
+
+        if (existing) isAvailable = false
+      } catch {
+        // Check local store
+        isAvailable = isLocalUsernameAvailable(checkUsername, user.id)
+      }
 
       return NextResponse.json({
         success: true,
-        data: { available: !existing }
+        data: { available: isAvailable }
       })
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('id, name, username')
-      .eq('id', user.id)
-      .single()
+    let profileName: string | null = null
+    let profileUsername: string | null = getLocalUsername(user.id)
+
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profile) {
+        profileName = profile.name
+        profileUsername = profile.username || profileUsername
+      }
+    } catch {
+      // profiles query fallback
+    }
 
     return NextResponse.json<ApiSuccess<{ username: string | null; name: string | null }>>({
       success: true,
       data: {
-        username: profile?.username ?? null,
-        name: profile?.name ?? null
+        username: profileUsername,
+        name: profileName || user.user_metadata?.name || null
       }
     })
   } catch (error) {
@@ -91,15 +116,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if username is already taken by someone else
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('username', username)
-      .neq('id', user.id)
-      .maybeSingle()
+    // Check if username is taken in DB or local store
+    try {
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .neq('id', user.id)
+        .maybeSingle()
 
-    if (existing) {
+      if (existing) {
+        return NextResponse.json<ApiError>(
+          {
+            success: false,
+            error: 'This username is already taken',
+            error_bn: 'এই ইউজারনেমটি ইতিমধ্যে অন্য কেউ ব্যবহার করছে',
+            code: 'USERNAME_TAKEN'
+          },
+          { status: 409 }
+        )
+      }
+    } catch {
+      // DB check failed
+    }
+
+    if (!isLocalUsernameAvailable(username, user.id)) {
       return NextResponse.json<ApiError>(
         {
           success: false,
@@ -111,18 +152,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ username, updated_at: new Date().toISOString() })
-      .eq('id', user.id)
-
-    if (updateError) {
-      console.error('[profile/username] Update failed:', updateError)
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to update username', code: 'UPDATE_FAILED' },
-        { status: 500 }
-      )
+    // Attempt saving to DB
+    try {
+      await supabase
+        .from('profiles')
+        .update({ username, updated_at: new Date().toISOString() })
+        .eq('id', user.id)
+    } catch {
+      // DB update fallback
     }
+
+    // Always persist to local store as well
+    saveLocalUsername(user.id, username)
 
     return NextResponse.json<ApiSuccess<{ username: string }>>({
       success: true,

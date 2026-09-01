@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getLocalConnections, saveLocalConnections } from '@/lib/family/store'
 import type { ApiError, ApiSuccess } from '@/types'
 
 export const dynamic = 'force-dynamic'
@@ -30,50 +31,76 @@ export async function PATCH(
       )
     }
 
-    // Fetch existing connection
-    const { data: connection, error: fetchError } = await supabase
-      .from('family_connections')
-      .select('*')
-      .eq('id', id)
-      .single()
+    let handledInDb = false
+    try {
+      const { data: connection } = await supabase
+        .from('family_connections')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
 
-    if (fetchError || !connection) {
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Connection invitation not found', code: 'NOT_FOUND' },
-        { status: 404 }
-      )
+      if (connection) {
+        if (connection.target_id !== user.id) {
+          return NextResponse.json<ApiError>(
+            {
+              success: false,
+              error: 'Only the invited user can accept or reject this invitation',
+              error_bn: 'শুধুমাত্র আমন্ত্রিত সদস্য এই অনুরোধ গ্রহণ বা প্রত্যাখ্যান করতে পারবেন',
+              code: 'FORBIDDEN'
+            },
+            { status: 403 }
+          )
+        }
+
+        const updatePayload: Record<string, unknown> = {
+          status: action === 'accept' ? 'accepted' : 'rejected',
+          ...(action === 'accept' ? { accepted_at: new Date().toISOString() } : {}),
+          ...(reverse_relation_type ? { reverse_relation_type } : {}),
+        }
+
+        const { error: updateError } = await supabase
+          .from('family_connections')
+          .update(updatePayload)
+          .eq('id', id)
+
+        if (!updateError) {
+          handledInDb = true
+        }
+      }
+    } catch {
+      // Table doesn't exist yet
     }
 
-    // Only target user can respond to pending request
-    if (connection.target_id !== user.id) {
-      return NextResponse.json<ApiError>(
-        {
-          success: false,
-          error: 'Only the invited user can accept or reject this invitation',
-          error_bn: 'শুধুমাত্র আমন্ত্রিত সদস্য এই অনুরোধ গ্রহণ বা প্রত্যাখ্যান করতে পারবেন',
-          code: 'FORBIDDEN'
-        },
-        { status: 403 }
-      )
-    }
+    if (!handledInDb) {
+      const localConns = getLocalConnections()
+      const connIndex = localConns.findIndex(c => c.id === id)
+      if (connIndex === -1) {
+        return NextResponse.json<ApiError>(
+          { success: false, error: 'Connection invitation not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        )
+      }
 
-    const updatePayload: Record<string, unknown> = {
-      status: action === 'accept' ? 'accepted' : 'rejected',
-      ...(action === 'accept' ? { accepted_at: new Date().toISOString() } : {}),
-      ...(reverse_relation_type ? { reverse_relation_type } : {}),
-    }
+      const connection = localConns[connIndex]
+      if (connection.target_id !== user.id) {
+        return NextResponse.json<ApiError>(
+          {
+            success: false,
+            error: 'Only the invited user can accept or reject this invitation',
+            error_bn: 'শুধুমাত্র আমন্ত্রিত সদস্য এই অনুরোধ গ্রহণ বা প্রত্যাখ্যান করতে পারবেন',
+            code: 'FORBIDDEN'
+          },
+          { status: 403 }
+        )
+      }
 
-    const { error: updateError } = await supabase
-      .from('family_connections')
-      .update(updatePayload)
-      .eq('id', id)
+      connection.status = action === 'accept' ? 'accepted' : 'rejected'
+      connection.accepted_at = action === 'accept' ? new Date().toISOString() : null
+      if (reverse_relation_type) {
+        connection.reverse_relation_type = reverse_relation_type
+      }
 
-    if (updateError) {
-      console.error('[family/connections/[id]] Update failed:', updateError)
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to update invitation status', code: 'UPDATE_FAILED' },
-        { status: 500 }
-      )
+      saveLocalConnections(localConns)
     }
 
     return NextResponse.json<ApiSuccess<{ id: string; status: string }>>({
@@ -105,39 +132,55 @@ export async function DELETE(
       )
     }
 
-    // Fetch existing connection
-    const { data: connection, error: fetchError } = await supabase
-      .from('family_connections')
-      .select('id, requester_id, target_id')
-      .eq('id', id)
-      .single()
+    let handledInDb = false
+    try {
+      const { data: connection } = await supabase
+        .from('family_connections')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle()
 
-    if (fetchError || !connection) {
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Connection not found', code: 'NOT_FOUND' },
-        { status: 404 }
-      )
+      if (connection) {
+        if (connection.requester_id !== user.id && connection.target_id !== user.id) {
+          return NextResponse.json<ApiError>(
+            { success: false, error: 'Forbidden', code: 'FORBIDDEN' },
+            { status: 403 }
+          )
+        }
+
+        const { error: deleteError } = await supabase
+          .from('family_connections')
+          .delete()
+          .eq('id', id)
+
+        if (!deleteError) {
+          handledInDb = true
+        }
+      }
+    } catch {
+      // Table doesn't exist yet
     }
 
-    // Check user is part of the connection
-    if (connection.requester_id !== user.id && connection.target_id !== user.id) {
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Forbidden', code: 'FORBIDDEN' },
-        { status: 403 }
-      )
-    }
+    if (!handledInDb) {
+      const localConns = getLocalConnections()
+      const connIndex = localConns.findIndex(c => c.id === id)
+      if (connIndex === -1) {
+        return NextResponse.json<ApiError>(
+          { success: false, error: 'Connection not found', code: 'NOT_FOUND' },
+          { status: 404 }
+        )
+      }
 
-    const { error: deleteError } = await supabase
-      .from('family_connections')
-      .delete()
-      .eq('id', id)
+      const connection = localConns[connIndex]
+      if (connection.requester_id !== user.id && connection.target_id !== user.id) {
+        return NextResponse.json<ApiError>(
+          { success: false, error: 'Forbidden', code: 'FORBIDDEN' },
+          { status: 403 }
+        )
+      }
 
-    if (deleteError) {
-      console.error('[family/connections/[id]] Delete error:', deleteError)
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to delete connection', code: 'DELETE_FAILED' },
-        { status: 500 }
-      )
+      localConns.splice(connIndex, 1)
+      saveLocalConnections(localConns)
     }
 
     return NextResponse.json<ApiSuccess<{ id: string; deleted: boolean }>>({

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { RELATIONS_MAP, getRelationLabel } from '@/lib/family/relations'
+import { getLocalConnections, getLocalUsername, type StoredFamilyConnection } from '@/lib/family/store'
 import type {
   ApiError,
   ApiSuccess,
@@ -23,35 +25,69 @@ export async function GET(_request: NextRequest) {
       )
     }
 
-    // 2. Fetch all accepted family connections
-    const { data: connections, error: connError } = await supabase
-      .from('family_connections')
-      .select('*')
-      .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`)
-      .eq('status', 'accepted')
+    // 1. Fetch all accepted family connections
+    let connections: StoredFamilyConnection[] = []
+    let usedDb = false
 
-    if (connError) {
-      console.error('[family/tree] Error fetching connections:', connError)
-      return NextResponse.json<ApiError>(
-        { success: false, error: 'Failed to build family tree', code: 'DB_ERROR' },
-        { status: 500 }
+    try {
+      const { data: dbConns, error: connError } = await supabase
+        .from('family_connections')
+        .select('*')
+        .or(`requester_id.eq.${user.id},target_id.eq.${user.id}`)
+        .eq('status', 'accepted')
+
+      if (!connError && dbConns) {
+        connections = dbConns as StoredFamilyConnection[]
+        usedDb = true
+      }
+    } catch {
+      // Table doesn't exist yet
+    }
+
+    if (!usedDb) {
+      const localConns = getLocalConnections()
+      connections = localConns.filter(
+        c => (c.requester_id === user.id || c.target_id === user.id) && c.status === 'accepted'
       )
     }
 
     const memberIds = Array.from(
       new Set([
         user.id,
-        ...(connections || []).map(c => (c.requester_id === user.id ? c.target_id : c.requester_id)),
+        ...connections.map(c => (c.requester_id === user.id ? c.target_id : c.requester_id)),
       ])
     )
 
-    // 3. Fetch profiles for all members
+    // 2. Fetch profiles for all members using select('*')
     const { data: memberProfiles } = await supabase
       .from('profiles')
-      .select('id, name, username, district')
+      .select('*')
       .in('id', memberIds)
 
-    const profileMap = new Map(memberProfiles?.map(p => [p.id, p]) || [])
+    const profileMap = new Map((memberProfiles || []).map(p => [p.id, p]))
+
+    // 3. Fetch auth users for email/name fallback
+    const authMap = new Map<string, { email: string | null; name: string | null }>()
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    if (serviceKey && supabaseUrl) {
+      try {
+        const adminSupabase = createSupabaseClient(supabaseUrl, serviceKey, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data: adminUsersRes } = await adminSupabase.auth.admin.listUsers({ perPage: 100 })
+        if (adminUsersRes?.users) {
+          for (const u of adminUsersRes.users) {
+            authMap.set(u.id, {
+              email: u.email || null,
+              name: u.user_metadata?.name || null,
+            })
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
 
     // 4. Fetch health summaries for all members (prescriptions, eye, food)
     const [eyeRes, rxRes, foodRes] = await Promise.all([
@@ -78,13 +114,15 @@ export async function GET(_request: NextRequest) {
     for (const mId of memberIds) {
       const isSelf = mId === user.id
       const p = profileMap.get(mId)
+      const authInfo = authMap.get(mId)
+      const fallbackUsername = getLocalUsername(mId)
 
       // Find relation relative to current user
       let relation: RelationType = 'Other'
       if (isSelf) {
         relation = 'Other'
       } else {
-        const conn = (connections || []).find(
+        const conn = connections.find(
           c => (c.requester_id === user.id && c.target_id === mId) || (c.target_id === user.id && c.requester_id === mId)
         )
         if (conn) {
@@ -100,113 +138,128 @@ export async function GET(_request: NextRequest) {
       const latestRx = userRxs[0]
       const latestFood = userFoods[0]
 
-      // Extract active medications from the latest prescription
-      const activeMedications: FamilyMemberHealthSummary['activeMedications'] = []
-      if (latestRx?.extracted_drugs && Array.isArray(latestRx.extracted_drugs)) {
-        for (const drug of latestRx.extracted_drugs.slice(0, 4)) {
+      const hasUrgentEye = userEyes.some(e => e.severity === 'High' || e.severity === 'Critical')
+      const hasDangerousInteraction = userRxs.some(r => r.has_dangerous_interactions === true)
+      const hasUrgentDiet = userFoods.some(f => f.risk_level === 'Red')
+
+      // Extract active medications from latest prescription
+      const activeMedications: {
+        name: string
+        dosage: string
+        frequency: string
+        scheduleSlot?: 'morning' | 'afternoon' | 'evening' | 'night'
+      }[] = []
+
+      if (latestRx && latestRx.extracted_drugs && Array.isArray(latestRx.extracted_drugs)) {
+        for (const drug of latestRx.extracted_drugs) {
+          const schedule = latestRx.digital_schedule?.schedule?.find(
+            (s: { medication_name: string }) =>
+              s.medication_name?.toLowerCase() === (drug.brand_name || drug.generic_name || drug.written_text)?.toLowerCase()
+          )
+
           activeMedications.push({
             name: drug.brand_name || drug.generic_name || drug.written_text || 'Medication',
             dosage: drug.dosage || '',
             frequency: drug.frequency || '',
+            scheduleSlot: schedule?.timing as ('morning' | 'afternoon' | 'evening' | 'night') | undefined,
           })
         }
       }
 
-      // Check for urgent conditions (e.g. Critical/High eye severity, dangerous rx interaction, Red food risk)
-      const hasUrgentCondition =
-        latestEye?.severity === 'Critical' ||
-        latestEye?.severity === 'High' ||
-        latestRx?.has_dangerous_interactions === true ||
-        latestFood?.risk_level === 'Red'
-
       const allDates = [
-        latestEye?.created_at,
-        latestRx?.created_at,
-        latestFood?.created_at,
-      ].filter(Boolean) as string[]
-
-      const lastActive = allDates.length > 0
-        ? allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
-        : null
+        ...userEyes.map(e => e.created_at),
+        ...userRxs.map(r => r.created_at),
+        ...userFoods.map(f => f.created_at),
+      ].sort().reverse()
 
       userHealthMap.set(mId, {
         userId: mId,
-        name: isSelf ? (p?.name || 'You') : (p?.name || 'Family Member'),
-        username: p?.username ?? null,
+        name: isSelf
+          ? (p?.name || authInfo?.name || user.user_metadata?.name || 'You')
+          : (p?.name || authInfo?.name || (authInfo?.email ? authInfo.email.split('@')[0] : 'Family Member')),
+        email: p?.email || authInfo?.email || (isSelf ? user.email : null),
+        username: p?.username || fallbackUsername || null,
         relation,
-        relationBn: isSelf ? 'আমি (স্বয়ং)' : getRelationLabel(relation, 'bn'),
-        district: p?.district ?? null,
+        relationBn: getRelationLabel(relation, 'bn'),
+        district: p?.district || null,
         isCurrentUser: isSelf,
         totalPrescriptions: userRxs.length,
         totalEyeAnalyses: userEyes.length,
         totalFoodAnalyses: userFoods.length,
-        hasUrgentCondition,
-        lastActive,
+        hasUrgentCondition: hasUrgentEye || hasDangerousInteraction || hasUrgentDiet,
+        lastActive: allDates[0] || null,
         activeMedications,
         latestHealthStatus: {
-          eyeSeverity: latestEye?.severity ?? null,
-          dietRisk: latestFood?.risk_level ?? null,
-          hasDangerousInteraction: latestRx?.has_dangerous_interactions ?? false,
+          eyeSeverity: latestEye?.severity || null,
+          dietRisk: latestFood?.risk_level || null,
+          hasDangerousInteraction: latestRx?.has_dangerous_interactions || false,
         },
       })
     }
 
-    // 5. Structure nodes by generation
-    const nodes: FamilyTreeNode[] = memberIds.map(mId => {
-      const isSelf = mId === user.id
-      const p = profileMap.get(mId)
-      const health = userHealthMap.get(mId)!
-      const relation = health.relation
-      const relMeta = RELATIONS_MAP[relation] || RELATIONS_MAP.Other
-      const generation = isSelf ? 0 : relMeta.generation
+    // 5. Organize into hierarchical Family Tree nodes
+    const rootNodes: FamilyTreeNode[] = []
 
-      return {
-        id: mId,
-        userId: mId,
-        name: isSelf ? (p?.name || 'You') : (p?.name || 'Family Member'),
-        username: p?.username ?? null,
-        relation: isSelf ? 'Other' : relation,
-        relationBn: isSelf ? 'আমি' : getRelationLabel(relation, 'bn'),
-        generation,
-        isCurrentUser: isSelf,
-        healthSummary: health,
-      }
-    })
-
-    const selfNode = nodes.find(n => n.isCurrentUser) || nodes[0]
-    const otherNodes = nodes.filter(n => !n.isCurrentUser)
-
-    // Group into generations
-    const generations: Record<string, FamilyTreeNode[]> = {
-      grandparents: nodes.filter(n => n.generation === -2),
-      parents: nodes.filter(n => n.generation === -1),
-      peers: nodes.filter(n => n.generation === 0),
-      children: nodes.filter(n => n.generation === 1),
-      grandchildren: nodes.filter(n => n.generation === 2),
+    // Add Self as root/center
+    const selfHealth = userHealthMap.get(user.id)
+    const selfNode: FamilyTreeNode = {
+      id: `node-${user.id}`,
+      userId: user.id,
+      name: selfHealth?.name || 'You',
+      email: selfHealth?.email || user.email,
+      username: selfHealth?.username || null,
+      relation: 'Other',
+      relationBn: 'আপনি',
+      generation: 0,
+      isCurrentUser: true,
+      healthSummary: selfHealth,
+      children: [],
     }
 
-    return NextResponse.json<
-      ApiSuccess<{
-        self: FamilyTreeNode
-        allNodes: FamilyTreeNode[]
-        otherNodes: FamilyTreeNode[]
-        generations: Record<string, FamilyTreeNode[]>
-        totalMembers: number
-      }>
-    >({
+    // Add connected family members grouped by generation
+    for (const mId of memberIds) {
+      if (mId === user.id) continue
+      const health = userHealthMap.get(mId)
+      if (!health) continue
+
+      const relationMeta = RELATIONS_MAP[health.relation]
+      const generation = relationMeta ? relationMeta.generation : 0
+
+      const memberNode: FamilyTreeNode = {
+        id: `node-${mId}`,
+        userId: mId,
+        name: health.name,
+        email: health.email,
+        username: health.username,
+        relation: health.relation,
+        relationBn: health.relationBn,
+        generation,
+        isCurrentUser: false,
+        healthSummary: health,
+      }
+
+      rootNodes.push(memberNode)
+    }
+
+    // Return the tree structure
+    return NextResponse.json<ApiSuccess<{
+      self: FamilyTreeNode
+      members: FamilyTreeNode[]
+      totalConnected: number
+      hasUrgentAlerts: boolean
+    }>>({
       success: true,
       data: {
         self: selfNode,
-        allNodes: nodes,
-        otherNodes,
-        generations,
-        totalMembers: nodes.length,
+        members: rootNodes,
+        totalConnected: rootNodes.length,
+        hasUrgentAlerts: Array.from(userHealthMap.values()).some(h => h.hasUrgentCondition),
       },
     })
   } catch (error) {
     console.error('[family/tree] Unhandled error:', error)
     return NextResponse.json<ApiError>(
-      { success: false, error: 'Internal server error building tree', code: 'INTERNAL_ERROR' },
+      { success: false, error: 'Failed to build family tree', code: 'INTERNAL_ERROR' },
       { status: 500 }
     )
   }
