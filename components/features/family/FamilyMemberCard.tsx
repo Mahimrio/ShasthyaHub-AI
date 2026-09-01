@@ -20,7 +20,9 @@ export function FamilyMemberCard({ connection, onViewHealth }: FamilyMemberCardP
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteMutation = useDeleteFamilyConnection()
 
-  const meta = RELATIONS_MAP[connection.relation_type] || RELATIONS_MAP.Other
+  const meta = RELATIONS_MAP[connection.relation_type] || {
+    badgeColor: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
+  }
   const member = connection.other_user
 
   const handleDelete = async () => {

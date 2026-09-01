@@ -22,10 +22,13 @@ import { Badge } from '@/components/ui/badge'
 interface FamilyTreeProps {
   treeData: {
     self: FamilyTreeNode
-    allNodes: FamilyTreeNode[]
-    otherNodes: FamilyTreeNode[]
-    generations: Record<string, FamilyTreeNode[]>
-    totalMembers: number
+    allNodes?: FamilyTreeNode[]
+    otherNodes?: FamilyTreeNode[]
+    members?: FamilyTreeNode[]
+    generations?: Record<string, FamilyTreeNode[]>
+    totalMembers?: number
+    totalConnected?: number
+    hasUrgentAlerts?: boolean
   }
   onSelectMember: (memberId: string) => void
   onAddMember: () => void
@@ -36,8 +39,8 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   const [zoomLevel, setZoomLevel] = useState<number>(1)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const { self, generations, otherNodes } = treeData
-
+  const self = treeData?.self
+  const otherNodes = treeData?.otherNodes || treeData?.members || []
   const hasRelatives = otherNodes && otherNodes.length > 0
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(1.4, z + 0.1))
@@ -50,11 +53,12 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
   //  0: peers (self + spouse + siblings)
   //  1: children
   //  2: grandchildren
-  const grandparents = generations.grandparents || []
-  const parents = generations.parents || []
-  const peers = (generations.peers || []).filter((n) => !n.isCurrentUser)
-  const children = generations.children || []
-  const grandchildren = generations.grandchildren || []
+  const grandparents = treeData?.generations?.grandparents || otherNodes.filter((n) => n.generation === -2) || []
+  const parents = treeData?.generations?.parents || otherNodes.filter((n) => n.generation === -1) || []
+  const peers = (treeData?.generations?.peers || otherNodes.filter((n) => n.generation === 0) || []).filter((n) => !n.isCurrentUser)
+  const children = treeData?.generations?.children || otherNodes.filter((n) => n.generation === 1) || []
+  const grandchildren = treeData?.generations?.grandchildren || otherNodes.filter((n) => n.generation === 2) || []
+  const totalMembers = treeData?.totalMembers ?? (otherNodes.length + (self ? 1 : 0))
 
   return (
     <div className="relative w-full rounded-3xl border border-gray-100 dark:border-gray-800 bg-gradient-to-b from-white via-sky-50/20 to-gray-50/50 dark:from-gray-900 dark:via-sky-950/10 dark:to-gray-950 shadow-sm overflow-hidden min-h-[560px] flex flex-col">
@@ -71,7 +75,7 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
             <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <span>{lang === 'bn' ? 'ইন্টারেক্টিভ ফ্যামিলি ট্রি' : 'Interactive Family Tree'}</span>
               <span className="text-[10px] font-medium bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 px-2 py-0.5 rounded-full">
-                {treeData.totalMembers} {lang === 'bn' ? 'জন সদস্য' : 'Members'}
+                {totalMembers} {lang === 'bn' ? 'জন সদস্য' : 'Members'}
               </span>
             </h3>
             <p className="text-[11px] text-gray-500 dark:text-gray-400">

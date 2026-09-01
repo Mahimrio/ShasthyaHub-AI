@@ -222,8 +222,7 @@ export async function GET(_request: NextRequest) {
       const health = userHealthMap.get(mId)
       if (!health) continue
 
-      const relationMeta = RELATIONS_MAP[health.relation]
-      const generation = relationMeta ? relationMeta.generation : 0
+      const generation = RELATIONS_MAP[health.relation]?.generation ?? 0
 
       const memberNode: FamilyTreeNode = {
         id: `node-${mId}`,
@@ -241,10 +240,22 @@ export async function GET(_request: NextRequest) {
       rootNodes.push(memberNode)
     }
 
+    const generations = {
+      grandparents: rootNodes.filter((n) => n.generation === -2),
+      parents: rootNodes.filter((n) => n.generation === -1),
+      peers: [selfNode, ...rootNodes.filter((n) => n.generation === 0)],
+      children: rootNodes.filter((n) => n.generation === 1),
+      grandchildren: rootNodes.filter((n) => n.generation === 2),
+    }
+
     // Return the tree structure
     return NextResponse.json<ApiSuccess<{
       self: FamilyTreeNode
       members: FamilyTreeNode[]
+      otherNodes: FamilyTreeNode[]
+      allNodes: FamilyTreeNode[]
+      generations: Record<string, FamilyTreeNode[]>
+      totalMembers: number
       totalConnected: number
       hasUrgentAlerts: boolean
     }>>({
@@ -252,8 +263,12 @@ export async function GET(_request: NextRequest) {
       data: {
         self: selfNode,
         members: rootNodes,
+        otherNodes: rootNodes,
+        allNodes: [selfNode, ...rootNodes],
+        generations,
+        totalMembers: rootNodes.length + 1,
         totalConnected: rootNodes.length,
-        hasUrgentAlerts: Array.from(userHealthMap.values()).some(h => h.hasUrgentCondition),
+        hasUrgentAlerts: Array.from(userHealthMap.values()).some((h) => h.hasUrgentCondition),
       },
     })
   } catch (error) {

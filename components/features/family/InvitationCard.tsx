@@ -21,15 +21,15 @@ export function InvitationCard({ connection }: InvitationCardProps) {
   const deleteMutation = useDeleteFamilyConnection()
 
   const isReceived = !connection.is_requester
-  const [selectedRelation, setSelectedRelation] = useState<RelationType>(
-    connection.relation_type || 'Other'
+  const [selectedRelation, setSelectedRelation] = useState<string>(
+    connection.reverse_relation_type || connection.relation_type || 'Other'
   )
 
   const handleAccept = async () => {
     await respondMutation.mutateAsync({
       connectionId: connection.id,
       action: 'accept',
-      reverse_relation_type: selectedRelation,
+      reverse_relation_type: selectedRelation as RelationType,
     })
   }
 
@@ -45,7 +45,9 @@ export function InvitationCard({ connection }: InvitationCardProps) {
   }
 
   const isLoading = respondMutation.isPending || deleteMutation.isPending
-  const meta = RELATIONS_MAP[connection.relation_type] || RELATIONS_MAP.Other
+  const meta = RELATIONS_MAP[connection.relation_type] || {
+    badgeColor: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-200 dark:border-sky-800',
+  }
 
   if (isReceived) {
     return (

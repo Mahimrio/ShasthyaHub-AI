@@ -405,6 +405,7 @@ export type RelationType =
   | 'Guardian'
   | 'Caregiver'
   | 'Other'
+  | (string & {})
 
 export type FamilyConnectionStatus = 'pending' | 'accepted' | 'rejected'
 

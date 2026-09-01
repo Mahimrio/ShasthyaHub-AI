@@ -1,11 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Search, UserPlus, X, Check, Loader2, HeartPulse, Mail } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Search, UserPlus, X, Check, Loader2, HeartPulse, Mail, Sparkles, Layers } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useSearchFamilyUsers, useSendFamilyInvitation } from '@/hooks/useFamily'
-import { ALL_RELATION_OPTIONS, getReciprocalRelation, getRelationLabel } from '@/lib/family/relations'
+import {
+  ALL_RELATION_OPTIONS,
+  getReciprocalRelation,
+} from '@/lib/family/relations'
 import type { RelationType, UserSearchResult } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,7 +25,10 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
   const { lang } = useLanguage()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null)
-  const [relationType, setRelationType] = useState<RelationType>('Father')
+  const [relationType, setRelationType] = useState<string>('Father')
+  const [customRelationName, setCustomRelationName] = useState('')
+  const [customReverseRelation, setCustomReverseRelation] = useState('')
+  const [customGeneration, setCustomGeneration] = useState<number>(-1)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
@@ -35,16 +41,35 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
     setSuccessMessage(null)
   }
 
+  const isCustom = relationType === 'Custom'
+
+  const effectiveRelation = isCustom
+    ? customRelationName.trim() || 'Custom'
+    : (relationType as RelationType)
+
+  const effectiveReverse = isCustom
+    ? customReverseRelation.trim() || 'Other'
+    : (getReciprocalRelation(relationType) as RelationType)
+
   const handleSendInvite = async () => {
     if (!selectedUser) return
     setError(null)
     setSuccessMessage(null)
 
+    if (isCustom && !customRelationName.trim()) {
+      setError(
+        lang === 'bn'
+          ? 'অনুগ্রহ করে কাস্টম সম্পর্কের নাম লিখুন (যেমন: ছোট কাকা বা কাজিন)'
+          : 'Please enter the custom relation name (e.g. Choto Kaku or Cousin Sister)'
+      )
+      return
+    }
+
     try {
       await sendInviteMutation.mutateAsync({
         target_id: selectedUser.id,
-        relation_type: relationType,
-        reverse_relation_type: getReciprocalRelation(relationType),
+        relation_type: effectiveRelation,
+        reverse_relation_type: effectiveReverse,
       })
 
       setSuccessMessage(
@@ -56,6 +81,8 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
       setTimeout(() => {
         setSelectedUser(null)
         setSearchTerm('')
+        setCustomRelationName('')
+        setCustomReverseRelation('')
         setSuccessMessage(null)
         onOpenChange(false)
       }, 1500)
@@ -64,8 +91,6 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
       setError(message)
     }
   }
-
-  const reciprocal = getReciprocalRelation(relationType)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -106,10 +131,10 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
           </div>
 
           {/* Search Results / Selected User */}
-          <div className="min-h-[160px] max-h-[220px] overflow-y-auto space-y-2 pr-1">
+          <div className="min-h-[140px] max-h-[220px] overflow-y-auto space-y-2 pr-1">
             {searchTerm.trim().length < 2 && !selectedUser && (
-              <div className="flex flex-col items-center justify-center h-36 text-center text-gray-400 p-4">
-                <Mail className="h-8 w-8 text-sky-400/50 mb-2" />
+              <div className="flex flex-col items-center justify-center h-32 text-center text-gray-400 p-4">
+                <Mail className="h-7 w-7 text-sky-400/50 mb-1.5" />
                 <p className="text-xs font-medium">
                   {lang === 'bn'
                     ? 'সদস্যের জিমেইল (Gmail) বা ইউজারনেম দিয়ে সন্ধান করুন'
@@ -124,7 +149,7 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
             )}
 
             {searchTerm.trim().length >= 2 && !isSearching && (!searchResults || searchResults.length === 0) && !selectedUser && (
-              <div className="flex flex-col items-center justify-center h-36 text-center text-gray-400 p-4">
+              <div className="flex flex-col items-center justify-center h-32 text-center text-gray-400 p-4">
                 <p className="text-xs">
                   {lang === 'bn' ? 'কোনো ব্যবহারকারী পাওয়া যায়নি' : 'No user found with this Gmail or username'}
                 </p>
@@ -233,7 +258,7 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
                   </label>
                   <select
                     value={relationType}
-                    onChange={(e) => setRelationType(e.target.value as RelationType)}
+                    onChange={(e) => setRelationType(e.target.value)}
                     className="w-full text-xs py-2.5 px-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-medium focus:ring-2 focus:ring-sky-500 focus:outline-none shadow-xs"
                   >
                     {ALL_RELATION_OPTIONS.map((opt) => (
@@ -244,13 +269,72 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
                   </select>
                 </div>
 
+                {/* Custom Relation Expansion */}
+                <AnimatePresence>
+                  {isCustom && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="p-3 rounded-xl bg-white dark:bg-gray-800/80 border border-sky-200 dark:border-sky-800 space-y-2.5 overflow-hidden"
+                    >
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+                        <Sparkles className="h-3.5 w-3.5" />
+                        <span>{lang === 'bn' ? 'কাস্টম সম্পর্কের বিবরণ লিখুন' : 'Enter Custom Relation Details'}</span>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">
+                          {lang === 'bn' ? 'আপনার সাথে তাদের সম্পর্ক (Relation to You):' : 'Their Relation to You:'}
+                        </label>
+                        <Input
+                          value={customRelationName}
+                          onChange={(e) => setCustomRelationName(e.target.value)}
+                          placeholder={lang === 'bn' ? 'যেমন: ছোট কাকা, মেজো মামা, কাজিন' : 'e.g. Choto Kaku, Stepmother, Cousin'}
+                          className="h-8 text-xs bg-gray-50 dark:bg-gray-900 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-600 dark:text-gray-400">
+                          {lang === 'bn' ? 'তাদের সাথে আপনার সম্পর্ক (Reciprocal Relation):' : 'Your Relation to Them:'}
+                        </label>
+                        <Input
+                          value={customReverseRelation}
+                          onChange={(e) => setCustomReverseRelation(e.target.value)}
+                          placeholder={lang === 'bn' ? 'যেমন: ভাতিজা, ভাগ্নে, কাজিন' : 'e.g. Bhatija, Nephew, Cousin'}
+                          className="h-8 text-xs bg-gray-50 dark:bg-gray-900 rounded-lg"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                          <Layers className="h-3 w-3" />
+                          <span>{lang === 'bn' ? 'পারিবারিক প্রজন্ম স্তর:' : 'Generation Tier in Tree:'}</span>
+                        </label>
+                        <select
+                          value={customGeneration}
+                          onChange={(e) => setCustomGeneration(Number(e.target.value))}
+                          className="w-full text-[11px] py-1.5 px-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300"
+                        >
+                          <option value="-2">{lang === 'bn' ? '🧓 দাদা-দাদী/নানা-নানী (-২ প্রজন্ম)' : '🧓 Grandparents Tier (-2)'}</option>
+                          <option value="-1">{lang === 'bn' ? '👨‍🦳 মা-বাবা ও জ্যেষ্ঠ অভিভাবক (-১ প্রজন্ম)' : '👨‍🦳 Parents & Elders Tier (-1)'}</option>
+                          <option value="0">{lang === 'bn' ? '🤝 সমবয়সী/কাজিন/স্বামী-স্ত্রী (০ প্রজন্ম)' : '🤝 Same Generation / Peers (0)'}</option>
+                          <option value="1">{lang === 'bn' ? '👶 সন্তান ও কনিষ্ঠ প্রজন্ম (+১ প্রজন্ম)' : '👶 Children & Descendants (+1)'}</option>
+                          <option value="2">{lang === 'bn' ? '🍼 নাতি-নাতনি (+২ প্রজন্ম)' : '🍼 Grandchildren (+2)'}</option>
+                        </select>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Reciprocal Preview Note */}
                 <div className="p-2.5 rounded-xl bg-white/80 dark:bg-gray-900/60 border border-sky-100 dark:border-sky-900/50 text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
                   <HeartPulse className="h-4 w-4 text-sky-500 shrink-0" />
                   <span>
                     {lang === 'bn'
-                      ? `তাঁর কাছে আপনি "${getRelationLabel(reciprocal, 'bn')}" হিসেবে প্রদর্শিত হবেন`
-                      : `You will appear as their "${getRelationLabel(reciprocal, 'en')}"`}
+                      ? `তাঁর কাছে আপনি "${effectiveReverse}" হিসেবে প্রদর্শিত হবেন`
+                      : `You will appear as their "${effectiveReverse}"`}
                   </span>
                 </div>
               </motion.div>
@@ -293,7 +377,7 @@ export function AddFamilyMember({ open, onOpenChange }: AddFamilyMemberProps) {
               ) : (
                 <UserPlus className="h-4 w-4 mr-1" />
               )}
-              <span>{lang === 'bn' ? 'আমন্ত্রণ পাঠান' : 'Send Invitation'}</span>
+              <span>{lang === 'bn' ? 'আমন্ত্রণ পাঠান' : 'Send Family Invitation'}</span>
             </Button>
           </div>
         </div>
