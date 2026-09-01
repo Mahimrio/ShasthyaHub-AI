@@ -7,7 +7,6 @@ import {
   Sparkles,
   Pill,
   AlertTriangle,
-  HeartPulse,
   CheckCircle2,
   ChevronDown,
   ZoomIn,
@@ -53,7 +52,6 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
 
   const self = treeData?.self
   const otherNodes = useMemo(() => treeData?.otherNodes || treeData?.members || [], [treeData])
-  const totalMembers = treeData?.totalMembers ?? (otherNodes.length + (self ? 1 : 0))
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(1.4, z + 0.1))
   const handleZoomOut = () => setZoomLevel((z) => Math.max(0.65, z - 0.1))
@@ -247,53 +245,20 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
       {/* Subtle Dot Mesh Background */}
       <div className="absolute inset-0 bg-[radial-gradient(#0284c710_1px,transparent_1px)] [background-size:22px_22px] pointer-events-none" />
 
-      {/* Top Header Controls Bar */}
-      <div className="relative z-20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-200/60 dark:border-gray-800/80 backdrop-blur-md bg-white/75 dark:bg-gray-900/75">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 via-teal-500 to-emerald-500 flex items-center justify-center text-white shadow-md shadow-sky-500/15 shrink-0">
-            <HeartPulse className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
-                {lang === 'bn' ? 'পারিবারিক প্রজন্ম বৃক্ষ' : 'Family Generation Tree'}
-              </h3>
-              <Badge variant="outline" className="text-[10px] font-bold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border-sky-200 dark:border-sky-800 rounded-full px-2 py-0.5">
-                {totalMembers} {lang === 'bn' ? 'সদস্য' : 'Members'}
-              </Badge>
-            </div>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {lang === 'bn'
-                ? 'প্রতিটি প্রজন্মের বৃত্তে ক্লিক করে ওষুধের রুটিন ও স্বাস্থ্য রিপোর্ট দেখুন'
-                : 'Click on any generation node to monitor medication schedules & health reports'}
-            </p>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center gap-2 self-stretch sm:self-auto justify-between sm:justify-end">
-          <div className="flex items-center bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-0.5 shadow-xs">
-            <Button variant="ghost" size="sm" onClick={handleZoomOut} className="h-7 w-7 p-0 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom Out">
-              <ZoomOut className="h-3.5 w-3.5" />
-            </Button>
-            <span className="text-[10px] font-mono font-bold px-1.5 text-gray-400">{Math.round(zoomLevel * 100)}%</span>
-            <Button variant="ghost" size="sm" onClick={handleZoomIn} className="h-7 w-7 p-0 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom In">
-              <ZoomIn className="h-3.5 w-3.5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-7 w-7 p-0 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Reset">
-              <RotateCcw className="h-3 w-3" />
-            </Button>
-          </div>
-
-          <Button
-            size="sm"
-            onClick={onAddMember}
-            className="h-8 rounded-xl bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white font-bold text-xs shadow-xs"
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" />
-            <span>{lang === 'bn' ? 'সদস্য যুক্ত করুন' : 'Add Member'}</span>
-          </Button>
-        </div>
+      {/* Floating Canvas Zoom Controls */}
+      <div className="absolute top-4 right-4 z-30 flex items-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl border border-gray-200/80 dark:border-gray-700/80 p-0.5 shadow-sm">
+        <Button variant="ghost" size="sm" onClick={handleZoomOut} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom Out">
+          <ZoomOut className="h-3.5 w-3.5" />
+        </Button>
+        <span className="text-[10px] font-mono font-bold px-1.5 text-gray-500 dark:text-gray-400 select-none">
+          {Math.round(zoomLevel * 100)}%
+        </span>
+        <Button variant="ghost" size="sm" onClick={handleZoomIn} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom In">
+          <ZoomIn className="h-3.5 w-3.5" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Reset">
+          <RotateCcw className="h-3 w-3" />
+        </Button>
       </div>
 
       {/* Main Generational Tree Stage */}
