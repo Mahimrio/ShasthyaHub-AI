@@ -268,3 +268,37 @@ export function useUpdateReminderSettings() {
     },
   })
 }
+
+// ── 7. Mutation: Refill Medication Supply ─────────────────────
+
+export function useRefillMedication() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({
+      schedule_id,
+      refill_amount = 10,
+    }: {
+      schedule_id: string
+      refill_amount?: number
+    }) => {
+      const res = await fetch('/api/medications/refill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id, refill_amount }),
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || 'Failed to refill medication')
+      }
+      return json
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: [...MEDICATION_DOSES_KEY, user?.id ?? 'anon'],
+      })
+    },
+  })
+}
+

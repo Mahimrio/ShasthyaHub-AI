@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   CheckCircle2,
   ClipboardList,
+  FileScan,
   Lightbulb,
+  Pill,
   RotateCcw,
   Search,
   Send,
@@ -15,16 +17,19 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useScriptGuardAnalysis } from '@/hooks/useScriptGuardAnalysis'
+import { useMedicationDoses } from '@/hooks/useMedicationReminders'
 import { ImageUploader } from '@/components/shared/ImageUploader'
 import { DisclaimerModal } from '@/components/shared/DisclaimerModal'
 import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { ResultCard } from '@/components/shared/ResultCard'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import ExtractedMedsTable from '@/components/features/scriptguard/ExtractedMedsTable'
 import DrugInteractionAlert from '@/components/features/scriptguard/DrugInteractionAlert'
 import MedicationScheduleTimeline from '@/components/features/scriptguard/MedicationScheduleTimeline'
 import AudioGuide from '@/components/features/scriptguard/AudioGuide'
+import { MyMedicinesCabinet } from '@/components/features/scriptguard/MyMedicinesCabinet'
 
 const DISCLAIMER_KEY = 'scriptguard_disclaimer_seen'
 
@@ -34,7 +39,12 @@ export default function ScriptGuardPage() {
   const { analyze, result, isLoading, isError, error, reset } =
     useScriptGuardAnalysis()
 
+  const { data: dosesData } = useMedicationDoses()
+  const activeMedsCount = dosesData?.doses ? new Set(dosesData.doses.map((d) => d.schedule.drug_name_en.toLowerCase())).size : 0
+
+  const [activeTab, setActiveTab] = useState<'scanner' | 'cabinet'>('scanner')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
   // SSR-safe: closed during prerender (window undefined), opens after mount
   // if the disclaimer hasn't been accepted yet.
   const [showDisclaimer, setShowDisclaimer] = useState(() => {
@@ -110,161 +120,199 @@ export default function ScriptGuardPage() {
       </div>
 
       <div className="relative min-h-screen z-10">
-        <div className="relative z-10 mx-auto max-w-3xl space-y-6 p-4 md:p-6">
+        <div className="relative z-10 mx-auto max-w-4xl space-y-6 p-4 md:p-6">
         {/* Header */}
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500">
-            <ClipboardList className="h-5 w-5 text-white" />
+        <div className="flex items-start gap-3.5">
+          <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 shadow-md shadow-emerald-500/20 text-white">
+            <ClipboardList className="h-6 w-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 md:text-2xl">
               {lang === 'bn'
-                ? 'স্ক্রিপ্টগার্ড — প্রেসক্রিপশন চেকার'
-                : 'ScriptGuard — Prescription Checker'}
+                ? 'স্ক্রিপ্টগার্ড — প্রেসক্রিপশন ও ঔষধ ব্যবস্থাপনা'
+                : 'ScriptGuard — Prescription & Medicine Cabinet'}
             </h1>
-            <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+            <p className="mt-0.5 text-xs sm:text-sm leading-relaxed text-gray-500 dark:text-gray-400">
               {lang === 'bn'
-                ? 'যেকোনো প্রেসক্রিপশনের ছবি আপলোড করুন — ওষুধ শনাক্তকরণ, মিথস্ক্রিয়া যাচাই ও ডিজিটাল শিডিউল তৈরি।'
-                : 'Upload a photo of any handwritten prescription for an instant drug safety check.'}
+                ? 'প্রেসক্রিপশন স্ক্যানিং, ওষুধের মিথস্ক্রিয়া যাচাই ও ভার্চুয়াল পিলবক্স ট্র্যাকিং।'
+                : 'Prescription scanning, drug safety screening & virtual pillbox inventory management.'}
             </p>
           </div>
         </div>
 
-        {/* Photo tip box */}
-        {!result && (
-          <div className="flex items-start gap-3 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-4 dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(16,185,129,0.06)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(16,185,129,0.08)]">
-            <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
-            <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-200">
-              {lang === 'bn'
-                ? 'টিপ: সেরা ফলাফলের জন্য ভালো আলোতে প্রেসক্রিপশনটি সমতল পৃষ্ঠে রেখে ছবি তুলুন।'
-                : 'Tip: For best results, take the photo in good lighting with the prescription flat on a surface.'}
-            </p>
-          </div>
-        )}
-
-        {/* Offline notification */}
-        {!isOnline && !result && (
-          <Alert className="rounded-2xl border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-              {lang === 'bn' ? 'ইন্টারনেট সংযোগ প্রয়োজন' : 'Internet Connection Required'}
-            </AlertTitle>
-            <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
-              {lang === 'bn'
-                ? 'প্রেসক্রিপশন বিশ্লেষণ এবং ওষুধের মিথস্ক্রিয়া যাচাই করার জন্য সক্রিয় ইন্টারনেট সংযোগ প্রয়োজন।'
-                : 'Prescription analysis and drug interaction verification require an active internet connection.'}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Upload + analyze button (hidden once a result is showing) */}
-        {!result && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <ImageUploader
-              onImageSelect={handleImageSelect}
-              acceptedTypes="image/*"
-              maxSizeMB={5}
-            />
-            <Button
-              onClick={handleAnalyzeClick}
-              disabled={!selectedFile || isLoading || !isOnline}
-              className="mt-4 w-full rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x py-6 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:cursor-not-allowed disabled:opacity-50"
+        {/* Top Feature Tabs */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as 'scanner' | 'cabinet')}
+          className="space-y-5"
+        >
+          <TabsList className="grid grid-cols-2 h-11 p-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md rounded-2xl border border-gray-200/60 dark:border-gray-800 max-w-md shadow-2xs">
+            <TabsTrigger
+              value="scanner"
+              className="text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all"
             >
-              <Search className="mr-2 h-5 w-5" />
-              {lang === 'bn' ? 'প্রেসক্রিপশন বিশ্লেষণ করুন' : 'Analyze Prescription'}
-            </Button>
-          </motion.div>
-        )}
+              <FileScan className="h-4 w-4" />
+              <span>{lang === 'bn' ? 'প্রেসক্রিপশন স্ক্যানার' : 'Prescription Scanner'}</span>
+            </TabsTrigger>
 
-        {/* Error state */}
-        {isError && (
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertTitle>
-                {lang === 'bn' ? 'বিশ্লেষণ ব্যর্থ হয়েছে' : 'Analysis Failed'}
-              </AlertTitle>
-              <AlertDescription>
-                <p className="mb-3">{error}</p>
+            <TabsTrigger
+              value="cabinet"
+              className="text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 data-[state=active]:bg-gradient-to-r data-[state=active]:from-sky-500 data-[state=active]:to-teal-500 data-[state=active]:text-white transition-all"
+            >
+              <Pill className="h-4 w-4" />
+              <span>{lang === 'bn' ? 'আমার ঔষধ তালিকা' : 'My Medicines'}</span>
+              {activeMedsCount > 0 && (
+                <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-white/20 text-current">
+                  {activeMedsCount}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* TAB 1: Prescription Scanner */}
+          <TabsContent value="scanner" className="space-y-5 focus:outline-none">
+            {/* Photo tip box */}
+            {!result && (
+              <div className="flex items-start gap-3 rounded-2xl border border-gray-200/50 bg-white/90 backdrop-blur-sm p-4 dark:border-gray-700/60 dark:bg-gray-900/90 dark:backdrop-blur-sm shadow-[0_10px_40px_rgba(0,0,0,0.1),0_4px_12px_rgba(16,185,129,0.06)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.4),0_4px_12px_rgba(16,185,129,0.08)]">
+                <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-200">
+                  {lang === 'bn'
+                    ? 'টিপ: সেরা ফলাফলের জন্য ভালো আলোতে প্রেসক্রিপশনটি সমতল পৃষ্ঠে রেখে ছবি তুলুন।'
+                    : 'Tip: For best results, take the photo in good lighting with the prescription flat on a surface.'}
+                </p>
+              </div>
+            )}
+
+            {/* Offline notification */}
+            {!isOnline && !result && (
+              <Alert className="rounded-2xl border-amber-200 bg-amber-50 dark:border-amber-900/50 dark:bg-amber-900/20">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <AlertTitle className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  {lang === 'bn' ? 'ইন্টারনেট সংযোগ প্রয়োজন' : 'Internet Connection Required'}
+                </AlertTitle>
+                <AlertDescription className="text-xs text-amber-700 dark:text-amber-300">
+                  {lang === 'bn'
+                    ? 'প্রেসক্রিপশন বিশ্লেষণ এবং ওষুধের মিথস্ক্রিয়া যাচাই করার জন্য সক্রিয় ইন্টারনেট সংযোগ প্রয়োজন।'
+                    : 'Prescription analysis and drug interaction verification require an active internet connection.'}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Upload + analyze button (hidden once a result is showing) */}
+            {!result && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                <ImageUploader
+                  onImageSelect={handleImageSelect}
+                  acceptedTypes="image/*"
+                  maxSizeMB={5}
+                />
                 <Button
                   onClick={handleAnalyzeClick}
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                  disabled={!selectedFile || isLoading || !isOnline}
+                  className="mt-4 w-full rounded-2xl bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 bg-[length:200%_100%] animate-gradient-x py-6 text-base font-semibold text-white shadow-md hover:shadow-lg active:scale-[0.99] transition-all disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <RotateCcw className="mr-2 h-3.5 w-3.5" />
-                  {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'Try Again'}
+                  <Search className="mr-2 h-5 w-5" />
+                  {lang === 'bn' ? 'প্রেসক্রিপশন বিশ্লেষণ করুন' : 'Analyze Prescription'}
                 </Button>
-              </AlertDescription>
-            </Alert>
-          </motion.div>
-        )}
+              </motion.div>
+            )}
 
-        {/* Result — render in safety order: interactions → drugs → schedule → audio */}
-        {result && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="space-y-4"
-          >
-            {/* 1. Drug interactions (FIRST for safety) */}
-            <DrugInteractionAlert
-              interactions={result.interaction_warnings}
-              hasDangerous={result.has_dangerous_interactions}
-              lang={lang}
-            />
+            {/* Error state */}
+            {isError && (
+              <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>
+                    {lang === 'bn' ? 'বিশ্লেষণ ব্যর্থ হয়েছে' : 'Analysis Failed'}
+                  </AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-3">{error}</p>
+                    <Button
+                      onClick={handleAnalyzeClick}
+                      variant="outline"
+                      size="sm"
+                      className="border-destructive/50 text-destructive hover:bg-destructive/10"
+                    >
+                      <RotateCcw className="mr-2 h-3.5 w-3.5" />
+                      {lang === 'bn' ? 'আবার চেষ্টা করুন' : 'Try Again'}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
 
-            {/* 2. Extracted medications */}
-            <ResultCard
-              title={lang === 'bn' ? 'শনাক্তকৃত ওষুধ' : 'Identified Medications'}
-              badge={{
-                label: `${result.extracted_drugs.length} ${
-                  lang === 'bn' ? 'টি' : 'drugs'
-                }`,
-                variant: 'normal',
-              }}
-            >
-              <div className="pt-3">
-                <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} />
-              </div>
-            </ResultCard>
-
-            {/* 3. Medication schedule timeline */}
-            <ResultCard
-              title={lang === 'bn' ? 'ওষুধ গ্রহণের সময়সূচি' : 'Medication Schedule'}
-              badge={{ label: lang === 'bn' ? 'প্রতিদিন' : 'Daily', variant: 'low' }}
-            >
-              <div className="pt-3">
-                <MedicationScheduleTimeline
-                  schedule={result.schedule}
-                  durationDays={result.duration_days}
-                  specialInstructions={specialInstructions}
-                  lang={lang}
-                  prescriptionId={result.id}
-                />
-              </div>
-            </ResultCard>
-
-            {/* 4. Audio guide (Bengali voice overview) */}
-            <AudioGuide
-              audioScriptBn={result.audio_script_bn}
-              lang={lang}
-            />
-
-            {/* Reset / New prescription button */}
-            <div className="pt-2">
-              <Button
-                onClick={handleReset}
-                variant="outline"
-                className="w-full rounded-xl py-5 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+            {/* Result — render in safety order: interactions → drugs → schedule → audio */}
+            {result && (
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+                className="space-y-4"
               >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                {lang === 'bn' ? 'নতুন প্রেসক্রিপশন পরীক্ষা করুন' : 'Scan Another Prescription'}
-              </Button>
-            </div>
-          </motion.div>
-        )}
+                {/* 1. Drug interactions (FIRST for safety) */}
+                <DrugInteractionAlert
+                  interactions={result.interaction_warnings}
+                  hasDangerous={result.has_dangerous_interactions}
+                  lang={lang}
+                />
+
+                {/* 2. Extracted medications */}
+                <ResultCard
+                  title={lang === 'bn' ? 'শনাক্তকৃত ওষুধ' : 'Identified Medications'}
+                  badge={{
+                    label: `${result.extracted_drugs.length} ${
+                      lang === 'bn' ? 'টি' : 'drugs'
+                    }`,
+                    variant: 'normal',
+                  }}
+                >
+                  <div className="pt-3">
+                    <ExtractedMedsTable drugs={result.extracted_drugs} lang={lang} />
+                  </div>
+                </ResultCard>
+
+                {/* 3. Medication schedule timeline with Reminders & Meal Routine */}
+                <ResultCard
+                  title={lang === 'bn' ? 'ওষুধ গ্রহণের সময়সূচি ও রিমাইন্ডার' : 'Medication Schedule & Reminders'}
+                  badge={{ label: lang === 'bn' ? 'প্রতিদিন' : 'Daily', variant: 'low' }}
+                >
+                  <div className="pt-3">
+                    <MedicationScheduleTimeline
+                      schedule={result.schedule}
+                      durationDays={result.duration_days}
+                      specialInstructions={specialInstructions}
+                      lang={lang}
+                      prescriptionId={result.id}
+                    />
+                  </div>
+                </ResultCard>
+
+                {/* 4. Audio guide (Bengali voice overview) */}
+                <AudioGuide
+                  audioScriptBn={result.audio_script_bn}
+                  lang={lang}
+                />
+
+                {/* Reset / New prescription button */}
+                <div className="pt-2">
+                  <Button
+                    onClick={handleReset}
+                    variant="outline"
+                    className="w-full rounded-2xl py-5 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    {lang === 'bn' ? 'নতুন প্রেসক্রিপশন পরীক্ষা করুন' : 'Scan Another Prescription'}
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </TabsContent>
+
+          {/* TAB 2: My Medicines & Pillbox */}
+          <TabsContent value="cabinet" className="focus:outline-none">
+            <MyMedicinesCabinet />
+          </TabsContent>
+        </Tabs>
       </div>
       </div>
     </>

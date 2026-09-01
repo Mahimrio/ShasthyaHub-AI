@@ -494,6 +494,7 @@ export interface MedicationScheduleItem {
   prescription_id?: string | null
   drug_name_en: string
   drug_name_bn: string
+  generic_name?: string
   dosage: string
   meal_timing: MealTimingType
   scheduled_time: string // e.g. "08:00" (24hr format HH:mm)
@@ -502,11 +503,32 @@ export interface MedicationScheduleItem {
   interval_hours?: number | null // e.g. 8 for 8-hour intervals
   instructions_en?: string
   instructions_bn?: string
+  indication_en?: string // e.g. "Acidity & Reflux", "Fever & Pain"
+  indication_bn?: string
+  total_prescribed_quantity?: number // e.g. 30
+  remaining_quantity?: number // e.g. 14
+  refill_threshold?: number // e.g. 4
   start_date: string // YYYY-MM-DD
   end_date?: string | null
   duration_days?: number
   is_active: boolean
+  is_archived?: boolean
   created_at: string
+}
+
+export interface CabinetMedicineSummary {
+  schedule: MedicationScheduleItem
+  times: string[] // all daily times for this drug e.g. ["08:00", "20:00"]
+  frequency: string // e.g. "1+0+1 (Twice Daily)"
+  remainingPills: number
+  totalPills: number
+  daysRemaining: number
+  isLowStock: boolean
+  courseProgressPercent: number
+  takenCount: number
+  missedCount: number
+  adherenceRate: number
+  todayStatus: DoseStatus
 }
 
 export interface DoseLog {

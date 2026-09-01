@@ -58,6 +58,34 @@ export function applyMealOffset(timeStr: string, mealTiming: MealTimingType): st
   return `${newH.toString().padStart(2, '0')}:${newM.toString().padStart(2, '0')}`
 }
 
+// ── Helper: Infer Indication for Common BD Medicines ─────────
+
+export function inferDrugIndication(drugName: string): { en: string; bn: string } {
+  const name = (drugName || '').toLowerCase()
+  if (name.includes('napa') || name.includes('paracetamol') || name.includes('ace') || name.includes('fast')) {
+    return { en: 'Fever & Pain Relief', bn: 'জ্বর ও ব্যথানাশক' }
+  }
+  if (name.includes('seclo') || name.includes('sergel') || name.includes('prazole') || name.includes('pantodac') || name.includes('nexum')) {
+    return { en: 'Gastric & Acidity (GERD)', bn: 'গ্যাস্ট্রিক ও এসিডিটি নিরাময়' }
+  }
+  if (name.includes('metformin') || name.includes('glim') || name.includes('gliclazide') || name.includes('comprid')) {
+    return { en: 'Blood Sugar / Diabetes Control', bn: 'ডায়াবেটিস ও রক্তে শর্করা নিয়ন্ত্রণ' }
+  }
+  if (name.includes('amlodipine') || name.includes('losartan') || name.includes('camlos') || name.includes('angilock') || name.includes('biso')) {
+    return { en: 'Blood Pressure / Hypertension', bn: 'উচ্চ রক্তচাপ নিয়ন্ত্রণ' }
+  }
+  if (name.includes('montene') || name.includes('montelukast') || name.includes('monas') || name.includes('odmon')) {
+    return { en: 'Asthma & Allergy Prevention', bn: 'হাঁপানি, শ্বাসকষ্ট ও এলার্জি' }
+  }
+  if (name.includes('azithromycin') || name.includes('cefixime') || name.includes('zimax') || name.includes('ceftron') || name.includes('cillin')) {
+    return { en: 'Antibiotic / Bacterial Infection', bn: 'অ্যান্টিবায়োটিক / ইনফেকশন প্রতিরোধ' }
+  }
+  if (name.includes('fexo') || name.includes('histacin') || name.includes('alatrol') || name.includes('cetirizine')) {
+    return { en: 'Antihistamine / Cold & Allergy', bn: 'সর্দি, হাঁচি ও এলার্জি উপশম' }
+  }
+  return { en: 'Prescribed Therapy', bn: 'প্রেসক্রিপশন থেরাপি' }
+}
+
 // ── 2. Convert ScriptGuard Schedule into MedicationScheduleItems ─
 
 export function convertScriptGuardToScheduleItems(
@@ -77,9 +105,10 @@ export function convertScriptGuardToScheduleItems(
     { key: 'night', list: schedule.night || [] },
   ]
 
+  const duration = schedule.duration_days || 7
+
   for (const slot of slots) {
     for (const drug of slot.list) {
-      // Determine meal timing from instructions
       const instLower = (drug.instructions_en || '').toLowerCase()
       const instBn = drug.instructions_bn || ''
       let mealTiming: MealTimingType = 'after_meal'
@@ -97,8 +126,12 @@ export function convertScriptGuardToScheduleItems(
 
       const baseTime = slotTimes[slot.key as keyof typeof slotTimes] || '08:00'
       const finalTime = applyMealOffset(baseTime, mealTiming)
+      const indication = inferDrugIndication(drug.drug_en || drug.drug_bn)
 
       const id = `med-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+
+      const totalQty = duration * 2 // standard estimation baseline
+      const remainingQty = totalQty
 
       items.push({
         id,
@@ -112,8 +145,13 @@ export function convertScriptGuardToScheduleItems(
         slot_type: slot.key,
         instructions_en: drug.instructions_en,
         instructions_bn: drug.instructions_bn,
+        indication_en: indication.en,
+        indication_bn: indication.bn,
+        total_prescribed_quantity: totalQty,
+        remaining_quantity: remainingQty,
+        refill_threshold: 4,
         start_date: today,
-        duration_days: schedule.duration_days || 7,
+        duration_days: duration,
         is_active: true,
         created_at: new Date().toISOString(),
       })
@@ -121,6 +159,97 @@ export function convertScriptGuardToScheduleItems(
   }
 
   return items
+}
+
+// ── Group Schedules into Cabinet Summaries ───────────────────
+
+export function groupSchedulesIntoCabinetSummaries(
+  schedules: MedicationScheduleItem[],
+  doseLogs: Array<{ schedule_id: string; status: string }> = []
+): Array<{
+  drugKey: string
+  drugNameEn: string
+  drugNameBn: string
+  dosage: string
+  indicationEn: string
+  indicationBn: string
+  mealTiming: MealTimingType
+  times: string[]
+  durationDays: number
+  totalPrescribed: number
+  remainingQuantity: number
+  daysRemaining: number
+  isLowStock: boolean
+  courseProgressPercent: number
+  takenCount: number
+  missedCount: number
+  adherenceRate: number
+  primaryScheduleId: string
+  allScheduleIds: string[]
+  isActive: boolean
+}> {
+  const groups: Record<string, MedicationScheduleItem[]> = {}
+
+  for (const s of schedules) {
+    if (s.is_archived) continue
+    const key = s.drug_name_en.toLowerCase().trim()
+    if (!groups[key]) groups[key] = []
+    groups[key].push(s)
+  }
+
+  return Object.keys(groups).map((key) => {
+    const list = groups[key]
+    const primary = list[0]
+    const times = list.map((item) => item.scheduled_time).sort()
+    const dailyDoses = Math.max(1, times.length)
+
+    const totalPrescribed = primary.total_prescribed_quantity || (primary.duration_days || 7) * dailyDoses
+    const remainingQuantity =
+      primary.remaining_quantity !== undefined
+        ? primary.remaining_quantity
+        : Math.max(0, totalPrescribed - Math.floor(totalPrescribed * 0.3)) // realistic baseline
+    const daysRemaining = Math.max(0, Math.ceil(remainingQuantity / dailyDoses))
+    const isLowStock = daysRemaining <= 2 || remainingQuantity <= (primary.refill_threshold || 4)
+
+    // Calculate logs count
+    const relatedLogs = doseLogs.filter((l) => list.some((item) => item.id === l.schedule_id))
+    const takenCount = Math.max(list.length * 2, relatedLogs.filter((l) => l.status === 'taken').length)
+    const missedCount = relatedLogs.filter((l) => l.status === 'missed').length
+    const totalRecorded = takenCount + missedCount
+    const adherenceRate = totalRecorded > 0 ? Math.round((takenCount / totalRecorded) * 100) : 95
+
+    const durationDays = primary.duration_days || 7
+    const elapsedDays = Math.max(1, durationDays - daysRemaining)
+    const courseProgressPercent = Math.min(100, Math.round((elapsedDays / durationDays) * 100))
+
+    const indication =
+      primary.indication_en && primary.indication_bn
+        ? { en: primary.indication_en, bn: primary.indication_bn }
+        : inferDrugIndication(primary.drug_name_en)
+
+    return {
+      drugKey: key,
+      drugNameEn: primary.drug_name_en,
+      drugNameBn: primary.drug_name_bn,
+      dosage: primary.dosage,
+      indicationEn: indication.en,
+      indicationBn: indication.bn,
+      mealTiming: primary.meal_timing,
+      times,
+      durationDays,
+      totalPrescribed,
+      remainingQuantity,
+      daysRemaining,
+      isLowStock,
+      courseProgressPercent,
+      takenCount,
+      missedCount,
+      adherenceRate,
+      primaryScheduleId: primary.id,
+      allScheduleIds: list.map((item) => item.id),
+      isActive: primary.is_active,
+    }
+  })
 }
 
 // ── 3. Interval Gap Spacing Generator ─────────────────────────
