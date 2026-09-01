@@ -5,7 +5,6 @@ import { motion } from 'framer-motion'
 import {
   Bell,
   CalendarClock,
-  Check,
   Info,
   Moon,
   Printer,
@@ -16,13 +15,12 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  useSavePrescriptionToReminders,
-  useReminderSettings,
-} from '@/hooks/useMedicationReminders'
+import { useReminderSettings } from '@/hooks/useMedicationReminders'
 import { MedicationSettingsModal } from '@/components/features/medications/MedicationSettingsModal'
+import { SaveToCabinetModal } from '@/components/features/scriptguard/SaveToCabinetModal'
 import { formatTimeDisplay, resolveSlotTimes } from '@/lib/services/medication-reminder'
 import type {
+  ExtractedMedication,
   Language,
   MedicationSchedule,
   ScheduleSlot,
@@ -34,6 +32,8 @@ interface MedicationScheduleTimelineProps {
   specialInstructions: string[]
   lang: Language
   prescriptionId?: string
+  extractedDrugs?: ExtractedMedication[]
+  onSwitchToCabinet?: () => void
 }
 
 type SlotKey = keyof Pick<
@@ -185,11 +185,10 @@ export default function MedicationScheduleTimeline({
   specialInstructions,
   lang,
   prescriptionId,
+  extractedDrugs,
+  onSwitchToCabinet,
 }: MedicationScheduleTimelineProps) {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [savedSuccess, setSavedSuccess] = useState(false)
-
-  const saveToReminders = useSavePrescriptionToReminders()
   const { data: reminderSettings } = useReminderSettings()
 
   const defaultTimes = resolveSlotTimes(
@@ -206,24 +205,31 @@ export default function MedicationScheduleTimeline({
     }
   )
 
-  const handleSaveToReminders = async () => {
-    try {
-      await saveToReminders.mutateAsync({
-        digital_schedule: {
-          ...schedule,
-          duration_days: durationDays,
-          special_instructions_en: specialInstructions,
-          special_instructions_bn: specialInstructions,
-          audio_script_bn: '',
+  const [saveToCabinetModalOpen, setSaveToCabinetModalOpen] = useState(false)
+
+  const derivedDrugs: ExtractedMedication[] = extractedDrugs || Array.from(
+    new Map(
+      [
+        ...schedule.morning,
+        ...schedule.afternoon,
+        ...schedule.evening,
+        ...schedule.night,
+      ].map((s) => [
+        s.drug_bn || s.drug_en,
+        {
+          written_text: s.drug_bn || s.drug_en,
+          brand_name: s.drug_bn || s.drug_en,
+          generic_name: s.drug_en || s.drug_bn,
+          dosage: s.dosage || '1 unit',
+          drug_class: 'Prescribed Agent',
+          frequency: '1+0+1',
+          duration: `${durationDays} days`,
+          instructions: s.instructions_bn || s.instructions_en || 'ডাক্তারের পরামর্শমতো সেব্য',
+          mapping_confidence: 'high' as const,
         },
-        prescription_id: prescriptionId,
-      })
-      setSavedSuccess(true)
-      setTimeout(() => setSavedSuccess(false), 4000)
-    } catch (e) {
-      console.error('Failed to save reminders:', e)
-    }
-  }
+      ])
+    ).values()
+  )
 
   const handlePrint = () => {
     if (typeof window !== 'undefined') window.print()
@@ -262,28 +268,18 @@ export default function MedicationScheduleTimeline({
             <span>{lang === 'bn' ? 'খাবারের সময়' : 'Meal Routine'}</span>
           </Button>
 
-          {/* Activate Reminders Button */}
+          {/* User-Controlled Save to Cabinet Button */}
           <Button
             size="sm"
-            onClick={handleSaveToReminders}
-            disabled={saveToReminders.isPending || savedSuccess}
-            className={`rounded-xl text-xs font-bold h-8 transition-all ${
-              savedSuccess
-                ? 'bg-emerald-500 hover:bg-emerald-600 text-white'
-                : 'bg-gradient-to-r from-sky-500 to-teal-500 hover:from-sky-600 hover:to-teal-600 text-white shadow-sm'
-            }`}
+            onClick={() => setSaveToCabinetModalOpen(true)}
+            className="rounded-xl text-xs font-bold h-8 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-sm"
           >
-            {savedSuccess ? (
-              <>
-                <Check className="mr-1.5 h-3.5 w-3.5 text-white" />
-                <span>{lang === 'bn' ? 'রিমাইন্ডার চালু হয়েছে!' : 'Reminders Activated!'}</span>
-              </>
-            ) : (
-              <>
-                <Bell className="mr-1.5 h-3.5 w-3.5" />
-                <span>{lang === 'bn' ? 'রিমাইন্ডার চালু করুন' : 'Activate Alarms'}</span>
-              </>
-            )}
+            <Bell className="mr-1.5 h-3.5 w-3.5" />
+            <span>
+              {lang === 'bn'
+                ? 'ঔষধ তালিকায় সংরক্ষণ ও রিমাইন্ডার'
+                : 'Save to Cabinet & Reminders'}
+            </span>
           </Button>
 
           {/* Print button */}
@@ -338,6 +334,16 @@ export default function MedicationScheduleTimeline({
       <MedicationSettingsModal
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
+      />
+
+      <SaveToCabinetModal
+        open={saveToCabinetModalOpen}
+        onOpenChange={setSaveToCabinetModalOpen}
+        drugs={derivedDrugs}
+        schedule={schedule}
+        durationDays={durationDays}
+        prescriptionId={prescriptionId}
+        onSwitchToCabinet={onSwitchToCabinet}
       />
     </motion.div>
   )

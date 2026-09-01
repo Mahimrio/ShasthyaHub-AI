@@ -11,8 +11,10 @@ import {
   Pill,
   Plus,
   RotateCcw,
+  Send,
   Settings2,
   Trash2,
+  Users,
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -23,9 +25,11 @@ import {
   useRecordDoseAction,
   useDeleteMedicationSchedule,
 } from '@/hooks/useMedicationReminders'
+import { useCaregiverAlerts, useSendCaregiverNudge } from '@/hooks/useFamily'
 import { MissedDoseAlertModal } from './MissedDoseAlertModal'
 import { AddManualMedicationModal } from './AddManualMedicationModal'
 import { MedicationSettingsModal } from './MedicationSettingsModal'
+import { formatTimeDisplay } from '@/lib/services/medication-reminder'
 import type { ActiveDoseWithStatus } from '@/types'
 
 export function MedicationNotificationDrawer() {
@@ -36,14 +40,44 @@ export function MedicationNotificationDrawer() {
   const [selectedMissedDose, setSelectedMissedDose] = useState<ActiveDoseWithStatus | null>(null)
   const [addModalOpen, setAddModalOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
+  const [nudgedMemberIds, setNudgedMemberIds] = useState<Set<string>>(new Set())
 
   const { data: dosesData, isLoading } = useMedicationDoses()
+  const { data: caregiverData } = useCaregiverAlerts()
+  const nudgeMutation = useSendCaregiverNudge()
   const recordAction = useRecordDoseAction()
   const deleteSchedule = useDeleteMedicationSchedule()
 
   const doses = dosesData?.doses || []
   const summary = dosesData?.summary
   const dueOrMissedCount = doses.filter((d) => d.isDueNow || d.isMissed).length
+
+  // Filter subscribed family members with missed doses
+  const activeFamilyMissedAlerts = (caregiverData?.alerts || []).filter(
+    (a) => a.isSubscribed && a.missedDoses.length > 0
+  )
+  const totalFamilyMissedDoses = activeFamilyMissedAlerts.reduce(
+    (acc, a) => acc + a.missedDoses.length,
+    0
+  )
+
+  const totalBadgeCount = dueOrMissedCount + totalFamilyMissedDoses
+
+  const handleNudge = async (memberId: string) => {
+    try {
+      await nudgeMutation.mutateAsync({ memberId })
+      setNudgedMemberIds((prev) => new Set(prev).add(memberId))
+      setTimeout(() => {
+        setNudgedMemberIds((prev) => {
+          const next = new Set(prev)
+          next.delete(memberId)
+          return next
+        })
+      }, 3500)
+    } catch (err) {
+      console.error('Failed to send nudge:', err)
+    }
+  }
 
   return (
     <>
@@ -56,9 +90,9 @@ export function MedicationNotificationDrawer() {
           className="relative p-2 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
         >
           <Bell className="h-4 w-4" />
-          {dueOrMissedCount > 0 && (
+          {totalBadgeCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gradient-to-r from-red-500 to-rose-500 text-[9px] font-black text-white shadow-sm ring-2 ring-white dark:ring-gray-900 animate-pulse">
-              {dueOrMissedCount}
+              {totalBadgeCount}
             </span>
           )}
         </button>
@@ -140,6 +174,97 @@ export function MedicationNotificationDrawer() {
                       <span>
                         {summary.weeklyStreakDays} {isBn ? 'দিনের স্ট্রিক' : 'd streak'}
                       </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Family Missed Dose Alerts */}
+                {activeFamilyMissedAlerts.length > 0 && (
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-rose-500/15 via-red-500/10 to-amber-500/10 border border-rose-300/80 dark:border-rose-900/60 shadow-xs space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-rose-700 dark:text-rose-300">
+                        <Users className="h-4 w-4 text-rose-600 shrink-0" />
+                        <p className="text-xs font-bold">
+                          {isBn
+                            ? `পরিবারের ${activeFamilyMissedAlerts.length} জনের মিসড ডোজ অ্যালার্ট`
+                            : `Family Caregiver Alerts (${activeFamilyMissedAlerts.length})`}
+                        </p>
+                      </div>
+                      <span className="text-[10px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-md">
+                        {isBn ? 'জরুরি' : 'Urgent'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      {activeFamilyMissedAlerts.map((alert) => {
+                        const isNudged = nudgedMemberIds.has(alert.memberId)
+                        return (
+                          <div
+                            key={alert.memberId}
+                            className="p-2.5 rounded-xl bg-white/90 dark:bg-gray-800/90 border border-rose-200/70 dark:border-rose-900/50 space-y-2"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                                  {alert.memberName}
+                                </h4>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                  {alert.relation} • {alert.missedDoses.length} {isBn ? 'টি ওষুধ মিসড' : 'missed'}
+                                </p>
+                              </div>
+
+                              <Button
+                                size="sm"
+                                onClick={() => handleNudge(alert.memberId)}
+                                disabled={nudgeMutation.isPending || isNudged}
+                                className={`h-7 text-[11px] font-bold rounded-xl px-2.5 shadow-xs transition-all ${
+                                  isNudged
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-rose-600 hover:bg-rose-700 text-white'
+                                }`}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                <span>
+                                  {isNudged
+                                    ? isBn
+                                      ? 'নক করা হয়েছে! ✓'
+                                      : 'Nudged! ✓'
+                                    : isBn
+                                    ? 'মনে করিয়ে দিন'
+                                    : 'Send Nudge'}
+                                </span>
+                              </Button>
+                            </div>
+
+                            {/* Drugs preview */}
+                            <div className="space-y-1 pt-1 border-t border-rose-100 dark:border-rose-900/30">
+                              {alert.missedDoses.map((m) => (
+                                <div
+                                  key={m.scheduleId}
+                                  className="flex items-center justify-between text-[11px] text-gray-700 dark:text-gray-300"
+                                >
+                                  <div className="flex items-center gap-1.5">
+                                    <div className="p-0.5 rounded-md bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 shrink-0">
+                                      <PillAvatar
+                                        shape={m.pillShape}
+                                        color={m.pillColor}
+                                        colorSecondary={m.pillColorSecondary}
+                                        size="xs"
+                                      />
+                                    </div>
+                                    <span className="font-semibold">
+                                      {isBn ? m.drugNameBn : m.drugNameEn}
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] font-mono text-rose-600 dark:text-rose-400 font-bold">
+                                    {formatTimeDisplay(m.scheduledTime, lang)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      })}
                     </div>
                   </div>
                 )}

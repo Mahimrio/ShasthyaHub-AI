@@ -442,6 +442,8 @@ export default function ScriptGuardPage() {
                         specialInstructions={specialInstructions}
                         lang={lang}
                         prescriptionId={result.id}
+                        extractedDrugs={result.extracted_drugs}
+                        onSwitchToCabinet={() => setActiveTab('cabinet')}
                       />
                     </div>
                   </ResultCard>
