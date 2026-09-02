@@ -1,9 +1,24 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
+import { Plus_Jakarta_Sans, Hind_Siliguri } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import type { Language } from "@/types";
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const hindSiliguri = Hind_Siliguri({
+  subsets: ["bengali", "latin"],
+  variable: "--font-bengali",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
 
 export const metadata: Metadata = {
   title: "ShasthyaHub-AI",
@@ -37,7 +52,10 @@ export default async function RootLayout({
   const initialLang: Language = stored === "en" ? "en" : "bn";
 
   return (
-    <html lang={initialLang} className="h-full antialiased">
+    <html
+      lang={initialLang}
+      className={`${plusJakartaSans.variable} ${hindSiliguri.variable} h-full antialiased`}
+    >
       <body className="min-h-full flex flex-col font-sans select-none">
         <Providers initialLang={initialLang}>{children}</Providers>
         <ServiceWorkerRegister />
