@@ -148,7 +148,7 @@ export default function NayanAIPage() {
       </div>
 
       <div className="relative min-h-screen z-10">
-        <div className="relative mx-auto max-w-6xl space-y-7 p-4 sm:p-6 lg:p-8">
+        <div className="relative mx-auto max-w-[1460px] 2xl:max-w-[1560px] space-y-7 p-4 sm:p-6 lg:p-8">
           {/* Header Card */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
             <div className="flex items-start gap-3.5">
@@ -369,7 +369,7 @@ export default function NayanAIPage() {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                 
                 {/* Left Column: Eye Image + Primary Clinical Report Card */}
-                <div className="lg:col-span-5 space-y-5">
+                <div className="lg:col-span-6 xl:col-span-6 space-y-5">
                   {/* Scanned Image Preview with Authentic Biometric Reticles */}
                   <div className="glass-card rounded-3xl p-5 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3">
@@ -381,7 +381,7 @@ export default function NayanAIPage() {
                       </span>
                     </div>
 
-                    <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden shadow-md bg-black/5 dark:bg-black/30 border border-sky-200/50 dark:border-sky-800/50">
+                    <div className="relative w-full h-64 sm:h-72 lg:h-80 rounded-2xl overflow-hidden shadow-md bg-black/5 dark:bg-black/30 border border-sky-200/50 dark:border-sky-800/50">
                       {selectedPreviewUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -436,7 +436,7 @@ export default function NayanAIPage() {
                 </div>
 
                 {/* Right Column: About Condition + Clinical Recommendations + Top Doctors */}
-                <div className="lg:col-span-7 space-y-5">
+                <div className="lg:col-span-6 xl:col-span-6 space-y-5">
                   {/* About This Condition Panel */}
                   {(result.disease_description_en || result.disease_description_bn) && (
                     <ResultCard
