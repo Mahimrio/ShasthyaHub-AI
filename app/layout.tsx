@@ -56,7 +56,7 @@ export default async function RootLayout({
       lang={initialLang}
       className={`${plusJakartaSans.variable} ${hindSiliguri.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans select-none">
+      <body className={`min-h-full flex flex-col ${initialLang === 'bn' ? 'font-bengali' : 'font-sans'} select-none`}>
         <Providers initialLang={initialLang}>{children}</Providers>
         <ServiceWorkerRegister />
       </body>
