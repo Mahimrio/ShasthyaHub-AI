@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getLocalSchedules, getLocalDoseLogs } from '@/lib/medications/store'
 import { inferPillAvatar } from '@/lib/services/medication-reminder'
-import type { FamilyMemberMedicationStatus, DoseLog } from '@/types'
+import type { FamilyMemberMedicationStatus, DoseLog, MedicationScheduleItem } from '@/types'
 
 export async function GET(request: Request) {
   try {
@@ -13,9 +14,39 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Missing member_id' }, { status: 400 })
     }
 
-    const schedules = getLocalSchedules(memberId).filter((s) => s.is_active && !s.is_archived)
     const today = new Date().toISOString().split('T')[0]
-    const logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today))
+    let schedules: MedicationScheduleItem[] = []
+    let logs: DoseLog[] = []
+
+    try {
+      const supabase = await createServerSupabaseClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user) {
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const client = serviceKey && supabaseUrl
+          ? createSupabaseClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+          : supabase
+
+        const [schedRes, logRes] = await Promise.all([
+          client.from('medication_schedules').select('*').eq('user_id', memberId).eq('is_active', true),
+          client.from('dose_logs').select('*').eq('user_id', memberId).gte('scheduled_for', `${today}T00:00:00.000Z`)
+        ])
+
+        if (schedRes.data && schedRes.data.length > 0) schedules = schedRes.data
+        if (logRes.data && logRes.data.length > 0) logs = logRes.data
+      }
+    } catch {
+      // fallback to local
+    }
+
+    if (schedules.length === 0) {
+      schedules = getLocalSchedules(memberId).filter((s) => s.is_active && !s.is_archived)
+    }
+    if (logs.length === 0) {
+      logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today))
+    }
 
     const totalMeds = new Set(schedules.map((s) => s.drug_name_en.toLowerCase())).size
     const totalDosesToday = schedules.length
