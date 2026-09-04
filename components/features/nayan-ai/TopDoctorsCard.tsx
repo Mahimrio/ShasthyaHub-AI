@@ -82,14 +82,14 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
   return (
     <div className="glass-card rounded-3xl p-6 space-y-4 transition-all duration-300">
       <div className="flex items-center justify-between pb-3 border-b border-gray-100/80 dark:border-gray-800/80">
-        <h3 className="flex items-center gap-2 text-sm font-bold text-gray-800 dark:text-gray-200">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-gray-800 dark:text-gray-200">
           <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
           <span>
             {lang === 'bn' ? 'প্রস্তাবিত বিশেষজ্ঞ চিকিৎসক ও হাসপাতাল' : 'Recommended Specialists & Eye Centers'}
           </span>
         </h3>
         {doctors.length === 0 && (
-          <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-0.5 rounded-full border border-sky-200/60 dark:border-sky-800/50">
+          <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/50 px-2.5 py-0.5 rounded-full border border-sky-200/60 dark:border-sky-800/50">
             {lang === 'bn' ? 'জাতীয় রেফারেল' : 'National Referral'}
           </span>
         )}
@@ -98,14 +98,14 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
       <div className="divide-y divide-gray-100/80 dark:divide-gray-800/80">
         {displayList.map((doctor) => (
           <div key={doctor.id} className="flex items-start gap-4 py-4 first:pt-1 last:pb-1">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-md text-white font-black text-sm">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-sm text-white font-bold text-sm">
               <span>{getInitials(doctor.name)}</span>
             </div>
 
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
                     {lang === 'bn' && doctor.name_bn ? doctor.name_bn : doctor.name}
                   </p>
                   {doctor.name_bn && lang !== 'bn' && (
@@ -116,7 +116,7 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
                 </div>
                 <div className="shrink-0 text-right">
                   {doctor.rating !== null && (
-                    <p className="flex items-center justify-end gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    <p className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
                       <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
                       {doctor.rating.toFixed(1)}
                     </p>
@@ -129,7 +129,7 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
                 </div>
               </div>
 
-              <p className="text-xs font-medium text-sky-600 dark:text-sky-400">
+              <p className="text-xs font-normal text-sky-600 dark:text-sky-400">
                 {doctor.qualification}
               </p>
 
@@ -149,7 +149,7 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
                 <div className="pt-1">
                   <a
                     href={`tel:${doctor.phone}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors cursor-pointer"
                   >
                     <Phone className="h-3 w-3" />
                     <span>{lang === 'bn' ? `কল করুন (${doctor.phone})` : `Call (${doctor.phone})`}</span>
