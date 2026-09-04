@@ -207,7 +207,10 @@ html[lang="bn"],
 html[lang="bn"] body,
 .font-bengali {
   font-family: var(--font-bengali), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 html[lang="bn"] {
@@ -216,6 +219,29 @@ html[lang="bn"] {
 
 .leading-bengali {
   line-height: 1.68;
+}
+
+/* Hind Siliguri 700 is excessively thick and blotchy; remap .font-bold and headings to 600 */
+html[lang="bn"] .font-bold,
+.font-bengali .font-bold {
+  font-weight: 600;
+}
+
+html[lang="bn"] .font-black,
+html[lang="bn"] .font-extrabold,
+.font-bengali .font-black,
+.font-bengali .font-extrabold {
+  font-weight: 600;
+}
+
+html[lang="bn"] h1,
+html[lang="bn"] h2,
+html[lang="bn"] h3,
+.font-bengali h1,
+.font-bengali h2,
+.font-bengali h3 {
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /* ── Simplemorphism Design System ────────────────────────────── */

@@ -9,13 +9,14 @@ import type { ReactNode } from 'react'
 interface ResultCardProps {
   title: string
   titleBn?: string
+  icon?: ReactNode
   badge?: { label: string; variant?: 'default' | 'secondary' | 'destructive' | 'outline' | 'critical' | 'high' | 'medium' | 'low' | 'normal' | 'green' | 'yellow' | 'red' }
   children: ReactNode
   defaultExpanded?: boolean
   actions?: ReactNode
 }
 
-export function ResultCard({ title, badge, children, defaultExpanded = true, actions }: ResultCardProps) {
+export function ResultCard({ title, badge, icon, children, defaultExpanded = true, actions }: ResultCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   return (
@@ -24,8 +25,9 @@ export function ResultCard({ title, badge, children, defaultExpanded = true, act
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between p-5 hover:bg-gray-50/50 dark:hover:bg-gray-800/40 transition-colors cursor-pointer"
       >
-        <div className="flex items-center gap-3">
-          <h3 className="font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+        <div className="flex items-center gap-2.5">
+          {icon && <span className="text-sky-500 shrink-0">{icon}</span>}
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
           {badge && (
             <Badge variant={badge.variant || 'default'}>{badge.label}</Badge>
           )}

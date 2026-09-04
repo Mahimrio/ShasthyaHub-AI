@@ -366,7 +366,7 @@ export function EyeResultCard({
 
       {/* Diagnosis Title & Medical Badge */}
       <motion.div variants={item} className="space-y-2">
-        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-snug text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight leading-snug text-gray-900 dark:text-gray-100">
           {diagnosisInfo.title}
         </h2>
         {diagnosisInfo.medicalBadge && (
@@ -497,10 +497,10 @@ export function EyeResultCard({
           onClick={handleDownload}
           disabled={isDownloading}
           variant="outline"
-          className="flex-1 rounded-2xl h-11 border-sky-300/80 text-sky-700 hover:bg-sky-50 dark:border-sky-700/60 dark:text-sky-300 dark:hover:bg-sky-950/40 font-medium shadow-xs hover:shadow-md active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
+          className="flex-1 rounded-2xl h-12 border-sky-300/80 text-sky-700 hover:bg-sky-50 dark:border-sky-700/60 dark:text-sky-300 dark:hover:bg-sky-950/40 font-medium shadow-xs hover:shadow-md active:scale-[0.99] transition-all disabled:opacity-50 cursor-pointer"
         >
           {isDownloading ? (
-            <span className="text-xs">{lang === 'bn' ? 'রিপোর্ট তৈরি হচ্ছে...' : 'Generating Report...'}</span>
+            <span className="text-xs sm:text-sm">{lang === 'bn' ? 'রিপোর্ট তৈরি হচ্ছে...' : 'Generating Report...'}</span>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
@@ -511,7 +511,7 @@ export function EyeResultCard({
         <Button
           onClick={handleShare}
           variant="ghost"
-          className="flex-1 rounded-2xl h-11 glass-pill text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium shadow-xs hover:shadow-md active:scale-[0.99] transition-all cursor-pointer"
+          className="flex-1 rounded-2xl h-12 glass-pill text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium shadow-xs hover:shadow-md active:scale-[0.99] transition-all cursor-pointer"
         >
           <Share2 className="mr-2 h-4 w-4" />
           <span className="text-xs sm:text-sm">{shareStatus ?? (lang === 'bn' ? 'ফলাফল শেয়ার করুন' : 'Share Result')}</span>

@@ -95,68 +95,66 @@ export function TopDoctorsCard({ doctors, isLoading }: TopDoctorsCardProps) {
         )}
       </div>
 
-      <div className="divide-y divide-gray-100/80 dark:divide-gray-800/80">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
         {displayList.map((doctor) => (
-          <div key={doctor.id} className="flex items-start gap-4 py-4 first:pt-1 last:pb-1">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-sm text-white font-bold text-sm">
-              <span>{getInitials(doctor.name)}</span>
-            </div>
+          <div
+            key={doctor.id}
+            className="rounded-2xl p-4 bg-white/70 dark:bg-gray-800/40 border border-gray-100/90 dark:border-gray-800/80 shadow-2xs flex flex-col justify-between gap-3 hover:border-sky-300/60 dark:hover:border-sky-800/60 transition-all group"
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-2xs text-white font-bold text-xs sm:text-sm">
+                <span>{getInitials(doctor.name)}</span>
+              </div>
 
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-start justify-between gap-1.5">
+                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
                     {lang === 'bn' && doctor.name_bn ? doctor.name_bn : doctor.name}
                   </p>
-                  {doctor.name_bn && lang !== 'bn' && (
-                    <p className="text-xs text-gray-400 dark:text-gray-500">
-                      {doctor.name_bn}
-                    </p>
-                  )}
-                </div>
-                <div className="shrink-0 text-right">
                   {doctor.rating !== null && (
-                    <p className="flex items-center justify-end gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                    <p className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0">
                       <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
                       {doctor.rating.toFixed(1)}
                     </p>
                   )}
-                  {doctor.experience_years !== null && (
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                      {doctor.experience_years} {lang === 'bn' ? 'বছর অভিজ্ঞতা' : 'yrs exp'}
-                    </p>
-                  )}
                 </div>
+
+                <p className="text-xs font-normal text-sky-600 dark:text-sky-400 truncate">
+                  {doctor.qualification}
+                </p>
+
+                {doctor.experience_years !== null && (
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500 font-normal">
+                    {doctor.experience_years} {lang === 'bn' ? 'বছর অভিজ্ঞতা' : 'yrs exp'}
+                  </p>
+                )}
               </div>
+            </div>
 
-              <p className="text-xs font-normal text-sky-600 dark:text-sky-400">
-                {doctor.qualification}
-              </p>
-
-              <div className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
+            <div className="space-y-1.5 pt-2 border-t border-gray-100/80 dark:border-gray-800/60 text-xs text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-1.5 truncate">
                 <MapPin className="h-3.5 w-3.5 shrink-0 text-sky-500" />
                 <span className="truncate">{doctor.hospital_name}</span>
               </div>
-
               {doctor.visiting_hours && (
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
-                  <Clock className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
-                  <span>{doctor.visiting_hours}</span>
-                </div>
-              )}
-
-              {doctor.phone && (
-                <div className="pt-1">
-                  <a
-                    href={`tel:${doctor.phone}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors cursor-pointer"
-                  >
-                    <Phone className="h-3 w-3" />
-                    <span>{lang === 'bn' ? `কল করুন (${doctor.phone})` : `Call (${doctor.phone})`}</span>
-                  </a>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                  <Clock className="h-3 w-3 shrink-0 text-emerald-500" />
+                  <span className="truncate">{doctor.visiting_hours}</span>
                 </div>
               )}
             </div>
+
+            {doctor.phone && (
+              <div className="pt-1">
+                <a
+                  href={`tel:${doctor.phone}`}
+                  className="flex items-center justify-center gap-1.5 w-full py-2 rounded-xl text-xs font-medium text-sky-700 dark:text-sky-300 bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/60 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>{lang === 'bn' ? `কল করুন (${doctor.phone})` : `Call (${doctor.phone})`}</span>
+                </a>
+              </div>
+            )}
           </div>
         ))}
       </div>

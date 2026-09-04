@@ -4,15 +4,18 @@ import { useCallback, useState } from 'react'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
+  BookOpen,
   CheckCircle,
   Cpu,
   Download,
   Eye,
   History,
   Lightbulb,
+  Phone,
   RotateCcw,
   Scan,
   Search,
+  ShieldAlert,
   Sparkles,
   WifiOff,
 } from 'lucide-react'
@@ -196,9 +199,9 @@ export default function NayanAIPage() {
                   <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3.5">
                     <div className="flex items-center gap-2">
                       <Scan className="h-4 w-4 text-sky-500" />
-                      <span className="text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                      <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
                         {lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যানার' : 'Biometric Ocular Console'}
-                      </span>
+                      </h3>
                     </div>
                     <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-900/40">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -287,9 +290,9 @@ export default function NayanAIPage() {
                     <Button
                       onClick={handleAnalyzeClick}
                       disabled={!selectedFile || isLoading || (!isOnline && offlineModelStatus === 'missing') || (!isOnline && offlineModelStatus === 'unsupported')}
-                      className="w-full rounded-2xl h-14 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 hover:from-sky-600 hover:via-cyan-600 hover:to-emerald-600 text-white font-semibold text-base shadow-md hover:shadow-lg transition-all disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
+                      className="w-full rounded-2xl h-12 bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 hover:from-sky-600 hover:via-cyan-600 hover:to-emerald-600 text-white font-medium text-sm sm:text-base shadow-md hover:shadow-lg transition-all disabled:opacity-45 disabled:cursor-not-allowed cursor-pointer"
                     >
-                      <Search className="mr-2 h-5 w-5" />
+                      <Search className="mr-2 h-4.5 w-4.5" />
                       <span>{lang === 'bn' ? 'এআই বিশ্লেষণ শুরু করুন' : 'Begin AI Screening'}</span>
                     </Button>
                   </motion.div>
@@ -373,9 +376,12 @@ export default function NayanAIPage() {
                   {/* Scanned Image Preview with Authentic Biometric Reticles */}
                   <div className="glass-card rounded-3xl p-5 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3">
-                      <span className="text-xs font-medium uppercase tracking-wider text-gray-600 dark:text-gray-400">
-                        {lang === 'bn' ? 'স্ক্যানকৃত চোখের চিত্র' : 'Analyzed Ocular Capture'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4 text-sky-500" />
+                        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                          {lang === 'bn' ? 'স্ক্যানকৃত চোখের চিত্র' : 'Analyzed Ocular Capture'}
+                        </h3>
+                      </div>
                       <span className="text-xs font-mono font-medium text-sky-600 dark:text-sky-400">
                         #SCAN-{result.id.slice(0, 8).toUpperCase()}
                       </span>
@@ -418,7 +424,7 @@ export default function NayanAIPage() {
 
                     <Button
                       onClick={handleReset}
-                      className="w-full rounded-2xl h-11 bg-sky-500 hover:bg-sky-600 text-white font-medium shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
+                      className="w-full rounded-2xl h-12 bg-sky-500 hover:bg-sky-600 text-white font-medium text-sm sm:text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       <span>{lang === 'bn' ? 'অন্য একটি ছবি স্ক্যান করুন' : 'Scan Another Photo'}</span>
@@ -435,12 +441,13 @@ export default function NayanAIPage() {
                   />
                 </div>
 
-                {/* Right Column: About Condition + Clinical Recommendations + Top Doctors */}
+                {/* Right Column: About Condition + Clinical Recommendations */}
                 <div className="lg:col-span-6 xl:col-span-6 space-y-5">
                   {/* About This Condition Panel */}
                   {(result.disease_description_en || result.disease_description_bn) && (
                     <ResultCard
                       title={lang === 'bn' ? 'এই অবস্থা সম্পর্কে তথ্যাবলী' : 'About This Condition'}
+                      icon={<BookOpen className="h-4 w-4 text-sky-500" />}
                       badge={
                         result.disease_stage
                           ? {
@@ -487,10 +494,12 @@ export default function NayanAIPage() {
                     isUpgrading={isUpgrading}
                     variant="advice"
                   />
-
-                  {/* Recommended Specialists & Eye Centers (Positioned Right Here - Visible Above the Fold!) */}
-                  <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
                 </div>
+              </div>
+
+              {/* Row 2: Recommended Specialists & Eye Centers Directory (Balanced Full Width) */}
+              <div className="pt-2">
+                <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
               </div>
             </div>
           )}
@@ -506,13 +515,49 @@ export default function NayanAIPage() {
             </div>
           )}
 
-          {/* Clinical Disclaimer Footnote */}
-          <div className="pt-6 border-t border-gray-100/80 dark:border-gray-800/80 text-center max-w-4xl mx-auto">
-            <p className="text-xs sm:text-[13px] leading-relaxed text-gray-500 dark:text-gray-400 font-normal">
-              {lang === 'bn'
-                ? 'আইনি সতর্কবার্তা: ShasthyaHub-AI একটি কৃত্রিম বুদ্ধিমত্তা নির্ভর প্রাথমিক স্ক্রিনিং ব্যবস্থা, ক্লিনিকাল চূড়ান্ত রোগ নির্ণয় নয়। দৃষ্টিশক্তি সুরক্ষার স্বার্থে যেকোনো ঔষধ বা চিকিৎসার পূর্বে সর্বদা একজন যোগ্য চক্ষু বিশেষজ্ঞের পরামর্শ নিন।'
-                : 'CLINICAL DISCLAIMER: ShasthyaHub-AI is an automated AI triage and screening tool, not a certified clinical diagnosis. Always consult a licensed medical ophthalmologist before making health decisions.'}
-            </p>
+          {/* Elevated Clinical Regulatory Advisory & Footer Card */}
+          <div className="pt-4 max-w-5xl mx-auto">
+            <div className="glass-card rounded-3xl p-5 sm:p-6 border border-amber-200/70 dark:border-amber-900/50 bg-gradient-to-r from-amber-50/40 via-white/70 to-sky-50/40 dark:from-amber-950/20 dark:via-gray-900/70 dark:to-sky-950/20 shadow-xs space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap border-b border-amber-200/40 dark:border-amber-900/30 pb-2.5">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                    <ShieldAlert className="h-4 w-4" />
+                  </div>
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                    {lang === 'bn' ? 'ক্লিনিক্যাল নির্দেশিকা ও আইনগত সতর্কবার্তা' : 'Clinical Regulatory & Safety Advisory'}
+                  </h4>
+                </div>
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/50 px-2.5 py-0.5 rounded-full border border-amber-300/50 dark:border-amber-800/50">
+                  {lang === 'bn' ? 'প্রাথমিক ট্রায়াজ প্রযুক্তি' : 'AI Triage Engine v3.5'}
+                </span>
+              </div>
+
+              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-normal">
+                {lang === 'bn'
+                  ? 'ShasthyaHub-AI একটি কৃত্রিম বুদ্ধিমত্তা নির্ভর প্রাথমিক স্ক্রিনিং ব্যবস্থা, কোনো নিবন্ধিত চিকিৎসকের বিকল্প বা চূড়ান্ত ক্লিনিকাল ডায়াগনোসিস নয়। দৃষ্টিশক্তি সুরক্ষার স্বার্থে যেকোনো ঔষধ গ্রহণ বা চিকিৎসা শুরুর পূর্বে সর্বদা একজন বাংলাদেশ মেডিকেল অ্যান্ড ডেন্টাল কাউন্সিল (BMDC) নিবন্ধিত চক্ষু বিশেষজ্ঞের (Ophthalmologist) সাথে সরাসরি পরামর্শ করুন।'
+                  : 'ShasthyaHub-AI is an automated clinical AI screening and triage tool, not a certified clinical diagnosis or replacement for a licensed doctor. Always consult a BMDC-registered ophthalmologist before initiating any treatment or medication.'}
+              </p>
+
+              <div className="flex items-center justify-between gap-3 pt-1 flex-wrap text-xs text-gray-500 dark:text-gray-400">
+                <span>{lang === 'bn' ? 'জরুরি প্রয়োজনে সরকারি স্বাস্থ্য বাতায়নে যোগাযোগ করুন:' : 'For emergency assistance, contact national helplines:'}</span>
+                <div className="flex items-center gap-2">
+                  <a
+                    href="tel:16263"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:text-rose-600 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Phone className="h-3 w-3 text-rose-500" />
+                    <span>১৬২৬৩ (স্বাস্থ্য বাতায়ন)</span>
+                  </a>
+                  <a
+                    href="tel:999"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/80 dark:bg-gray-800/80 border border-gray-200/80 dark:border-gray-700 text-gray-700 dark:text-gray-200 font-medium hover:text-rose-600 transition-colors shadow-2xs cursor-pointer"
+                  >
+                    <Phone className="h-3 w-3 text-rose-500" />
+                    <span>৯৯৯ (জরুরি সেবা)</span>
+                  </a>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -548,7 +593,7 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <History className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-        <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
           {lang === 'bn' ? 'পূর্ববর্তী স্ক্রিনিং ইতিহাস' : 'Recent Eye Screenings'}
         </h3>
       </div>
@@ -566,7 +611,7 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
               className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-md transition-all"
             >
               <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-bold text-gray-900 dark:text-gray-100">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
                   {localized?.title ?? (lang === 'bn' ? 'অজানা ফলাফল' : 'Unknown')}
                 </p>
                 <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
@@ -580,7 +625,7 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
                   </Badge>
                 )}
                 {item.confidence_score !== null && (
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
                     {lang === 'bn'
                       ? `${toBengaliDigits(Math.round(item.confidence_score))}%`
                       : `${Math.round(item.confidence_score)}%`}
