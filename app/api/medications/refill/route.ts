@@ -17,7 +17,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Missing schedule_id' }, { status: 400 })
     }
 
-    const schedules = getLocalSchedules(userId)
+    let schedules = getLocalSchedules(userId)
+    let usedDb = false
+
+    if (user?.id) {
+      try {
+        const { data, error } = await supabase
+          .from('medication_schedules')
+          .select('*')
+          .eq('user_id', userId)
+
+        if (!error && data && data.length > 0) {
+          schedules = data
+          usedDb = true
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
     const target = schedules.find((s) => s.id === schedule_id)
 
     if (!target) {
@@ -34,7 +52,7 @@ export async function POST(request: Request) {
       saveLocalSchedule(s)
     }
 
-    if (user?.id) {
+    if (user?.id && usedDb) {
       try {
         for (const s of matchingSchedules) {
           await supabase
