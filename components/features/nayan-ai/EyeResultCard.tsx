@@ -6,6 +6,7 @@ import { Loader2 } from 'lucide-react'
 import {
   CalendarClock,
   CheckCircle2,
+  ClipboardList,
   Download,
   Info,
   RefreshCw,
@@ -24,11 +25,12 @@ import {
   localizeSpecialist,
 } from './diagnosis-localization'
 
-interface EyeResultCardProps {
+export interface EyeResultCardProps {
   result: NayanResult
   lang: Language
   analysisMode?: 'online' | 'offline' | null
   isUpgrading?: boolean
+  variant?: 'full' | 'summary' | 'advice'
 }
 
 // Staggered entrance — parent orchestrates children reveal.
@@ -58,7 +60,13 @@ function clampPercent(value: number): number {
   return Math.min(Math.max(Math.round(value), 0), 100)
 }
 
-export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeResultCardProps) {
+export function EyeResultCard({
+  result,
+  lang,
+  analysisMode,
+  isUpgrading,
+  variant = 'full',
+}: EyeResultCardProps) {
   const style = severityStyles[result.severity]
   const confidence = clampPercent(result.confidence_score)
   const recommendation = lang === 'bn' ? result.recommendation_bn : result.recommendation_en
@@ -103,7 +111,7 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
       container.innerHTML = `
         <div style="border-bottom: 2px solid #0EA5E9; padding-bottom: 12px; margin-bottom: 24px;">
           <h1 style="font-size: 26px; color: #0EA5E9; margin: 0;">ShasthyaHub-AI</h1>
-          <p style="font-size: 12px; color: #6B7280; margin: 4px 0 0 0;">${lang === 'bn' ? 'নয়ান এআই — চোখের স্ক্রিনিং রিপোর্ট' : 'NayanAI — Eye Screening Report'}</p>
+          <p style="font-size: 12px; color: #6B7280; margin: 4px 0 0 0;">${lang === 'bn' ? 'নয়ন এআই — চোখের স্ক্রিনিং রিপোর্ট' : 'NayanAI — Eye Screening Report'}</p>
           <p style="font-size: 10px; color: #9CA3AF; margin: 2px 0 0 0;">ID: ${result.id}</p>
           <p style="font-size: 10px; color: #9CA3AF; margin: 2px 0 0 0;">Date: ${new Date().toLocaleString()}</p>
         </div>
@@ -208,12 +216,100 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
     }
   }, [result, confidence, diagnosisInfo, lang])
 
+  // --- VARIANT 1: ADVICE ONLY (For Right Column) ---
+  if (variant === 'advice') {
+    return (
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="glass-card rounded-3xl p-5 sm:p-6 space-y-4 relative overflow-hidden transition-all duration-300"
+      >
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100/80 dark:border-gray-800/80">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-sky-500/10 dark:bg-sky-400/15 text-sky-600 dark:text-sky-400">
+              <ClipboardList className="h-4 w-4" />
+            </div>
+            <h3 className="text-sm font-bold text-gray-800 dark:text-gray-200">
+              {lang === 'bn' ? 'ক্লিনিকাল নির্দেশনা ও করণীয় পদক্ষেপ' : 'Clinical Guidance & Next Steps'}
+            </h3>
+          </div>
+          <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-900/40">
+            {lang === 'bn' ? 'এআই নির্দেশিত' : 'AI Guided'}
+          </span>
+        </div>
+
+        {/* AI Recommendation Box */}
+        <motion.div
+          variants={item}
+          className="rounded-2xl border-l-4 border-sky-500 glass-panel p-4 dark:border-sky-400"
+        >
+          <div className="flex items-start gap-3">
+            <div className="p-1.5 rounded-lg bg-sky-500/10 dark:bg-sky-400/15 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
+              <Info className="h-4 w-4" />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                {lang === 'bn' ? 'এআই বিশ্লেষণ ও পরামর্শ' : 'Clinical AI Recommendation'}
+              </span>
+              <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
+                &ldquo;{recommendation}&rdquo;
+              </p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Next steps */}
+        {result.next_steps.length > 0 && (
+          <motion.div variants={item} className="space-y-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              {lang === 'bn' ? 'করণীয় পদক্ষেপসমূহ' : 'Recommended Action Items'}
+            </h3>
+            <ol className="space-y-2">
+              {result.next_steps.map((step, i) => (
+                <li
+                  key={i}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100/80 dark:border-gray-800/60"
+                >
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 text-xs font-bold">
+                    {lang === 'bn' ? toBengaliDigits(i + 1) : i + 1}
+                  </span>
+                  <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 pt-0.5">
+                    {localizeNextStep(step, lang)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </motion.div>
+        )}
+
+        {/* Specialist needed */}
+        <motion.div variants={item}>
+          <div className="flex items-center gap-3.5 rounded-2xl border border-emerald-200/60 bg-emerald-50/40 p-3.5 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-sm">
+              <Stethoscope className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                {lang === 'bn' ? 'পরামর্শিত বিশেষজ্ঞ চিকিৎসক' : 'Recommended Specialist'}
+              </p>
+              <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100">
+                {localizeSpecialist(result.specialist_needed, lang)}
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    )
+  }
+
+  // --- VARIANT 2: SUMMARY REPORT CARD (For Left Column) OR FULL ---
   return (
     <motion.div
       variants={container}
       initial="hidden"
       animate="show"
-      className="glass-card rounded-3xl p-6 sm:p-7 space-y-6 relative overflow-hidden transition-all duration-300"
+      className="glass-card rounded-3xl p-5 sm:p-6 space-y-5 relative overflow-hidden transition-all duration-300"
     >
       {/* Decorative Radial Ambient Glow */}
       <div className="pointer-events-none absolute right-0 top-0 h-56 w-56 rounded-full bg-gradient-to-br from-sky-400/10 via-cyan-400/5 to-transparent blur-3xl dark:from-sky-400/15" />
@@ -310,7 +406,7 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
       {/* Urgency Alert Card */}
       <motion.div variants={item}>
         <div
-          className={`flex items-start gap-3.5 rounded-2xl border p-4.5 ${style.bg} ${style.border} ${style.text} shadow-xs`}
+          className={`flex items-start gap-3.5 rounded-2xl border p-4 ${style.bg} ${style.border} ${style.text} shadow-xs`}
         >
           <div className="p-2 rounded-xl bg-white/70 dark:bg-black/20 shrink-0 mt-0.5 shadow-xs">
             <CalendarClock className="h-5 w-5" />
@@ -329,88 +425,93 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
         </div>
       </motion.div>
 
-      {/* AI Recommendation Box */}
-      <motion.div
-        variants={item}
-        className="rounded-2xl border-l-4 border-sky-500 glass-panel p-4.5 dark:border-sky-400"
-      >
-        <div className="flex items-start gap-3">
-          <div className="p-1.5 rounded-lg bg-sky-500/10 dark:bg-sky-400/15 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
-            <Info className="h-4 w-4" />
-          </div>
-          <div className="space-y-1">
-            <span className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
-              {lang === 'bn' ? 'এআই বিশ্লেষণ ও পরামর্শ' : 'Clinical AI Recommendation'}
-            </span>
-            <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
-              &ldquo;{recommendation}&rdquo;
-            </p>
-          </div>
-        </div>
-      </motion.div>
+      {/* When variant === 'full', include recommendations and next steps here too */}
+      {variant === 'full' && (
+        <>
+          {/* AI Recommendation Box */}
+          <motion.div
+            variants={item}
+            className="rounded-2xl border-l-4 border-sky-500 glass-panel p-4 dark:border-sky-400"
+          >
+            <div className="flex items-start gap-3">
+              <div className="p-1.5 rounded-lg bg-sky-500/10 dark:bg-sky-400/15 text-sky-600 dark:text-sky-400 shrink-0 mt-0.5">
+                <Info className="h-4 w-4" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">
+                  {lang === 'bn' ? 'এআই বিশ্লেষণ ও পরামর্শ' : 'Clinical AI Recommendation'}
+                </span>
+                <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
+                  &ldquo;{recommendation}&rdquo;
+                </p>
+              </div>
+            </div>
+          </motion.div>
 
-      {/* Next steps */}
-      {result.next_steps.length > 0 && (
-        <motion.div variants={item} className="space-y-3">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-            {lang === 'bn' ? 'করণীয় পদক্ষেপসমূহ' : 'Recommended Next Steps'}
-          </h3>
-          <ol className="space-y-2">
-            {result.next_steps.map((step, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100/80 dark:border-gray-800/60"
-              >
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 text-xs font-bold">
-                  {lang === 'bn' ? toBengaliDigits(i + 1) : i + 1}
-                </span>
-                <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 pt-0.5">
-                  {localizeNextStep(step, lang)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        </motion.div>
+          {/* Next steps */}
+          {result.next_steps.length > 0 && (
+            <motion.div variants={item} className="space-y-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                {lang === 'bn' ? 'করণীয় পদক্ষেপসমূহ' : 'Recommended Next Steps'}
+              </h3>
+              <ol className="space-y-2">
+                {result.next_steps.map((step, i) => (
+                  <li
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-xl bg-gray-50/70 dark:bg-gray-800/40 border border-gray-100/80 dark:border-gray-800/60"
+                  >
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 text-xs font-bold">
+                      {lang === 'bn' ? toBengaliDigits(i + 1) : i + 1}
+                    </span>
+                    <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 pt-0.5">
+                      {localizeNextStep(step, lang)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </motion.div>
+          )}
+
+          {/* Specialist needed */}
+          <motion.div variants={item}>
+            <div className="flex items-center gap-3.5 rounded-2xl border border-emerald-200/60 bg-emerald-50/40 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-sm">
+                <Stethoscope className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+                  {lang === 'bn' ? 'পরামর্শিত বিশেষজ্ঞ চিকিৎসক' : 'Recommended Specialist'}
+                </p>
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                  {localizeSpecialist(result.specialist_needed, lang)}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </>
       )}
 
-      {/* Specialist needed */}
-      <motion.div variants={item}>
-        <div className="flex items-center gap-3.5 rounded-2xl border border-emerald-200/60 bg-emerald-50/40 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-sm">
-            <Stethoscope className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-              {lang === 'bn' ? 'পরামর্শিত বিশেষজ্ঞ চিকিৎসক' : 'Recommended Specialist'}
-            </p>
-            <p className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              {localizeSpecialist(result.specialist_needed, lang)}
-            </p>
-          </div>
-        </div>
-      </motion.div>
-
       {/* Download PDF + Share buttons */}
-      <motion.div variants={item} className="flex flex-col sm:flex-row gap-3 pt-2">
+      <motion.div variants={item} className="flex flex-col sm:flex-row gap-3 pt-1">
         <Button
           onClick={handleDownload}
           disabled={isDownloading}
           variant="outline"
-          className="flex-1 rounded-2xl h-12 border-sky-300/80 text-sky-700 hover:bg-sky-50 dark:border-sky-700/60 dark:text-sky-300 dark:hover:bg-sky-950/40 font-bold shadow-xs hover:shadow-md active:scale-[0.99] transition-all disabled:opacity-50"
+          className="flex-1 rounded-2xl h-11 border-sky-300/80 text-sky-700 hover:bg-sky-50 dark:border-sky-700/60 dark:text-sky-300 dark:hover:bg-sky-950/40 font-bold shadow-xs hover:shadow-md active:scale-[0.99] transition-all disabled:opacity-50"
         >
           {isDownloading ? (
             <span className="text-xs">{lang === 'bn' ? 'রিপোর্ট তৈরি হচ্ছে...' : 'Generating Report...'}</span>
           ) : (
             <>
               <Download className="mr-2 h-4 w-4" />
-              <span className="text-xs sm:text-sm">{lang === 'bn' ? 'অফিসিয়াল রিপোর্ট ডাউনলোড' : 'Download Clinical PDF'}</span>
+              <span className="text-xs sm:text-sm">{lang === 'bn' ? 'অফিসিয়াল রিপোর্ট ডাউনলোড' : 'Download Clinical PDF'}</span>
             </>
           )}
         </Button>
         <Button
           onClick={handleShare}
           variant="ghost"
-          className="flex-1 rounded-2xl h-12 glass-pill text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-bold shadow-xs hover:shadow-md active:scale-[0.99] transition-all"
+          className="flex-1 rounded-2xl h-11 glass-pill text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-bold shadow-xs hover:shadow-md active:scale-[0.99] transition-all"
         >
           <Share2 className="mr-2 h-4 w-4" />
           <span className="text-xs sm:text-sm">{shareStatus ?? (lang === 'bn' ? 'ফলাফল শেয়ার করুন' : 'Share Result')}</span>
@@ -421,7 +522,7 @@ export function EyeResultCard({ result, lang, analysisMode, isUpgrading }: EyeRe
       {result.severity === 'Normal' && (
         <motion.div
           variants={item}
-          className="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 pt-2"
+          className="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 pt-1"
         >
           <CheckCircle2 className="h-4 w-4" />
           <span className="text-xs font-semibold">

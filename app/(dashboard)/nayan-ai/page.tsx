@@ -368,9 +368,9 @@ export default function NayanAIPage() {
             <div className="space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                 
-                {/* Left Column: Eye Image + Condition Details */}
+                {/* Left Column: Eye Image + Primary Clinical Report Card */}
                 <div className="lg:col-span-5 space-y-5">
-                  {/* Scanned Image Preview with Biometric Overlay */}
+                  {/* Scanned Image Preview with Authentic Biometric Reticles */}
                   <div className="glass-card rounded-3xl p-5 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3">
                       <span className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
@@ -381,7 +381,7 @@ export default function NayanAIPage() {
                       </span>
                     </div>
 
-                    <div className="relative w-full h-64 sm:h-72 rounded-2xl overflow-hidden shadow-md bg-black/5 dark:bg-black/30 border border-sky-200/50 dark:border-sky-800/50">
+                    <div className="relative w-full h-56 sm:h-64 rounded-2xl overflow-hidden shadow-md bg-black/5 dark:bg-black/30 border border-sky-200/50 dark:border-sky-800/50">
                       {selectedPreviewUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -395,14 +395,22 @@ export default function NayanAIPage() {
                         </div>
                       )}
 
-                      {/* Holographic Diagnostic Ring Overlay */}
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                        <div className="w-32 h-32 rounded-full border border-sky-400/40 animate-pulse" />
-                        <div className="w-48 h-48 rounded-full border border-dashed border-cyan-400/20" />
+                      {/* Biometric Viewfinder Corner Reticles (No misplaced static circles!) */}
+                      <div className="absolute inset-0 pointer-events-none rounded-2xl">
+                        <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-sky-400" />
+                        <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-sky-400" />
+                        <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-sky-400" />
+                        <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-sky-400" />
+                      </div>
+
+                      {/* Optical Metadata Tag */}
+                      <div className="absolute top-3 left-3 bg-black/65 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold text-sky-300 border border-sky-400/30 flex items-center gap-1.5 shadow-xs">
+                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                        <span>{lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যান' : 'BIOMETRIC OCULAR SPECTRUM'}</span>
                       </div>
 
                       {/* Status Badge */}
-                      <div className="absolute bottom-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-semibold text-white flex items-center gap-1.5 shadow-sm">
+                      <div className="absolute bottom-3 left-3 bg-black/65 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-semibold text-white flex items-center gap-1.5 shadow-sm border border-white/10">
                         <span className="h-2 w-2 rounded-full bg-emerald-400" />
                         <span>{lang === 'bn' ? 'বিশ্লেষণ সম্পন্ন' : 'Scan Completed'}</span>
                       </div>
@@ -410,13 +418,25 @@ export default function NayanAIPage() {
 
                     <Button
                       onClick={handleReset}
-                      className="w-full rounded-2xl h-11 bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-md hover:shadow-lg active:scale-[0.99] transition-all"
+                      className="w-full rounded-2xl h-11 bg-sky-500 hover:bg-sky-600 text-white font-bold shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       <span>{lang === 'bn' ? 'অন্য একটি ছবি স্ক্যান করুন' : 'Scan Another Photo'}</span>
                     </Button>
                   </div>
 
+                  {/* Primary Clinical Report Card (Summary: Diagnosis, Severity, Confidence, Urgency, PDF, Share) */}
+                  <EyeResultCard
+                    result={result}
+                    lang={lang}
+                    analysisMode={analysisMode}
+                    isUpgrading={isUpgrading}
+                    variant="summary"
+                  />
+                </div>
+
+                {/* Right Column: About Condition + Clinical Recommendations + Top Doctors */}
+                <div className="lg:col-span-7 space-y-5">
                   {/* About This Condition Panel */}
                   {(result.disease_description_en || result.disease_description_bn) && (
                     <ResultCard
@@ -458,22 +478,19 @@ export default function NayanAIPage() {
                       </div>
                     </ResultCard>
                   )}
-                </div>
 
-                {/* Right Column: Full EyeResultCard */}
-                <div className="lg:col-span-7 space-y-5">
+                  {/* Clinical Guidance & Recommended Action Items */}
                   <EyeResultCard
                     result={result}
                     lang={lang}
                     analysisMode={analysisMode}
                     isUpgrading={isUpgrading}
+                    variant="advice"
                   />
-                </div>
-              </div>
 
-              {/* Verified Doctors Card (rendered under the result grid) */}
-              <div className="pt-2">
-                <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
+                  {/* Recommended Specialists & Eye Centers (Positioned Right Here - Visible Above the Fold!) */}
+                  <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
+                </div>
               </div>
             </div>
           )}

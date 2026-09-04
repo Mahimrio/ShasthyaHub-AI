@@ -114,10 +114,13 @@ export function ImageUploader({
               alt="Upload preview"
               className="w-full h-full object-cover"
             />
-            {/* Holographic scanner reticle overlay on preview */}
-            <div className="absolute inset-0 pointer-events-none border border-sky-400/30 rounded-2xl flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full border border-dashed border-sky-300/60 animate-pulse" />
-              <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+            {/* Biometric Viewfinder Reticles & Scanning Beam */}
+            <div className="absolute inset-0 pointer-events-none rounded-2xl border border-sky-400/20">
+              <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-sky-400" />
+              <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-sky-400" />
+              <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-sky-400" />
+              <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-sky-400" />
+              <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_8px_#22d3ee] animate-biometric-scan opacity-70" />
             </div>
 
             {/* Quick status badge */}
