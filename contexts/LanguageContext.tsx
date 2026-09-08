@@ -68,6 +68,10 @@ export function LanguageProvider({
 
   useEffect(() => {
     document.documentElement.lang = lang
+    // The server renders <body> with the cookie language; keep it in step so
+    // `.font-bengali …` descendant rules stop applying after a client-side switch.
+    document.body.classList.toggle('font-bengali', lang === 'bn')
+    document.body.classList.toggle('font-sans', lang !== 'bn')
     i18n.changeLanguage(lang)
   }, [lang, i18n])
 

@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { LanguageToggle } from '@/components/shared/LanguageToggle'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
+import { BrandWordmark } from '@/components/shared/BrandWordmark'
 import { MedicationNotificationDrawer } from '@/components/features/medications/MedicationNotificationDrawer'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Footer } from '@/components/layout/Footer'
@@ -67,7 +68,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-7 h-7 bg-gradient-to-br from-sky-500 to-emerald-500 rounded-lg flex items-center justify-center">
               <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.5} />
             </div>
-            <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">ShasthyaHub</span>
+            <BrandWordmark className="text-[15px]" />
           </Link>
           <div className="flex items-center gap-1">
             <MedicationNotificationDrawer />
@@ -100,9 +101,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="w-8 h-8 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-sky-500/10 dark:shadow-sky-400/10">
                 <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.5} />
               </div>
-              <span className="font-black text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400 tracking-tight text-sm">
-                ShasthyaHub
-              </span>
+              <BrandWordmark className="text-[15px]" />
             </Link>
             <button onClick={() => setSidebarOpen(false)} className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
               <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />
@@ -193,9 +192,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="w-8 h-8 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shrink-0 shadow-sm shadow-sky-500/15">
               <HeartPulse className="h-4.5 w-4.5 text-white" strokeWidth={2.2} />
             </div>
-            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400 tracking-tight text-base">
-              ShasthyaHub
-            </span>
+            <BrandWordmark className="text-[17px]" />
           </div>
           <div className="flex items-center gap-1">
             <MedicationNotificationDrawer />
