@@ -139,7 +139,7 @@ export function ImageUploader({
             </button>
           </div>
 
-          <p className="mt-3.5 text-xs font-semibold text-gray-600 dark:text-gray-300">
+          <p className="mt-3.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">
             {lang === 'bn' ? 'চোখের আইরিস ও কর্নিয়া স্পষ্ট রয়েছে' : 'Eye image ready for AI biometric analysis'}
           </p>
         </div>
@@ -154,10 +154,10 @@ export function ImageUploader({
           </div>
 
           <div className="text-center px-4 max-w-sm">
-            <p className="text-base font-bold text-gray-800 dark:text-gray-100 tracking-tight">
+            <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
               {title ?? (lang === 'bn' ? 'চোখের স্পষ্ট ছবি আপলোড করুন' : 'Upload High-Quality Eye Photo')}
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+            <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mt-2 leading-relaxed">
               {subtitle ?? (lang === 'bn'
                 ? `ছবি ড্র্যাগ করে আনুন অথবা ক্যামেরা দিয়ে সরাসরি তুলুন (সর্বোচ্চ ${maxSizeMB}MB)`
                 : `Drag & drop or snap directly with camera (max ${maxSizeMB}MB)`)}
@@ -168,7 +168,7 @@ export function ImageUploader({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); cameraRef.current?.click() }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-sky-500 to-cyan-500 shadow-md shadow-sky-500/20 hover:shadow-lg hover:shadow-sky-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-sky-500 to-cyan-500 shadow-md shadow-sky-500/20 hover:shadow-lg hover:shadow-sky-500/35 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all cursor-pointer"
             >
               <Camera className="h-4 w-4" />
               <span>{lang === 'bn' ? 'ছবি তুলুন' : 'Take Photo'}</span>
@@ -176,7 +176,7 @@ export function ImageUploader({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); inputRef.current?.click() }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-sky-700 dark:text-sky-300 glass-pill hover:bg-sky-50 dark:hover:bg-sky-950/40 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-sky-700 dark:text-sky-300 glass-pill hover:bg-sky-50 dark:hover:bg-sky-950/40 shadow-sm hover:shadow hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all cursor-pointer"
             >
               <Upload className="h-4 w-4" />
               <span>{lang === 'bn' ? 'গ্যালারি' : 'Browse Files'}</span>

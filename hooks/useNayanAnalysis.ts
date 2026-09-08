@@ -14,6 +14,7 @@ import { enqueueAnalysis } from '@/lib/offline-queue'
 interface UseNayanAnalysisReturn {
   analyze: (file: File) => Promise<void>
   result: NayanResult | null
+  setResult: (result: NayanResult | null) => void
   isLoading: boolean
   isError: boolean
   error: string | null
@@ -263,6 +264,7 @@ export function useNayanAnalysis(): UseNayanAnalysisReturn {
   return {
     analyze,
     result,
+    setResult,
     isLoading,
     isError,
     error,

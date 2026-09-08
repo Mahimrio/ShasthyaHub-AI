@@ -36,6 +36,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ResultCard } from '@/components/shared/ResultCard'
 import { formatDate, toBengaliDigits } from '@/lib/utils'
+import type { NayanResult } from '@/types'
 
 const DISCLAIMER_KEY = 'nayan_disclaimer_seen'
 
@@ -79,6 +80,7 @@ export default function NayanAIPage() {
   const {
     analyze,
     result,
+    setResult,
     isLoading,
     isError,
     error,
@@ -96,6 +98,30 @@ export default function NayanAIPage() {
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState<string | null>(null)
+
+  const handleSelectHistory = useCallback((item: (typeof history)[number]) => {
+    if (!item.diagnosis || !item.severity) return
+    const fullResult: NayanResult = {
+      id: item.id,
+      diagnosis: item.diagnosis,
+      severity: item.severity,
+      recommendation_en: item.recommendation_en || 'Consult an eye specialist for comprehensive assessment.',
+      recommendation_bn: item.recommendation_bn || 'বিস্তারিত পরীক্ষার জন্য একজন চক্ষু বিশেষজ্ঞের পরামর্শ নিন।',
+      urgency_days: item.urgency_days ?? (item.severity === 'High' || item.severity === 'Critical' ? 7 : 30),
+      next_steps: item.next_steps ?? [
+        'Consult a certified ophthalmologist for detailed examination.',
+        'Monitor blood sugar levels and maintain healthy lifestyle.',
+      ],
+      specialist_needed: item.specialist_needed || 'Ophthalmologist',
+      disease_description_en: item.disease_description_en || undefined,
+      disease_description_bn: item.disease_description_bn || undefined,
+      disease_stage: item.disease_stage || undefined,
+      confidence_score: item.confidence_score ?? 85,
+      analysis_mode: 'online',
+    }
+    setResult(fullResult)
+    setSelectedPreviewUrl(null)
+  }, [setResult])
 
   const [showDisclaimer, setShowDisclaimer] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -306,22 +332,22 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <Lightbulb className="h-4 w-4 text-amber-500" />
-                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
                       {lang === 'bn' ? 'কীভাবে সঠিক ছবি তুলবেন' : 'Image Capture Guidelines'}
                     </h3>
                   </div>
 
-                  <div className="space-y-3.5">
+                  <div className="space-y-4">
                     {INSTRUCTIONS.map((item) => (
                       <div key={item.step} className="flex items-start gap-3.5">
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs font-semibold shadow-xs">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs sm:text-sm font-bold shadow-xs">
                           {lang === 'bn' ? item.stepBn : item.step}
                         </span>
                         <div className="space-y-0.5">
-                          <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                          <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
                             {lang === 'bn' ? item.titleBn : item.titleEn}
                           </h4>
-                          <p className="text-[12px] leading-relaxed text-gray-500 dark:text-gray-400 font-normal">
+                          <p className="text-xs sm:text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
                             {lang === 'bn' ? item.descBn : item.descEn}
                           </p>
                         </div>
@@ -329,8 +355,8 @@ export default function NayanAIPage() {
                     ))}
                   </div>
 
-                  <div className="rounded-xl bg-sky-50/60 dark:bg-sky-950/30 p-3 border border-sky-200/50 dark:border-sky-800/40">
-                    <p className="text-xs leading-relaxed text-sky-800 dark:text-sky-300 font-normal">
+                  <div className="rounded-2xl bg-sky-100/70 dark:bg-sky-950/60 p-3.5 border border-sky-300/80 dark:border-sky-800/60 shadow-2xs">
+                    <p className="text-xs sm:text-sm leading-relaxed text-sky-950 dark:text-sky-200 font-medium">
                       💡 {lang === 'bn' ? 'টিপস: ক্যামেরার ফ্ল্যাশ সরাসরি চোখে না মেরে স্বাভাবিক দিনের আলো বা উজ্জ্বল ঘরের আলোতে ছবি তুললে সর্বাধিক নির্ভুল ফলাফল পাওয়া যায়।' : 'Tip: Natural indirect room lighting provides significantly higher diagnostic accuracy than harsh flash.'}
                     </p>
                   </div>
@@ -340,7 +366,7 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-3.5">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
                       {lang === 'bn' ? 'যা যা শনাক্তকরণে সাহায্য করে' : 'Screened Eye Conditions'}
                     </h3>
                   </div>
@@ -349,7 +375,7 @@ export default function NayanAIPage() {
                     {SCREENED_CONDITIONS.map((cond, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium glass-pill text-gray-700 dark:text-gray-200 shadow-xs hover:border-sky-300 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold glass-pill text-gray-800 dark:text-gray-100 shadow-xs hover:border-sky-300 transition-colors"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                         <span>{lang === 'bn' ? cond.nameBn : cond.nameEn}</span>
@@ -357,7 +383,7 @@ export default function NayanAIPage() {
                     ))}
                   </div>
 
-                  <p className="text-xs text-gray-400 dark:text-gray-500 pt-1 leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 pt-1 leading-relaxed font-medium">
                     {lang === 'bn'
                       ? 'নয়ান AI গ্রামীণ ও শহরতলির মানুষের অন্ধত্ব প্রতিরোধে প্রাথমিক স্ক্রিনিং প্রদান করে।'
                       : 'Nayan AI assists rural and urban communities in early detection to prevent preventable blindness.'}
@@ -367,70 +393,104 @@ export default function NayanAIPage() {
               </div>
             </div>
           ) : (
-            /* POST-ANALYSIS / RESULT STATE: Balanced Diagnostic Console */
+            /* POST-ANALYSIS / RESULT STATE: Consistent Console & Left-Aligned Recommendations */
             <div className="space-y-8">
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                 
-                {/* Left Column: Eye Image + Primary Clinical Report Card */}
+                {/* Left Column: Biometric Ocular Console + Clinical Recommendations (Like Before) */}
                 <div className="lg:col-span-6 xl:col-span-6 space-y-5">
-                  {/* Scanned Image Preview with Authentic Biometric Reticles */}
-                  <div className="glass-card rounded-3xl p-5 space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3">
+                  
+                  {/* Consistent Biometric Ocular Console */}
+                  <div className="glass-card rounded-3xl p-5 sm:p-7 space-y-5">
+                    <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3.5">
                       <div className="flex items-center gap-2">
-                        <Eye className="h-4 w-4 text-sky-500" />
-                        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-                          {lang === 'bn' ? 'স্ক্যানকৃত চোখের চিত্র' : 'Analyzed Ocular Capture'}
+                        <Scan className="h-4 w-4 text-sky-500" />
+                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                          {lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যানার' : 'Biometric Ocular Console'}
                         </h3>
                       </div>
-                      <span className="text-xs font-mono font-medium text-sky-600 dark:text-sky-400">
-                        #SCAN-{result.id.slice(0, 8).toUpperCase()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-semibold text-sky-600 dark:text-sky-400">
+                          #SCAN-{result.id.slice(0, 8).toUpperCase()}
+                        </span>
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-900/60">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                          <span>{lang === 'bn' ? 'বিশ্লেষণ সম্পন্ন' : 'Scan Completed'}</span>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="relative w-full h-64 sm:h-72 lg:h-80 rounded-2xl overflow-hidden shadow-md bg-black/5 dark:bg-black/30 border border-sky-200/50 dark:border-sky-800/50">
-                      {selectedPreviewUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={selectedPreviewUrl}
-                          alt="Analyzed eye"
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 text-xs font-normal">
-                          {lang === 'bn' ? 'ছবি প্রদর্শিত হচ্ছে' : 'Preview Available'}
+                    {/* Viewfinder Frame with authentic corner reticles matching pre-scan console */}
+                    <div className="relative rounded-3xl p-5 sm:p-6 bg-sky-50/20 dark:bg-sky-950/15 border border-sky-200/60 dark:border-sky-800/40 flex flex-col items-center justify-center text-center">
+                      {/* Biometric Corner Reticles */}
+                      <div className="pointer-events-none absolute top-3.5 left-3.5 w-4 h-4 border-t-2 border-l-2 border-sky-500/70 rounded-tl" />
+                      <div className="pointer-events-none absolute top-3.5 right-3.5 w-4 h-4 border-t-2 border-r-2 border-sky-500/70 rounded-tr" />
+                      <div className="pointer-events-none absolute bottom-3.5 left-3.5 w-4 h-4 border-b-2 border-l-2 border-sky-500/70 rounded-bl" />
+                      <div className="pointer-events-none absolute bottom-3.5 right-3.5 w-4 h-4 border-b-2 border-r-2 border-sky-500/70 rounded-br" />
+
+                      <div className="relative w-full max-w-sm h-64 sm:h-72 rounded-2xl overflow-hidden shadow-xl ring-2 ring-sky-400/40 bg-black/5 dark:bg-black/30 group">
+                        {selectedPreviewUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={selectedPreviewUrl}
+                            alt="Analyzed eye"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-gray-400 text-xs font-medium">
+                            {lang === 'bn' ? 'ছবি প্রদর্শিত হচ্ছে' : 'Preview Available'}
+                          </div>
+                        )}
+
+                        {/* Biometric Viewfinder Corner Reticles */}
+                        <div className="absolute inset-0 pointer-events-none rounded-2xl border border-sky-400/20">
+                          <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-sky-400" />
+                          <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-sky-400" />
+                          <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-sky-400" />
+                          <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-sky-400" />
                         </div>
-                      )}
 
-                      {/* Biometric Viewfinder Corner Reticles (No misplaced static circles!) */}
-                      <div className="absolute inset-0 pointer-events-none rounded-2xl">
-                        <div className="absolute top-2.5 left-2.5 w-4 h-4 border-t-2 border-l-2 border-sky-400" />
-                        <div className="absolute top-2.5 right-2.5 w-4 h-4 border-t-2 border-r-2 border-sky-400" />
-                        <div className="absolute bottom-2.5 left-2.5 w-4 h-4 border-b-2 border-l-2 border-sky-400" />
-                        <div className="absolute bottom-2.5 right-2.5 w-4 h-4 border-b-2 border-r-2 border-sky-400" />
+                        {/* Optical Metadata Tag */}
+                        <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-mono font-medium text-sky-300 border border-sky-400/30 flex items-center gap-1.5 shadow-xs">
+                          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                          <span>{lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যান' : 'BIOMETRIC OCULAR SPECTRUM'}</span>
+                        </div>
+
+                        {/* Status Badge */}
+                        <div className="absolute bottom-3 left-3 bg-black/70 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-semibold text-white flex items-center gap-1.5 shadow-sm border border-white/10">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                          <span>{lang === 'bn' ? 'বিশ্লেষণ সম্পন্ন' : 'Scan Completed'}</span>
+                        </div>
                       </div>
 
-                      {/* Optical Metadata Tag */}
-                      <div className="absolute top-3 left-3 bg-black/65 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[10px] font-mono font-medium text-sky-300 border border-sky-400/30 flex items-center gap-1.5 shadow-xs">
-                        <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                        <span>{lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যান' : 'BIOMETRIC OCULAR SPECTRUM'}</span>
-                      </div>
-
-                      {/* Status Badge */}
-                      <div className="absolute bottom-3 left-3 bg-black/65 backdrop-blur-md px-3 py-1 rounded-full text-[11px] font-medium text-white flex items-center gap-1.5 shadow-sm border border-white/10">
-                        <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                        <span>{lang === 'bn' ? 'বিশ্লেষণ সম্পন্ন' : 'Scan Completed'}</span>
-                      </div>
+                      <p className="mt-3.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        {lang === 'bn'
+                          ? 'বায়োমেট্রিক দৃষ্টি বিশ্লেষণ সফলভাবে সম্পন্ন হয়েছে'
+                          : 'Ocular biometric scan completed successfully'}
+                      </p>
                     </div>
 
                     <Button
                       onClick={handleReset}
-                      className="w-full rounded-2xl h-12 bg-sky-500 hover:bg-sky-600 text-white font-medium text-sm sm:text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
+                      className="w-full rounded-2xl h-12 bg-sky-500 hover:bg-sky-600 text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       <span>{lang === 'bn' ? 'অন্য একটি ছবি স্ক্যান করুন' : 'Scan Another Photo'}</span>
                     </Button>
                   </div>
 
+                  {/* Clinical Guidance & Recommendations (Positioned on Left Side) */}
+                  <EyeResultCard
+                    result={result}
+                    lang={lang}
+                    analysisMode={analysisMode}
+                    isUpgrading={isUpgrading}
+                    variant="advice"
+                  />
+                </div>
+
+                {/* Right Column: Primary Clinical Diagnosis Card + About Condition */}
+                <div className="lg:col-span-6 xl:col-span-6 space-y-5">
                   {/* Primary Clinical Report Card (Summary: Diagnosis, Severity, Confidence, Urgency, PDF, Share) */}
                   <EyeResultCard
                     result={result}
@@ -439,10 +499,7 @@ export default function NayanAIPage() {
                     isUpgrading={isUpgrading}
                     variant="summary"
                   />
-                </div>
 
-                {/* Right Column: About Condition + Clinical Recommendations */}
-                <div className="lg:col-span-6 xl:col-span-6 space-y-5">
                   {/* About This Condition Panel */}
                   {(result.disease_description_en || result.disease_description_bn) && (
                     <ResultCard
@@ -468,14 +525,14 @@ export default function NayanAIPage() {
                       }
                     >
                       <div className="space-y-3">
-                        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-normal">
+                        <p className="text-sm sm:text-[15px] leading-relaxed text-gray-800 dark:text-gray-200 font-medium">
                           {lang === 'bn'
                             ? result.disease_description_bn
                             : result.disease_description_en}
                         </p>
                         {result.disease_stage === 'Advanced' && (
                           <div className="rounded-2xl border border-red-200 bg-red-50/80 p-3.5 dark:border-red-800 dark:bg-red-950/40">
-                            <p className="text-xs font-semibold text-red-700 dark:text-red-300">
+                            <p className="text-xs sm:text-sm font-bold text-red-700 dark:text-red-300">
                               ⚠️ {lang === 'bn'
                                 ? 'উন্নত পর্যায় সনাক্ত — অবিলম্বে একজন চক্ষুরোগ বিশেষজ্ঞের কাছে যান।'
                                 : 'Advanced stage detected — seek immediate consultation with an ophthalmologist.'}
@@ -486,20 +543,9 @@ export default function NayanAIPage() {
                     </ResultCard>
                   )}
 
-                  {/* Clinical Guidance & Recommended Action Items */}
-                  <EyeResultCard
-                    result={result}
-                    lang={lang}
-                    analysisMode={analysisMode}
-                    isUpgrading={isUpgrading}
-                    variant="advice"
-                  />
+                  {/* Doctor Recommendation Card (Directly After About This Condition) */}
+                  <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} layout="column" />
                 </div>
-              </div>
-
-              {/* Row 2: Recommended Specialists & Eye Centers Directory (Balanced Full Width) */}
-              <div className="pt-2">
-                <TopDoctorsCard doctors={doctors} isLoading={doctorsLoading} />
               </div>
             </div>
           )}
@@ -511,6 +557,7 @@ export default function NayanAIPage() {
                 history={history}
                 isLoading={historyLoading}
                 lang={lang}
+                onSelect={handleSelectHistory}
               />
             </div>
           )}
@@ -571,9 +618,10 @@ interface PastAnalysesProps {
   history: ReturnType<typeof useNayanHistory>['history']
   isLoading: boolean
   lang: 'en' | 'bn'
+  onSelect?: (item: ReturnType<typeof useNayanHistory>['history'][number]) => void
 }
 
-function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
+function PastAnalyses({ history, isLoading, lang, onSelect }: PastAnalysesProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -591,11 +639,16 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <History className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
-          {lang === 'bn' ? 'পূর্ববর্তী স্ক্রিনিং ইতিহাস' : 'Recent Eye Screenings'}
-        </h3>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+            {lang === 'bn' ? 'পূর্ববর্তী স্ক্রিনিং ইতিহাস' : 'Recent Eye Screenings'}
+          </h3>
+        </div>
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {lang === 'bn' ? 'ফলাফল দেখতে কার্ডে ক্লিক করুন' : 'Click card to view details'}
+        </span>
       </div>
       <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {history.map((item) => {
@@ -608,13 +661,22 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
           return (
             <li
               key={item.id}
-              className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-md transition-all"
+              onClick={() => onSelect?.(item)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onSelect?.(item)
+                }
+              }}
+              className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all cursor-pointer group active:scale-[0.99] focus:outline-hidden focus:ring-2 focus:ring-sky-400"
             >
               <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">
+                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                   {localized?.title ?? (lang === 'bn' ? 'অজানা ফলাফল' : 'Unknown')}
                 </p>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
                   {formatDate(item.created_at)}
                 </p>
               </div>
@@ -625,7 +687,7 @@ function PastAnalyses({ history, isLoading, lang }: PastAnalysesProps) {
                   </Badge>
                 )}
                 {item.confidence_score !== null && (
-                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
                     {lang === 'bn'
                       ? `${toBengaliDigits(Math.round(item.confidence_score))}%`
                       : `${Math.round(item.confidence_score)}%`}

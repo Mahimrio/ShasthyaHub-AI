@@ -301,6 +301,14 @@ export interface NayanResultLight {
   severity: Severity | null
   created_at: string
   confidence_score: number | null
+  recommendation_en?: string | null
+  recommendation_bn?: string | null
+  urgency_days?: number | null
+  specialist_needed?: string | null
+  next_steps?: string[] | null
+  disease_description_en?: string | null
+  disease_description_bn?: string | null
+  disease_stage?: string | null
 }
 
 // --- Lokhon (Symptom Screener) types ---
