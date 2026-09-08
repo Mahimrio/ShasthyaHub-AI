@@ -21,6 +21,19 @@ export interface AgentTheme {
 }
 
 export const AGENT_THEME: Record<ChatAgent, AgentTheme> = {
+  nayan: {
+    nameEn: 'Nayan AI',
+    nameBn: 'নয়ন AI',
+    dot: 'bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500',
+    gradient: 'bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500',
+    chipActive: 'border-sky-400/70 bg-sky-50 text-sky-700 dark:border-sky-500/50 dark:bg-sky-500/15 dark:text-sky-300',
+    ring: 'focus-within:ring-sky-500/25 focus-within:border-sky-400/60 dark:focus-within:border-sky-500/50',
+    text: 'text-sky-600 dark:text-sky-400',
+    placeholderIdleEn: 'Ask how Nayan AI screens an eye photo…',
+    placeholderIdleBn: 'নয়ন AI কীভাবে চোখ পরীক্ষা করে জিজ্ঞাসা করুন…',
+    placeholderResultEn: 'Ask about this eye screening…',
+    placeholderResultBn: 'এই চোখের পরীক্ষা নিয়ে জিজ্ঞাসা করুন…',
+  },
   scriptguard: {
     nameEn: 'ScriptGuard',
     nameBn: 'স্ক্রিপ্টগার্ড',

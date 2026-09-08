@@ -418,8 +418,8 @@ export default function ScriptGuardPage() {
                 </motion.div>
               )}
 
-              {/* Ask ScriptGuard — general questions before any analysis */}
-              {!result && !isLoading && (
+              {/* Ask ScriptGuard — general questions before any analysis (stays mounted under the analyzing overlay) */}
+              {!result && (
                 <PageChat
                   agent="scriptguard"
                   contextId="general"

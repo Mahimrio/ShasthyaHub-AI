@@ -6,10 +6,9 @@ import { cn } from '@/lib/utils'
 import { AGENT_THEME } from './agentTheme'
 import type { ChatAgent, ScopedChatOptions } from '@/types'
 
-const CHIPS: { key: keyof ScopedChatOptions; icon: typeof Feather; en: string; bn: string }[] = [
+const CHIPS: { key: Exclude<keyof ScopedChatOptions, 'includeHistory'>; icon: typeof Feather; en: string; bn: string }[] = [
   { key: 'simple', icon: Feather, en: 'Simple words', bn: 'সহজ ভাষা' },
   { key: 'doctorQuestions', icon: Stethoscope, en: 'Doctor questions', bn: 'ডাক্তারকে প্রশ্ন' },
-  { key: 'includeHistory', icon: History, en: 'My history', bn: 'আমার ইতিহাস' },
 ]
 
 interface ChatComposerProps {
@@ -25,6 +24,8 @@ interface ChatComposerProps {
   options: ScopedChatOptions
   onToggleOption: (key: keyof ScopedChatOptions) => void
   onAttachImage?: (file: File) => void
+  onOpenHistory: () => void
+  historyCount?: number
 }
 
 /** DeepSeek-style block: growing textbox on top, mode chips + attach/send below. */
@@ -41,6 +42,8 @@ export function ChatComposer({
   options,
   onToggleOption,
   onAttachImage,
+  onOpenHistory,
+  historyCount = 0,
 }: ChatComposerProps) {
   const theme = AGENT_THEME[agent]
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -105,6 +108,21 @@ export function ChatComposer({
               </button>
             )
           })}
+
+          <button
+            type="button"
+            onClick={onOpenHistory}
+            aria-haspopup="dialog"
+            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 motion-reduce:transition-none dark:border-gray-600/60 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            <History className="h-3.5 w-3.5" />
+            {lang === 'bn' ? 'ইতিহাস' : 'History'}
+            {historyCount > 0 && (
+              <span className={cn('ml-0.5 rounded-full px-1.5 py-px text-[10px] font-semibold leading-4 text-white', theme.gradient)}>
+                {historyCount > 99 ? '99+' : historyCount}
+              </span>
+            )}
+          </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">

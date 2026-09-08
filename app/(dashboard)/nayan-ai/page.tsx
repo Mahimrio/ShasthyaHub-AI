@@ -35,8 +35,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ResultCard } from '@/components/shared/ResultCard'
+import { PageChat } from '@/components/chat/scoped/PageChat'
 import { formatDate, toBengaliDigits } from '@/lib/utils'
-import type { NayanResult } from '@/types'
+import type { NayanResult, ScopedChatContext } from '@/types'
 
 const DISCLAIMER_KEY = 'nayan_disclaimer_seen'
 
@@ -158,6 +159,41 @@ export default function NayanAIPage() {
       setSelectedPreviewUrl(null)
     }
   }, [reset, selectedPreviewUrl])
+
+  // Paperclip in the chat composer: swap the photo and screen it straight away.
+  const handleChatAttach = useCallback(
+    (file: File) => {
+      handleImageSelect(file)
+      const seen = typeof window !== 'undefined' && localStorage.getItem(DISCLAIMER_KEY)
+      if (!seen) {
+        setShowDisclaimer(true)
+        return
+      }
+      void analyze(file)
+    },
+    [handleImageSelect, analyze]
+  )
+
+  const getChatContext = useCallback((): ScopedChatContext | null => {
+    if (!result) return null
+    return {
+      agent: 'nayan',
+      diagnosis: result.diagnosis,
+      severity: result.severity,
+      confidence_score: result.confidence_score,
+      recommendation_en: result.recommendation_en,
+      urgency_days: result.urgency_days,
+      next_steps: result.next_steps ?? [],
+      specialist_needed: result.specialist_needed,
+      disease_description_en: result.disease_description_en,
+      disease_stage: result.disease_stage,
+      analysis_mode: result.analysis_mode ?? analysisMode ?? 'online',
+    }
+  }, [result, analysisMode])
+
+  const chatContextLabel = result
+    ? `${localizeDiagnosis(result.diagnosis, lang).title} · ${severityLabel(result.severity, lang)}`
+    : undefined
 
   return (
     <>
@@ -324,6 +360,15 @@ export default function NayanAIPage() {
                     </Button>
                   </motion.div>
                 </div>
+
+                {/* Ask Nayan AI — general questions before any screening (stays mounted under the analyzing overlay) */}
+                <PageChat
+                  agent="nayan"
+                  contextId="general"
+                  getContext={getChatContext}
+                  mode="idle"
+                  onAttachImage={handleChatAttach}
+                />
               </div>
 
               {/* Right Column (Guidelines & Conditions Screened) */}
@@ -487,6 +532,16 @@ export default function NayanAIPage() {
                     analysisMode={analysisMode}
                     isUpgrading={isUpgrading}
                     variant="advice"
+                  />
+
+                  {/* Ask Nayan AI about this screening */}
+                  <PageChat
+                    agent="nayan"
+                    contextId={result.id}
+                    getContext={getChatContext}
+                    mode="result"
+                    contextLabel={chatContextLabel}
+                    onAttachImage={handleChatAttach}
                   />
                 </div>
 

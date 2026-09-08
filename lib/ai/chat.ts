@@ -102,6 +102,12 @@ Strict rules:
 // ── Page-scoped prompt (ScriptGuard / GlycoVision / Lokhon composers) ───────
 
 const AGENT_BRIEF: Record<ChatAgent, { name: string; domain: string; offTopic: string }> = {
+  nayan: {
+    name: 'Nayan AI',
+    domain:
+      'this eye-photo screening: what the detected condition and severity mean, how confident the screening is, how urgently to see which eye specialist, the suggested next steps, and how to take a clear eye photo',
+    offTopic: 'medicines, food analysis, symptom questionnaires or unrelated health topics',
+  },
   scriptguard: {
     name: 'ScriptGuard',
     domain:
@@ -161,7 +167,13 @@ export function buildScopedSystemPrompt(
           'If the context is the depression questionnaire, NEVER state a score or percentage; speak about feelings and support only.',
           'If the context says immediate support is required, begin the reply with warmth and the Shuchona helpline 16463 before anything else.',
         ]
-      : []
+      : agent === 'nayan'
+        ? [
+            'Nayan AI screens a photo; it is not an eye examination. Say "the screening suggests", never "you have".',
+            'If the context says the result came from the offline model, remind the user it is preliminary and should be re-checked online or by a doctor.',
+            'Never suggest eye drops, medicines or home remedies for the condition.',
+          ]
+        : []
 
   return `You are the ${brief.name} assistant inside ShasthyaHub-AI, a health app for rural Bangladesh. You live on the ${brief.name} page and help ONLY with ${brief.domain}.
 
@@ -170,7 +182,8 @@ ${contextBlock}${historyBlock}
 Strict rules:
 - ${languageRule(lang)}
 - ${SAFETY_RULES.join('\n- ')}
-- Stay on topic. If the user asks about ${brief.offTopic}, reply with ONE sentence saying this box only covers ${brief.name}, and that Shasthya Bondhu on the Home page can help with the rest. Do not answer the off-topic question.
+- Stay on topic. If the user asks about ${brief.offTopic}, reply with ONE sentence saying this box only covers ${brief.name}, and that Shasthya Bondhu on the Home page can help with the rest — write that name exactly as the link [Shasthya Bondhu](/) so it is clickable. Do not answer the off-topic question.
+- Links: only use [text](url) markup for [Shasthya Bondhu](/) or helpline numbers; never invent other URLs.
 - Ground every answer in the context above. If something is not in the context, say the app did not detect it rather than guessing.
 - Never tell the user to change, stop or start a medicine or a dose on their own; that is the doctor's decision.
 - Keep answers under ${wordLimit} words. Plain sentences and simple "-" bullet lists only. No tables, no headers, no code, no emojis.
