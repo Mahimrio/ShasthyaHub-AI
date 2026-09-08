@@ -348,6 +348,9 @@ export default function ScriptGuardPage() {
                     onImageSelect={handleImageSelect}
                     acceptedTypes="image/*"
                     maxSizeMB={5}
+                    title={isBn ? 'প্রেসক্রিপশনের স্পষ্ট ছবি আপলোড করুন' : 'Upload or Capture Prescription Photo'}
+                    subtitle={isBn ? 'ওষুধের নাম ও ডোজ পড়া যায় এমন ভালো আলোতে, সমতল করে তুলুন (সর্বোচ্চ 5MB)' : 'Lay it flat in good light so drug names and doses are readable (max 5MB)'}
+                    readyText={isBn ? 'প্রেসক্রিপশন বিশ্লেষণের জন্য প্রস্তুত' : 'Prescription ready for AI analysis'}
                   />
                   <Button
                     onClick={handleAnalyzeClick}

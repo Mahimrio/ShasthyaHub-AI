@@ -54,6 +54,7 @@ Desktop.ini
 
 # Logs
 logs/
+!/app/api/medications/logs/
 *.log
 
 # Turbo

@@ -241,6 +241,7 @@ export default function NayanAIPage() {
                     maxSizeMB={5}
                     title={lang === 'bn' ? 'চোখের স্পষ্ট ছবি নির্বাচন করুন' : 'Upload or Capture Eye Photo'}
                     subtitle={lang === 'bn' ? 'আইরিস ও কর্নিয়া কেন্দ্রে রেখে ছবিটি স্পষ্ট ও ফোকাসে রাখুন' : 'Ensure iris & cornea are centered and in sharp focus'}
+                    readyText={lang === 'bn' ? 'চোখের আইরিস ও কর্নিয়া স্পষ্ট রয়েছে' : 'Eye image ready for AI biometric analysis'}
                   />
 
                   {/* Offline Warning Banners */}

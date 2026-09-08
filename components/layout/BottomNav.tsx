@@ -20,7 +20,7 @@ export function BottomNav() {
   const { lang } = useLanguage()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-t border-gray-100 dark:border-gray-800 md:hidden z-40 pb-[env(safe-area-inset-bottom)] transition-colors">
+    <nav className="fixed bottom-0 left-0 right-0 glass-panel glass-bar-top border-gray-100/90 dark:border-gray-800/80 md:hidden z-40 pb-[env(safe-area-inset-bottom)] transition-colors duration-200 motion-reduce:transition-none">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = pathname === item.href
