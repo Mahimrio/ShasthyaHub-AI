@@ -4,10 +4,60 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from './useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { ChatMsg, RedFlagLevel } from './useChat'
-import type { ChatAgent, ScopedChatContext, ScopedChatOptions } from '@/types'
+import type { ChatAgent, ScopedChatContext, ScopedChatOptions, ScopedConversation } from '@/types'
 
 const CACHE_CAP = 30
 const cacheKey = (uid: string, agent: ChatAgent, contextId: string) => `shasthya_chat_v1:${uid}:${agent}:${contextId}`
+const indexKey = (uid: string, agent: ChatAgent) => `shasthya_chat_index_v1:${uid}:${agent}`
+
+type LocalIndex = Record<string, Omit<ScopedConversation, 'contextId' | 'kind'>>
+
+function readIndex(uid: string, agent: ChatAgent): LocalIndex {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(indexKey(uid, agent)) ?? '{}')
+    return parsed && typeof parsed === 'object' ? (parsed as LocalIndex) : {}
+  } catch {
+    return {}
+  }
+}
+
+function writeIndex(uid: string, agent: ChatAgent, index: LocalIndex) {
+  try {
+    localStorage.setItem(indexKey(uid, agent), JSON.stringify(index))
+  } catch {
+    // storage full — ignore
+  }
+}
+
+export function conversationKind(contextId: string): ScopedConversation['kind'] {
+  if (contextId === 'general') return 'general'
+  if (contextId.endsWith(':questionnaire')) return 'questionnaire'
+  return 'analysis'
+}
+
+/** Conversations cached in this browser for one agent (covers rows never persisted server-side). */
+export function readLocalConversationIndex(uid: string, agent: ChatAgent): ScopedConversation[] {
+  return Object.entries(readIndex(uid, agent)).map(([contextId, meta]) => ({
+    contextId,
+    kind: conversationKind(contextId),
+    ...meta,
+    localOnly: true,
+  }))
+}
+
+export function removeLocalConversation(uid: string, agent: ChatAgent, contextId: string) {
+  const index = readIndex(uid, agent)
+  delete index[contextId]
+  writeIndex(uid, agent, index)
+  try {
+    localStorage.removeItem(cacheKey(uid, agent, contextId))
+  } catch {
+    // ignore
+  }
+}
+
+const stripMarkdown = (s: string) =>
+  s.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/\*+/g, '').replace(/^\s*-\s+/gm, '').replace(/\s+/g, ' ').trim()
 
 function newId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -20,13 +70,15 @@ interface UseScopedChatArgs {
   /** Read at send time so HITL edits on the page are always reflected. */
   getContext: () => ScopedChatContext | null
   options: ScopedChatOptions
+  /** Shown in the history list for this conversation. */
+  label?: string
 }
 
 /**
  * Conversation state for one page-scoped composer: streaming send, retry,
  * localStorage cache, Supabase hydration by (scope, context_id).
  */
-export function useScopedChat({ agent, contextId, getContext, options }: UseScopedChatArgs) {
+export function useScopedChat({ agent, contextId, getContext, options, label }: UseScopedChatArgs) {
   const { user } = useAuth()
   const { lang } = useLanguage()
   const [messages, setMessages] = useState<ChatMsg[]>([])
@@ -91,7 +143,19 @@ export function useScopedChat({ agent, contextId, getContext, options }: UseScop
     } catch {
       // storage full — ignore
     }
-  }, [messages, user?.id, agent, contextId])
+    const firstUser = messages.find((m) => m.role === 'user')
+    const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant' && m.content)
+    const index = readIndex(user.id, agent)
+    index[contextId] = {
+      title: (firstUser?.content ?? '').slice(0, 140),
+      preview: stripMarkdown(lastAssistant?.content ?? '').slice(0, 160),
+      count: messages.length,
+      updatedAt: new Date(messages[messages.length - 1].at).toISOString(),
+      labelEn: label ?? index[contextId]?.labelEn ?? '',
+      labelBn: label ?? index[contextId]?.labelBn ?? '',
+    }
+    writeIndex(user.id, agent, index)
+  }, [messages, user?.id, agent, contextId, label])
 
   // Abort an in-flight reply if the composer unmounts (page reset / navigation).
   useEffect(() => () => abortRef.current?.abort(), [])
@@ -122,7 +186,15 @@ export function useScopedChat({ agent, contextId, getContext, options }: UseScop
         const res = await fetch('/api/chat/scoped', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ agent, lang, contextId, context: getContext(), options, messages: outbound }),
+          body: JSON.stringify({
+            agent,
+            lang,
+            contextId,
+            context: getContext(),
+            // Prior results are cheap (≤3 lines) and let "compared to last time" questions work.
+            options: { ...options, includeHistory: true },
+            messages: outbound,
+          }),
           signal: ac.signal,
         })
 
@@ -183,11 +255,7 @@ export function useScopedChat({ agent, contextId, getContext, options }: UseScop
     setError(null)
     setFailedText(null)
     if (!user?.id) return
-    try {
-      localStorage.removeItem(cacheKey(user.id, agent, contextId))
-    } catch {
-      // ignore
-    }
+    removeLocalConversation(user.id, agent, contextId)
     import('@/lib/supabase/client')
       .then(({ createClient }) =>
         createClient().from('chat_messages').delete().eq('user_id', user.id).eq('scope', agent).eq('context_id', contextId)

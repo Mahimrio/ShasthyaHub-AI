@@ -9,6 +9,7 @@ import {
   chatAgentSchema,
   describeIdleContext,
   fetchAgentHistory,
+  fetchContextFromDb,
   scopedContextSchema,
   serializeScopedContext,
 } from '@/lib/ai/scoped-context'
@@ -93,8 +94,10 @@ export async function POST(request: NextRequest) {
     }
 
     const redFlag = detectRedFlags(last.content)
-    const contextBlock = context
-      ? serializeScopedContext(context).slice(0, MAX_CONTEXT_CHARS)
+    // A reopened conversation about an earlier analysis arrives without page context; rebuild it from the DB.
+    const effectiveContext = context ?? (await fetchContextFromDb(supabase, user.id, agent, contextId))
+    const contextBlock = effectiveContext
+      ? serializeScopedContext(effectiveContext).slice(0, MAX_CONTEXT_CHARS)
       : describeIdleContext(agent)
 
     const historyLines = options.includeHistory ? await fetchAgentHistory(supabase, user.id, agent, contextId) : []

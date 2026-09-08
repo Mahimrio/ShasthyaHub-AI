@@ -454,6 +454,22 @@ export interface LokhonChatContext {
 
 export type ScopedChatContext = NayanChatContext | ScriptGuardChatContext | GlycoVisionChatContext | LokhonChatContext
 
+/** One earlier conversation of a page-scoped composer, grouped by (scope, context_id). */
+export interface ScopedConversation {
+  contextId: string
+  kind: 'general' | 'questionnaire' | 'analysis'
+  /** First user message. */
+  title: string
+  /** Last assistant reply, markdown stripped. */
+  preview: string
+  count: number
+  updatedAt: string
+  labelEn: string
+  labelBn: string
+  /** Cached in this browser only (migration 007 not applied when it was saved). */
+  localOnly?: boolean
+}
+
 export const BANGLADESH_DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria',
   'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', 'Cox\'s Bazar',
