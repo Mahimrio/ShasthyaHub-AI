@@ -2,6 +2,7 @@
 
 import { HeartPulse, Phone, Ambulance, ShieldAlert } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { BrandWordmark } from '@/components/shared/BrandWordmark'
 
 export function Footer({ variant = 'full' }: { variant?: 'full' | 'minimal' }) {
   const { lang } = useLanguage()
@@ -30,7 +31,7 @@ export function Footer({ variant = 'full' }: { variant?: 'full' | 'minimal' }) {
           <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-sm">
             <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.2} />
           </div>
-          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">ShasthyaHub-AI</span>
+          <BrandWordmark className="text-sm" suffix="-AI" />
           <span className="text-xs text-gray-500 dark:text-gray-400">© {year}</span>
         </div>
 

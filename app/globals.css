@@ -26,9 +26,9 @@
   --color-health-yellow: #f59e0b;
   --color-health-red: #ef4444;
   --color-health-blue: #3b82f6;
-  --font-sans: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  --font-bengali: var(--font-bengali), 'Noto Sans Bengali', 'Anek Bangla', 'Segoe UI', system-ui, sans-serif;
+  --font-bengali: var(--font-bengali), 'Hind Siliguri', 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
   --radius: 0.75rem;
 }
 
@@ -82,6 +82,24 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Plus Jakarta Sans sets wide; headings read as display type when tracked a touch tighter. */
+h1, h2, h3 {
+  letter-spacing: -0.02em;
+}
+h4 {
+  letter-spacing: -0.01em;
+}
+
+/* Wordmark / hero numerals */
+.font-display {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.035em;
 }
 
 /* ── Mobile momentum scrolling ────────────────────────────── */
@@ -215,22 +233,26 @@ html[lang="bn"] body,
 }
 
 html[lang="bn"] {
-  line-height: 1.62;
-}
-
-.leading-bengali {
   line-height: 1.65;
 }
 
-/* Headings and optical weights in Bengali */
+.leading-bengali {
+  line-height: 1.7;
+}
+
+/* Hind Siliguri carries real 600/700 cuts, so named weights map closer to their Latin meaning. */
+html[lang="bn"] .font-black,
+.font-bengali .font-black,
+html[lang="bn"] .font-extrabold,
+.font-bengali .font-extrabold,
 html[lang="bn"] .font-bold,
 .font-bengali .font-bold {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 html[lang="bn"] .font-semibold,
 .font-bengali .font-semibold {
-  font-weight: 500;
+  font-weight: 600;
 }
 
 html[lang="bn"] .font-medium,
@@ -240,15 +262,28 @@ html[lang="bn"] .font-medium,
 
 html[lang="bn"] h1,
 html[lang="bn"] h2,
+.font-bengali h1,
+.font-bengali h2 {
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
 html[lang="bn"] h3,
 html[lang="bn"] h4,
-.font-bengali h1,
-.font-bengali h2,
 .font-bengali h3,
 .font-bengali h4 {
   font-weight: 600;
   letter-spacing: 0;
-  line-height: 1.35;
+  line-height: 1.4;
+}
+
+/* Bengali glyphs have no use for Latin display tracking (the Latin wordmark keeps its own). */
+html[lang="bn"] .tracking-tight,
+.font-bengali .tracking-tight,
+html[lang="bn"] .tracking-tighter,
+.font-bengali .tracking-tighter {
+  letter-spacing: 0;
 }
 
 /* Elevate contrast for secondary text in Bengali to keep small conjuncts crystal clear */
@@ -270,11 +305,6 @@ html[lang="bn"] .text-gray-400 {
 [data-tabular-nums="true"] {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
-}
-
-/* Clinical legibility OpenType features for Latin characters in Inter */
-.font-sans {
-  font-feature-settings: "cv05" 1, "cv08" 1, "zero" 1;
 }
 
 /* ── Simplemorphism Design System ────────────────────────────── */

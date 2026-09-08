@@ -33,6 +33,7 @@ import { sendCacheAll } from "@/lib/cache-all";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageToggle } from "@/components/shared/LanguageToggle";
 import { ThemeToggle } from "@/components/shared/ThemeToggle";
+import { BrandWordmark } from "@/components/shared/BrandWordmark";
 
 interface AuthLandingPageProps {
   defaultMode?: "login" | "register";
@@ -316,9 +317,7 @@ export default function AuthLandingPage({
             <HeartPulse className="w-6 h-6 text-white" strokeWidth={2.6} />
           </div>
           <div className="flex items-center gap-2.5">
-            <span className="font-extrabold text-2xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-sky-600 via-cyan-500 to-emerald-500 dark:from-sky-400 dark:via-cyan-400 dark:to-emerald-400">
-              ShasthyaHub-AI
-            </span>
+            <BrandWordmark className="text-2xl" suffix="-AI" />
             <span className="hidden sm:inline-block text-xs px-2.5 py-0.5 rounded-full font-bold bg-sky-500/10 dark:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/25 shadow-xs">
               v2.5 · Multi-Agent Suite
             </span>
