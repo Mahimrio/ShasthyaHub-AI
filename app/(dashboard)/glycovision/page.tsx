@@ -34,8 +34,9 @@ import RiskScoreCard from '@/components/features/glycovision/RiskScoreCard'
 import { useGlycoVisionHistory } from '@/hooks/useGlycoVisionHistory'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { PageChat } from '@/components/chat/scoped/PageChat'
 import { cn, formatDate } from '@/lib/utils'
-import type { EnrichedFoodItem, ChronicDiseaseRisk, RiskLevel, MealModification } from '@/types'
+import type { EnrichedFoodItem, ChronicDiseaseRisk, RiskLevel, MealModification, ScopedChatContext } from '@/types'
 
 type AnalysisState = 'idle' | 'disclaimer' | 'uploading' | 'processing' | 'complete'
 
@@ -45,6 +46,7 @@ type MainTab = 'upload' | 'history'
 type ResultTab = 'overview' | 'nutrients' | 'risks' | 'suggestions'
 
 interface AnalysisResult {
+  id: string
   items: EnrichedFoodItem[]
   totalCalories: number
   totalCarbs: number
@@ -147,6 +149,7 @@ export default function GlycoVisionPage() {
 
       const d = body.data
       setResult({
+        id: typeof d.id === 'string' && d.id ? d.id : `local-${key}`,
         items: (d.identified_items ?? []).map((i: Record<string, unknown>) => ({
           name_en: i.name_en as string,
           name_bn: (i.name_bn as string) ?? '',
@@ -192,6 +195,36 @@ export default function GlycoVisionPage() {
     setErrorMsg('')
     setState('idle')
   }
+
+  const getChatContext = useCallback((): ScopedChatContext | null => {
+    if (!result) return null
+    return {
+      agent: 'glycovision',
+      items: result.items.map((i) => ({
+        name_en: i.name_en ?? '',
+        estimated_grams: i.estimated_grams ?? 0,
+        calories: i.calories ?? 0,
+        carbs_g: i.carbs_g ?? 0,
+        protein_g: i.protein_g ?? 0,
+        fat_g: i.fat_g ?? 0,
+      })),
+      total_calories: result.totalCalories,
+      total_carbs_g: result.totalCarbs,
+      total_protein_g: result.totalProtein,
+      total_fat_g: result.totalFat,
+      glycemic_load: result.glycemicLoad,
+      risk_level: result.riskLevel,
+      risk_summary_en: result.riskSummaryEn,
+      chronic_disease_risks: result.chronicDiseaseRisks.map((r) => ({ disease_en: r.disease_en, status: r.status })),
+      meal_modifications: result.mealModifications.map((m) => m.suggestion_en).filter(Boolean),
+    }
+  }, [result])
+
+  const chatContextLabel = result
+    ? lang === 'bn'
+      ? `${result.items.length} টি খাবার · ${Math.round(result.totalCalories)} kcal · GL ${Math.round(result.glycemicLoad)}`
+      : `${result.items.length} items · ${Math.round(result.totalCalories)} kcal · GL ${Math.round(result.glycemicLoad)}`
+    : undefined
 
   const resultTabs: { key: ResultTab; labelEn: string; labelBn: string; icon: typeof BarChart3 }[] = [
     { key: 'overview', labelEn: 'Overview', labelBn: 'সারসংক্ষেপ', icon: BarChart3 },
@@ -309,6 +342,17 @@ export default function GlycoVisionPage() {
                           ? 'পুরো খাবারের ছবি তুলুন — একক উপাদান নয়'
                           : 'Capture your full plate — not individual items'}
                       </p>
+
+                      {/* Ask GlycoVision — general questions before any analysis */}
+                      {state === 'idle' && (
+                        <PageChat
+                          agent="glycovision"
+                          contextId="general"
+                          getContext={getChatContext}
+                          mode="idle"
+                          onAttachImage={(file) => void handleImageSelect(file)}
+                        />
+                      )}
                     </>
                   )}
 
@@ -525,6 +569,16 @@ export default function GlycoVisionPage() {
                         )}
                       </motion.div>
                     </AnimatePresence>
+
+                    {/* Ask GlycoVision about this meal */}
+                    <PageChat
+                      agent="glycovision"
+                      contextId={result.id}
+                      getContext={getChatContext}
+                      mode="result"
+                      contextLabel={chatContextLabel}
+                      onAttachImage={(file) => void handleImageSelect(file)}
+                    />
 
                     {/* Re-upload button */}
                     <Button

@@ -13,6 +13,7 @@ import { MedicationNotificationDrawer } from '@/components/features/medications/
 import { BottomNav } from '@/components/layout/BottomNav'
 import { Footer } from '@/components/layout/Footer'
 import { ChatWidget } from '@/components/chat/ChatWidget'
+import { PageChatPresenceProvider } from '@/contexts/PageChatPresenceContext'
 import { Skeleton } from '@/components/shared/skeletons/Skeleton'
 import { useState } from 'react'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
@@ -44,6 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
+    <PageChatPresenceProvider>
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
       {/* Mobile header */}
       <header className="sticky top-0 z-30 md:hidden glass-panel glass-bar-bottom border-gray-100/90 dark:border-gray-800/80 pt-[env(safe-area-inset-top)] transition-colors duration-200 motion-reduce:transition-none">
@@ -295,5 +297,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <BottomNav />
       <ChatWidget />
     </div>
+    </PageChatPresenceProvider>
   )
 }

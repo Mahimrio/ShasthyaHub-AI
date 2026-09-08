@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { getGeminiKeys, GEMINI_MODEL } from './gemini'
+import type { ChatAgent, ScopedChatOptions } from '@/types'
 
 /**
  * Shasthya Bondhu chat helpers — PLAIN-TEXT chat (not JSON mode).
@@ -56,15 +57,25 @@ export function trimHistory(messages: ChatTurn[], maxChars = 6000, maxTurns = 20
 
 // ── System prompt ───────────────────────────────────────────────────────────
 
+function languageRule(lang: 'bn' | 'en'): string {
+  return lang === 'bn'
+    ? 'Reply in Bengali (বাংলা). Use simple, warm, everyday Bengali a villager understands.'
+    : 'Reply in English. Use simple, warm language.'
+}
+
+/** Safety rules shared by every assistant persona in the app. */
+export const SAFETY_RULES = [
+  'You are NOT a doctor. Never diagnose, never prescribe medicines or doses. For anything serious, tell the user to see a qualified doctor.',
+  'For emergencies (chest pain, breathing trouble, heavy bleeding, unconsciousness): tell them to call 999 (national emergency) or 16263 (Shastho Batayon health line) IMMEDIATELY, before anything else.',
+  'If the user mentions suicide or self-harm: respond with warmth and care, and share the Shuchona mental health helpline 16463 and Kaan Pete Roi. Never be dismissive.',
+]
+
 export function buildChatSystemPrompt(
   lang: 'bn' | 'en',
   profile?: { name?: string | null; district?: string | null } | null,
   reportLines?: string[]
 ): string {
-  const langRule =
-    lang === 'bn'
-      ? 'Reply in Bengali (বাংলা). Use simple, warm, everyday Bengali a villager understands.'
-      : 'Reply in English. Use simple, warm language.'
+  const langRule = languageRule(lang)
 
   const userLine = profile?.name
     ? `The user's name is ${profile.name}${profile.district ? `, from ${profile.district} district, Bangladesh` : ''}.`
@@ -81,13 +92,90 @@ ${userLine}${reportBlock}
 
 Strict rules:
 - ${langRule}
-- You are NOT a doctor. Never diagnose, never prescribe medicines or doses. For anything serious, tell the user to see a qualified doctor.
-- For emergencies (chest pain, breathing trouble, heavy bleeding, unconsciousness): tell them to call 999 (national emergency) or 16263 (Shastho Batayon health line) IMMEDIATELY, before anything else.
-- If the user mentions suicide or self-harm: respond with warmth and care, and share the Shuchona mental health helpline 16463 and Kaan Pete Roi. Never be dismissive.
+- ${SAFETY_RULES.join('\n- ')}
 - Keep answers SHORT: under 180 words. Plain sentences and simple "-" bullet lists only. No tables, no headers, no code, no emojis.
 - General health education, hygiene, nutrition, diabetes/BP lifestyle advice, explaining this app's features, and explaining the user's own reports listed above are all fine.
 - If asked something unrelated to health or this app, politely steer back in one sentence.
 - End answers about symptoms or reports with a one-line reminder to consult a doctor for confirmation.`
+}
+
+// ── Page-scoped prompt (ScriptGuard / GlycoVision / Lokhon composers) ───────
+
+const AGENT_BRIEF: Record<ChatAgent, { name: string; domain: string; offTopic: string }> = {
+  scriptguard: {
+    name: 'ScriptGuard',
+    domain:
+      'prescriptions: the medicines written on them, what each medicine is generally for, how the schedule works, food/timing instructions, and the drug-interaction warnings the app found',
+    offTopic: 'other health topics, food analysis, eye problems or symptom checks',
+  },
+  glycovision: {
+    name: 'GlycoVision',
+    domain:
+      'the analysed meal: its food items, calories and macros, glycemic load, the diabetes/BP/heart risk flags the app raised, portion changes and healthier Bangladeshi alternatives',
+    offTopic: 'medicines, eye problems, symptom checks or unrelated health topics',
+  },
+  lokhon: {
+    name: 'Lokhon',
+    domain:
+      'this symptom questionnaire: what a question means, what the risk band and flagged symptoms indicate, which type of doctor to see and how urgently, and how to prepare for that visit',
+    offTopic: 'medicines, food analysis, eye problems or unrelated health topics',
+  },
+}
+
+/**
+ * Prompt for an in-page assistant that only talks about one agent's domain and
+ * the analysis currently on screen. `contextBlock` is the serialized analysis
+ * (or a note that none exists yet); `historyLines` are prior results.
+ */
+export function buildScopedSystemPrompt(
+  agent: ChatAgent,
+  lang: 'bn' | 'en',
+  contextBlock: string,
+  options: ScopedChatOptions,
+  historyLines: string[] = []
+): string {
+  const brief = AGENT_BRIEF[agent]
+  const wordLimit = options.simple ? 120 : 180
+
+  const styleRules: string[] = []
+  if (options.simple) {
+    styleRules.push(
+      'SIMPLE MODE: the user may not read well. Use the plainest everyday words, very short sentences, and explain any medical or English term in brackets right after it. No more than 5 bullets.'
+    )
+  }
+  if (options.doctorQuestions) {
+    styleRules.push(
+      'DOCTOR-QUESTIONS MODE: answer as a numbered list of 4 to 6 short questions the user should ask their doctor about this result, each on its own line, then ONE closing line saying how soon to go. Nothing else.'
+    )
+  }
+
+  const historyBlock =
+    historyLines.length > 0
+      ? `\n\nThe user's previous ${brief.name} results (only mention when asked about earlier results or changes over time):\n${historyLines.join('\n')}`
+      : ''
+
+  const lokhonRules =
+    agent === 'lokhon'
+      ? [
+          'Lokhon is a screening questionnaire, not a test result. Say "screening suggests", never "you have".',
+          'If the context is the depression questionnaire, NEVER state a score or percentage; speak about feelings and support only.',
+          'If the context says immediate support is required, begin the reply with warmth and the Shuchona helpline 16463 before anything else.',
+        ]
+      : []
+
+  return `You are the ${brief.name} assistant inside ShasthyaHub-AI, a health app for rural Bangladesh. You live on the ${brief.name} page and help ONLY with ${brief.domain}.
+
+${contextBlock}${historyBlock}
+
+Strict rules:
+- ${languageRule(lang)}
+- ${SAFETY_RULES.join('\n- ')}
+- Stay on topic. If the user asks about ${brief.offTopic}, reply with ONE sentence saying this box only covers ${brief.name}, and that Shasthya Bondhu on the Home page can help with the rest. Do not answer the off-topic question.
+- Ground every answer in the context above. If something is not in the context, say the app did not detect it rather than guessing.
+- Never tell the user to change, stop or start a medicine or a dose on their own; that is the doctor's decision.
+- Keep answers under ${wordLimit} words. Plain sentences and simple "-" bullet lists only. No tables, no headers, no code, no emojis.
+${lokhonRules.map((r) => `- ${r}`).join('\n')}${styleRules.map((r) => `\n- ${r}`).join('')}
+- End with a one-line reminder to confirm with a qualified doctor.`
 }
 
 // ── Plain-text fallback providers ───────────────────────────────────────────

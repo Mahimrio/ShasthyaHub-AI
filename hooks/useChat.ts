@@ -61,6 +61,7 @@ export function useChat() {
           .from('chat_messages')
           .select('id, role, content, created_at')
           .eq('user_id', user.id)
+          .eq('scope', 'global')
           .order('created_at', { ascending: false })
           .limit(20)
         if (data && data.length > 0) {
@@ -175,7 +176,9 @@ export function useChat() {
       }
       // Fire-and-forget server-side wipe (RLS delete-own policy).
       import('@/lib/supabase/client')
-        .then(({ createClient }) => createClient().from('chat_messages').delete().eq('user_id', user.id))
+        .then(({ createClient }) =>
+          createClient().from('chat_messages').delete().eq('user_id', user.id).eq('scope', 'global')
+        )
         .catch(() => {})
     }
   }, [user?.id])

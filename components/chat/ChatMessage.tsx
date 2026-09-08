@@ -5,17 +5,19 @@ import { HeartPulse, Volume2, Square, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMsg } from '@/hooks/useChat'
 
-/** Minimal formatter: **bold**, "- " bullets, newlines. No markdown dependency. */
-function FormattedText({ text }: { text: string }) {
+/** Minimal formatter: **bold**, *italic*, "- " bullets, newlines. No markdown dependency. */
+export function FormattedText({ text }: { text: string }) {
   const lines = text.split('\n')
   return (
     <>
       {lines.map((line, i) => {
         const isBullet = line.trimStart().startsWith('- ')
         const clean = isBullet ? line.trimStart().slice(2) : line
-        const parts = clean.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
+        const parts = clean.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, j) =>
           part.startsWith('**') && part.endsWith('**') ? (
             <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>
+          ) : part.length > 2 && part.startsWith('*') && part.endsWith('*') ? (
+            <em key={j}>{part.slice(1, -1)}</em>
           ) : (
             <span key={j}>{part}</span>
           )
@@ -34,7 +36,7 @@ function FormattedText({ text }: { text: string }) {
 }
 
 /** Speaker button backed by the existing Bengali TTS route. */
-function SpeakButton({ text, lang }: { text: string; lang: 'bn' | 'en' }) {
+export function SpeakButton({ text, lang }: { text: string; lang: 'bn' | 'en' }) {
   const [state, setState] = useState<'idle' | 'loading' | 'playing'>('idle')
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
@@ -50,7 +52,7 @@ function SpeakButton({ text, lang }: { text: string; lang: 'bn' | 'en' }) {
     setState('loading')
     try {
       // Send speakable text — markdown markers would be read aloud otherwise.
-      const speakable = text.replace(/\*\*/g, '').replace(/^\s*-\s+/gm, '')
+      const speakable = text.replace(/\*+/g, '').replace(/^\s*-\s+/gm, '')
       const res = await fetch('/api/scriptguard/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -378,6 +378,68 @@ export interface LokhonAnalysisRow {
   created_at: string
 }
 
+// --- Page-scoped AI chat (ScriptGuard / GlycoVision / Lokhon composers) ---
+
+export type ChatAgent = 'scriptguard' | 'glycovision' | 'lokhon'
+export type ChatScope = 'global' | ChatAgent
+
+export interface ScopedChatOptions {
+  /** Village-level wording, shorter reply. */
+  simple: boolean
+  /** Reply becomes a list of questions to ask the doctor. */
+  doctorQuestions: boolean
+  /** Inject the user's previous results from the same agent. */
+  includeHistory: boolean
+}
+
+export interface ScriptGuardChatContext {
+  agent: 'scriptguard'
+  drugs: Pick<ExtractedMedication, 'brand_name' | 'generic_name' | 'drug_class' | 'dosage' | 'frequency' | 'duration' | 'instructions'>[]
+  interactions: Pick<DrugInteraction, 'drugs_involved' | 'severity' | 'risk_en' | 'recommendation_en'>[]
+  has_dangerous_interactions: boolean
+  schedule: Record<'morning' | 'afternoon' | 'evening' | 'night', string[]>
+  duration_days: number
+  special_instructions_en: string[]
+}
+
+export interface GlycoVisionChatContext {
+  agent: 'glycovision'
+  items: Pick<EnrichedFoodItem, 'name_en' | 'estimated_grams' | 'calories' | 'carbs_g' | 'protein_g' | 'fat_g'>[]
+  total_calories: number
+  total_carbs_g: number
+  total_protein_g: number
+  total_fat_g: number
+  glycemic_load: number
+  risk_level: RiskLevel
+  risk_summary_en: string
+  chronic_disease_risks: Pick<ChronicDiseaseRisk, 'disease_en' | 'status'>[]
+  meal_modifications: string[]
+}
+
+export interface LokhonChatContext {
+  agent: 'lokhon'
+  disease_slug: string
+  disease_name_en: string
+  disease_description_en: string | null
+  /** Questionnaire phase: the question currently on screen. */
+  current_question_en?: string
+  questions_en?: string[]
+  /** Result phase. */
+  result?: {
+    risk_band: RiskBand
+    /** Omitted for depression — the UI never shows a score there either. */
+    risk_percentage?: number
+    is_red_flag: boolean
+    advice_en: string
+    doctor_type_en: string
+    urgency: string
+    top_symptoms_en: string[]
+    requires_immediate_support: boolean
+  }
+}
+
+export type ScopedChatContext = ScriptGuardChatContext | GlycoVisionChatContext | LokhonChatContext
+
 export const BANGLADESH_DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria',
   'Chandpur', 'Chapainawabganj', 'Chattogram', 'Chuadanga', 'Cox\'s Bazar',

@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Groq from 'groq-sdk'
 import { createClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/rate-limit'
 import { sanitizeInput } from '@/lib/sanitize'
-import {
-  buildChatSystemPrompt,
-  detectRedFlags,
-  trimHistory,
-  openRouterChatText,
-  geminiChatText,
-  type ChatTurn,
-} from '@/lib/ai/chat'
+import { buildChatSystemPrompt, detectRedFlags, trimHistory, type ChatTurn } from '@/lib/ai/chat'
+import { runChatCompletion, streamChatResponse } from '@/lib/ai/chat-stream'
 import type { ApiError } from '@/types'
 
 export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
-const GROQ_CHAT_MODEL = 'openai/gpt-oss-120b'
 const MAX_MESSAGE_CHARS = 4000
 
 interface ChatRequestBody {
@@ -135,82 +127,13 @@ export async function POST(request: NextRequest) {
     const system = buildChatSystemPrompt(lang, profile, reportLines)
     const trimmed = trimHistory(history)
 
-    // Pick a provider up-front so headers can carry it. Groq streams; the
-    // fallbacks return whole texts that we emit as a single chunk.
-    let provider: 'groq' | 'openrouter' | 'gemini' = 'groq'
-    let groqStream: AsyncIterable<Groq.Chat.Completions.ChatCompletionChunk> | null = null
-    let fallbackText: string | null = null
+    const completion = await runChatCompletion(system, trimmed)
 
-    try {
-      const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
-      groqStream = await groq.chat.completions.create({
-        model: GROQ_CHAT_MODEL,
-        messages: [{ role: 'system', content: system }, ...trimmed],
-        stream: true,
-        temperature: 0.4,
-        max_completion_tokens: 1024,
-        reasoning_effort: 'low',
-      })
-    } catch (groqError) {
-      console.warn('[chat] Groq failed, falling back:', groqError instanceof Error ? groqError.message : groqError)
-      try {
-        fallbackText = await openRouterChatText(system, trimmed)
-        provider = 'openrouter'
-      } catch (orError) {
-        console.warn('[chat] OpenRouter failed, falling back to Gemini:', orError instanceof Error ? orError.message : orError)
-        fallbackText = await geminiChatText(system, trimmed)
-        provider = 'gemini'
-      }
-    }
-
-    const encoder = new TextEncoder()
-    const userContent = last.content
-
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        let full = ''
-        let completed = false
-        try {
-          if (groqStream) {
-            for await (const chunk of groqStream) {
-              const delta = chunk.choices[0]?.delta?.content || ''
-              if (delta) {
-                full += delta
-                controller.enqueue(encoder.encode(delta))
-              }
-            }
-          } else if (fallbackText) {
-            full = fallbackText
-            controller.enqueue(encoder.encode(fallbackText))
-          }
-          completed = true
-          controller.close()
-        } catch (streamError) {
-          console.error('[chat] stream interrupted:', streamError)
-          // Erroring (not closing) the stream tells the client the reply is
-          // incomplete, so it can show a retry instead of a truncated answer.
-          controller.error(streamError)
-        }
-
-        // Persist only complete exchanges so history never contains cut-off answers.
-        if (completed && full.trim()) {
-          const { error: insertError } = await supabase.from('chat_messages').insert([
-            { user_id: user.id, role: 'user', content: userContent, lang },
-            { user_id: user.id, role: 'assistant', content: full, lang },
-          ])
-          if (insertError) console.warn('[chat] persistence skipped:', insertError.message)
-        }
-      },
-    })
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'no-store',
-        'x-provider': provider,
-        'x-red-flag': redFlag,
-      },
-    })
+    return streamChatResponse(
+      completion,
+      { supabase, userId: user.id, lang, scope: 'global', userContent: last.content },
+      { 'x-red-flag': redFlag }
+    )
   } catch (err) {
     console.error('[chat] Unexpected error:', err)
     return NextResponse.json<ApiError>(
