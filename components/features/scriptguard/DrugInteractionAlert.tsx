@@ -76,10 +76,10 @@ function InteractionCard({
         aria-expanded={open}
         className="flex w-full items-center gap-3 px-3 py-2.5 text-left"
       >
-        <Badge variant={style.badge}>
+        <Badge variant={style.badge} className="text-xs font-bold shrink-0">
           {lang === 'bn' ? style.label.bn : style.label.en}
         </Badge>
-        <span className="min-w-0 flex-1 text-sm font-medium text-gray-800 dark:text-gray-200">
+        <span className="min-w-0 flex-1 text-sm font-bold text-gray-900 dark:text-gray-100">
           {interaction.drugs_involved.join(' + ')}
         </span>
         <ChevronDown
@@ -98,28 +98,28 @@ function InteractionCard({
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 border-t border-black/5 px-3 py-3 dark:border-white/5">
+            <div className="space-y-2.5 border-t border-black/5 px-3.5 py-3 dark:border-white/5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                   {lang === 'bn' ? 'ঝুঁকি' : 'Risk'}
                 </p>
-                <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-200">
+                <p className="mt-1 text-sm font-medium leading-relaxed text-gray-800 dark:text-gray-200">
                   {risk}
                 </p>
               </div>
               {interaction.mechanism_en && (
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  <p className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {lang === 'bn' ? 'কারণ' : 'Mechanism'}
                   </p>
-                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 font-medium">
                     {interaction.mechanism_en}
                   </p>
                 </div>
               )}
-              <div className="flex items-start gap-2 rounded-lg bg-sky-50 p-2.5 dark:bg-sky-900/30">
+              <div className="flex items-start gap-2.5 rounded-xl bg-sky-50 dark:bg-sky-950/50 border border-sky-200/70 dark:border-sky-800/60 p-3 shadow-2xs">
                 <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-sky-600 dark:text-sky-400" />
-                <p className="text-xs text-sky-800 dark:text-sky-200">
+                <p className="text-xs sm:text-sm font-medium leading-relaxed text-sky-950 dark:text-sky-100">
                   {recommendation}
                 </p>
               </div>

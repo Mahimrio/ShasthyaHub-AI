@@ -125,7 +125,7 @@ function SlotCard({
             <span className="text-sm font-bold text-gray-800 dark:text-gray-100">
               {label}
             </span>
-            <span className="ml-2 text-[11px] font-mono font-bold text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-black/30 px-2 py-0.5 rounded-md">
+            <span className="ml-2 text-[11px] font-mono font-bold text-gray-600 dark:text-gray-300 bg-white/70 dark:bg-black/30 px-2 py-0.5 rounded-md tabular-nums">
               {formattedTime}
             </span>
           </div>
@@ -155,7 +155,7 @@ function SlotCard({
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm">{name}</span>
                   {slot.dosage && (
-                    <span className="text-xs opacity-80 font-mono font-semibold">
+                    <span className="text-xs opacity-80 font-mono font-semibold tabular-nums">
                       {slot.dosage}
                     </span>
                   )}
