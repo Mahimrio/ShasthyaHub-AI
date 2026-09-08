@@ -21,42 +21,46 @@ export function Footer({ variant = 'full' }: { variant?: 'full' | 'minimal' }) {
   }
 
   return (
-    <footer className="relative z-10 mt-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition-colors">
-      <div className="h-px bg-gradient-to-r from-sky-500/50 via-cyan-500/50 to-emerald-500/50" />
+    <footer className="relative z-10 mt-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm transition-colors border-t border-gray-100/80 dark:border-gray-800/80">
+      <div className="h-0.5 bg-gradient-to-r from-sky-500/40 via-cyan-500/40 to-emerald-500/40" />
 
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2.5 px-4 py-4 sm:flex-row md:px-6">
+      <div className="mx-auto flex max-w-[1460px] 2xl:max-w-[1560px] flex-col items-center justify-between gap-4 px-4 py-5 sm:py-6 sm:flex-row sm:px-6 lg:px-8">
         {/* Brand */}
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500">
-            <HeartPulse className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 shadow-sm">
+            <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.2} />
           </div>
-          <span className="text-xs font-bold text-gray-700 dark:text-gray-300">ShasthyaHub-AI</span>
-          <span className="text-[11px] text-gray-400 dark:text-gray-500">© {year}</span>
+          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">ShasthyaHub-AI</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">© {year}</span>
         </div>
 
         {/* Disclaimer */}
-        <p className="flex items-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-          <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-amber-500" />
-          {lang === 'bn'
-            ? 'এআই স্ক্রিনিং — চিকিৎসকের বিকল্প নয়'
-            : 'AI screening — not a substitute for a doctor'}
+        <p className="flex items-center gap-2 text-xs sm:text-sm font-normal text-gray-600 dark:text-gray-400 text-center sm:text-left">
+          <ShieldAlert className="h-4 w-4 shrink-0 text-amber-500" />
+          <span>
+            {lang === 'bn'
+              ? 'এআই স্ক্রিনিং প্রযুক্তি — নিবন্ধিত চিকিৎসকের বিকল্প নয়'
+              : 'AI screening technology — not a substitute for a licensed doctor'}
+          </span>
         </p>
 
         {/* Helplines */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <a
             href="tel:16263"
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1 text-[11px] font-bold tabular-nums text-gray-600 transition-colors hover:border-rose-300 hover:text-rose-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-rose-800 dark:hover:text-rose-400"
+            title={lang === 'bn' ? 'সরকারি স্বাস্থ্য বাতায়ন' : 'National Health Helpline'}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200/80 bg-white/70 px-4 py-2 text-xs sm:text-sm font-medium tabular-nums text-gray-700 transition-all hover:border-rose-300 hover:text-rose-600 dark:border-gray-700/80 dark:bg-gray-800/60 dark:text-gray-300 dark:hover:border-rose-800 dark:hover:text-rose-400 shadow-2xs cursor-pointer"
           >
-            <Phone className="h-3 w-3 text-rose-500" />
-            16263
+            <Phone className="h-3.5 w-3.5 text-rose-500" />
+            <span>16263</span>
           </a>
           <a
             href="tel:999"
-            className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-1 text-[11px] font-bold tabular-nums text-gray-600 transition-colors hover:border-rose-300 hover:text-rose-600 dark:border-gray-700 dark:text-gray-300 dark:hover:border-rose-800 dark:hover:text-rose-400"
+            title={lang === 'bn' ? 'জাতীয় জরুরি সেবা' : 'Emergency Services'}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-gray-200/80 bg-white/70 px-4 py-2 text-xs sm:text-sm font-medium tabular-nums text-gray-700 transition-all hover:border-rose-300 hover:text-rose-600 dark:border-gray-700/80 dark:bg-gray-800/60 dark:text-gray-300 dark:hover:border-rose-800 dark:hover:text-rose-400 shadow-2xs cursor-pointer"
           >
-            <Ambulance className="h-3 w-3 text-rose-500" />
-            999
+            <Ambulance className="h-3.5 w-3.5 text-rose-500" />
+            <span>999</span>
           </a>
         </div>
       </div>

@@ -27,6 +27,13 @@ export function formatTime(date: Date | string): string {
   })
 }
 
+// ── Bengali numerals converter ─────────────────────────────────────────────
+
+export function toBengaliDigits(num: number | string): string {
+  const bengaliDigits = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯']
+  return String(num).replace(/[0-9]/g, (digit) => bengaliDigits[Number(digit)] || digit)
+}
+
 // ── Custom error classes ───────────────────────────────────────────────────
 
 export class GeminiError extends Error {

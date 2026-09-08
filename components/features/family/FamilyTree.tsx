@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus,
@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCcw,
+  Move,
 } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { useCaregiverAlerts } from '@/hooks/useFamily'
@@ -48,15 +49,91 @@ interface GenerationRow {
 export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTreeProps) {
   const { lang } = useLanguage()
   const [zoomLevel, setZoomLevel] = useState<number>(1)
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const [isDragging, setIsDragging] = useState<boolean>(false)
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const dragStartRef = useRef<{ x: number; y: number; startPanX: number; startPanY: number }>({
+    x: 0,
+    y: 0,
+    startPanX: 0,
+    startPanY: 0,
+  })
+  const didDragRef = useRef<boolean>(false)
+  const totalDragDistRef = useRef<number>(0)
 
   const self = treeData?.self
   const otherNodes = useMemo(() => treeData?.otherNodes || treeData?.members || [], [treeData])
 
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(1.4, z + 0.1))
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.65, z - 0.1))
-  const handleResetZoom = () => setZoomLevel(1)
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(1.5, z + 0.1))
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(0.6, z - 0.1))
+  const handleResetZoom = () => {
+    setZoomLevel(1)
+    setPan({ x: 0, y: 0 })
+  }
+
+  // Pointer-based Grab and Move handlers
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
+    setIsDragging(true)
+    totalDragDistRef.current = 0
+    didDragRef.current = false
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startPanX: pan.x,
+      startPanY: pan.y,
+    }
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    const dx = e.clientX - dragStartRef.current.x
+    const dy = e.clientY - dragStartRef.current.y
+    totalDragDistRef.current += Math.hypot(e.movementX, e.movementY)
+    if (totalDragDistRef.current > 5) {
+      didDragRef.current = true
+    }
+    setPan({
+      x: dragStartRef.current.startPanX + dx,
+      y: dragStartRef.current.startPanY + dy,
+    })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    setIsDragging(false)
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+    setTimeout(() => {
+      didDragRef.current = false
+    }, 100)
+  }
+
+  // Wheel and trackpad two-finger pan
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.ctrlKey || e.metaKey) {
+      // Zoom with ctrl + wheel
+      e.preventDefault()
+      const delta = -e.deltaY * 0.002
+      setZoomLevel((z) => Math.min(1.5, Math.max(0.6, z + delta)))
+    } else {
+      // Pan canvas
+      setPan((prev) => ({
+        x: prev.x - e.deltaX,
+        y: prev.y - e.deltaY,
+      }))
+    }
+  }, [])
 
   // =========================================================================
   // MULTI-GENERATIONAL HIERARCHY TREE — Grouped by generation level
@@ -163,8 +240,12 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         whileHover={{ scale: 1.1, zIndex: 40 }}
         onHoverStart={() => setHoveredNodeId(node.userId)}
         onHoverEnd={() => setHoveredNodeId(null)}
-        onClick={() => onSelectMember(node.userId)}
-        className="flex flex-col items-center gap-2 cursor-pointer group relative shrink-0"
+        onClick={(e) => {
+          e.stopPropagation()
+          if (didDragRef.current) return
+          onSelectMember(node.userId)
+        }}
+        className="flex flex-col items-center gap-2 cursor-pointer group relative shrink-0 select-none"
       >
         {/* Circular Avatar Node */}
         <div className="relative">
@@ -272,7 +353,15 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
       <div className="absolute inset-0 bg-[radial-gradient(rgba(14,165,233,0.12)_1px,transparent_1px)] bg-[size:14px_14px] opacity-40 pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-80 bg-[radial-gradient(ellipse_80%_60%_at_50%_0%,rgba(14,165,233,0.12),transparent_75%)] pointer-events-none" />
 
-      {/* Floating Canvas Zoom Controls */}
+      {/* Floating Grab & Move Helper Badge */}
+      <div className="absolute top-4 left-4 z-30 flex items-center gap-1.5 px-3 py-1 rounded-2xl bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border border-gray-200/80 dark:border-gray-700/80 text-[10px] text-gray-600 dark:text-gray-300 select-none shadow-xs pointer-events-none">
+        <Move className="h-3 w-3 text-sky-500 animate-pulse" />
+        <span className="font-semibold">
+          {lang === 'bn' ? 'টেনে ক্যানভাস সরান' : 'Drag canvas to move'}
+        </span>
+      </div>
+
+      {/* Floating Canvas Zoom & Reset Controls */}
       <div className="absolute top-4 right-4 z-30 flex items-center bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-2xl border border-gray-200/80 dark:border-gray-700/80 p-0.5 shadow-sm">
         <Button variant="ghost" size="sm" onClick={handleZoomOut} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom Out">
           <ZoomOut className="h-3.5 w-3.5" />
@@ -283,20 +372,32 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
         <Button variant="ghost" size="sm" onClick={handleZoomIn} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Zoom In">
           <ZoomIn className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-7 w-7 p-0 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" title="Reset">
+        <Button variant="ghost" size="sm" onClick={handleResetZoom} className="h-7 px-2 rounded-xl text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1 text-[10px] font-medium" title={lang === 'bn' ? 'দৃশ্য ও অবস্থান রিসেট করুন' : 'Reset Canvas View'}>
           <RotateCcw className="h-3 w-3" />
+          <span className="hidden sm:inline">{lang === 'bn' ? 'রিসেট' : 'Reset'}</span>
         </Button>
       </div>
 
-      {/* Main Generational Tree Stage */}
+      {/* Main Generational Tree Stage — Grab and Move Supported */}
       <div
         ref={containerRef}
-        className="relative flex-1 w-full overflow-x-auto flex items-start justify-center py-10 px-4 min-h-[520px]"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onWheel={handleWheel}
+        className={`relative flex-1 w-full overflow-hidden flex items-center justify-center py-10 px-4 min-h-[520px] select-none transition-colors ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
       >
         <motion.div
-          animate={{ scale: zoomLevel }}
-          transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-          className="relative origin-top w-full flex flex-col items-center gap-0 min-w-[340px]"
+          animate={{
+            x: pan.x,
+            y: pan.y,
+            scale: zoomLevel,
+          }}
+          transition={isDragging ? { duration: 0 } : { type: 'spring', damping: 26, stiffness: 220 }}
+          className="relative origin-center w-full flex flex-col items-center gap-0 min-w-[340px]"
         >
           {/* Empty State */}
           {!hasFamily && (
@@ -385,8 +486,12 @@ export function FamilyTree({ treeData, onSelectMember, onAddMember }: FamilyTree
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ type: 'spring', damping: 18, stiffness: 200, delay: rowIndex * 0.08 }}
                         whileHover={{ scale: 1.08 }}
-                        onClick={() => onSelectMember(self.userId)}
-                        className="flex flex-col items-center gap-2 cursor-pointer group"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (didDragRef.current) return
+                          onSelectMember(self.userId)
+                        }}
+                        className="flex flex-col items-center gap-2 cursor-pointer group select-none"
                       >
                         <div className="relative">
                           {/* Pulsing Aura */}
