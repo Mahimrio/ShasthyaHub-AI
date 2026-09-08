@@ -187,10 +187,10 @@ export default function ExtractedMedsTable({
                               />
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-gray-900 dark:text-gray-100">
+                              <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-gray-100">
                                 {drug.brand_name}
                               </p>
-                              <span className="text-[10px] text-gray-400">
+                              <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400 tabular-nums">
                                 {drug.dosage}
                               </span>
                             </div>
@@ -357,7 +357,7 @@ export default function ExtractedMedsTable({
                           <dt className="text-gray-400 dark:text-gray-500 text-[10px]">
                             {lang === 'bn' ? 'মাত্রা' : 'Dosage'}
                           </dt>
-                          <dd className="mt-0.5 text-gray-600 dark:text-gray-300 text-[11px]">
+                          <dd className="mt-0.5 text-gray-700 dark:text-gray-200 font-semibold text-[11px] tabular-nums">
                             {drug.dosage || '—'}
                           </dd>
                         </div>

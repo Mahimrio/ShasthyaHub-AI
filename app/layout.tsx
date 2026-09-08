@@ -1,23 +1,23 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Plus_Jakarta_Sans, Hind_Siliguri } from "next/font/google";
+import { Inter, Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import type { Language } from "@/types";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
   display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const hindSiliguri = Hind_Siliguri({
+const notoSansBengali = Noto_Sans_Bengali({
   subsets: ["bengali", "latin"],
   variable: "--font-bengali",
   display: "swap",
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
 });
 
 export const metadata: Metadata = {
@@ -54,7 +54,7 @@ export default async function RootLayout({
   return (
     <html
       lang={initialLang}
-      className={`${plusJakartaSans.variable} ${hindSiliguri.variable} h-full antialiased`}
+      className={`${inter.variable} ${notoSansBengali.variable} h-full antialiased`}
     >
       <body className={`min-h-full flex flex-col ${initialLang === 'bn' ? 'font-bengali' : 'font-sans'} select-none`}>
         <Providers initialLang={initialLang}>{children}</Providers>

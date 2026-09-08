@@ -186,7 +186,7 @@ export default function NayanAIPage() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                     {lang === 'bn' ? 'নয়ন AI — চোখের স্ক্রিনিং' : 'Nayan AI — Eye Screening'}
                   </h1>
                   <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-sky-100/80 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300/50 dark:border-sky-800/40 shadow-xs">
@@ -332,7 +332,7 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <Lightbulb className="h-4 w-4 text-amber-500" />
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
                       {lang === 'bn' ? 'কীভাবে সঠিক ছবি তুলবেন' : 'Image Capture Guidelines'}
                     </h3>
                   </div>
@@ -340,14 +340,14 @@ export default function NayanAIPage() {
                   <div className="space-y-4">
                     {INSTRUCTIONS.map((item) => (
                       <div key={item.step} className="flex items-start gap-3.5">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs sm:text-sm font-bold shadow-xs">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs sm:text-sm font-semibold shadow-xs">
                           {lang === 'bn' ? item.stepBn : item.step}
                         </span>
                         <div className="space-y-0.5">
-                          <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
+                          <h4 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
                             {lang === 'bn' ? item.titleBn : item.titleEn}
                           </h4>
-                          <p className="text-xs sm:text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-medium">
+                          <p className="text-xs sm:text-sm leading-relaxed text-gray-600 dark:text-gray-400 font-normal">
                             {lang === 'bn' ? item.descBn : item.descEn}
                           </p>
                         </div>
@@ -356,7 +356,7 @@ export default function NayanAIPage() {
                   </div>
 
                   <div className="rounded-2xl bg-sky-100/70 dark:bg-sky-950/60 p-3.5 border border-sky-300/80 dark:border-sky-800/60 shadow-2xs">
-                    <p className="text-xs sm:text-sm leading-relaxed text-sky-950 dark:text-sky-200 font-medium">
+                    <p className="text-xs sm:text-sm leading-relaxed text-sky-900 dark:text-sky-200 font-normal">
                       💡 {lang === 'bn' ? 'টিপস: ক্যামেরার ফ্ল্যাশ সরাসরি চোখে না মেরে স্বাভাবিক দিনের আলো বা উজ্জ্বল ঘরের আলোতে ছবি তুললে সর্বাধিক নির্ভুল ফলাফল পাওয়া যায়।' : 'Tip: Natural indirect room lighting provides significantly higher diagnostic accuracy than harsh flash.'}
                     </p>
                   </div>
@@ -366,7 +366,7 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-3.5">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
                       {lang === 'bn' ? 'যা যা শনাক্তকরণে সাহায্য করে' : 'Screened Eye Conditions'}
                     </h3>
                   </div>
@@ -375,7 +375,7 @@ export default function NayanAIPage() {
                     {SCREENED_CONDITIONS.map((cond, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold glass-pill text-gray-800 dark:text-gray-100 shadow-xs hover:border-sky-300 transition-colors"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-medium glass-pill text-gray-700 dark:text-gray-200 shadow-xs hover:border-sky-300 transition-colors"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                         <span>{lang === 'bn' ? cond.nameBn : cond.nameEn}</span>
@@ -383,7 +383,7 @@ export default function NayanAIPage() {
                     ))}
                   </div>
 
-                  <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300 pt-1 leading-relaxed font-medium">
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 pt-1 leading-relaxed font-normal">
                     {lang === 'bn'
                       ? 'নয়ান AI গ্রামীণ ও শহরতলির মানুষের অন্ধত্ব প্রতিরোধে প্রাথমিক স্ক্রিনিং প্রদান করে।'
                       : 'Nayan AI assists rural and urban communities in early detection to prevent preventable blindness.'}
@@ -405,15 +405,15 @@ export default function NayanAIPage() {
                     <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3.5">
                       <div className="flex items-center gap-2">
                         <Scan className="h-4 w-4 text-sky-500" />
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
                           {lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যানার' : 'Biometric Ocular Console'}
                         </h3>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-semibold text-sky-600 dark:text-sky-400">
+                        <span className="text-xs font-mono font-medium text-sky-600 dark:text-sky-400">
                           #SCAN-{result.id.slice(0, 8).toUpperCase()}
                         </span>
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-900/60">
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-0.5 rounded-full border border-emerald-200/80 dark:border-emerald-900/60">
                           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                           <span>{lang === 'bn' ? 'বিশ্লেষণ সম্পন্ন' : 'Scan Completed'}</span>
                         </span>
@@ -525,14 +525,14 @@ export default function NayanAIPage() {
                       }
                     >
                       <div className="space-y-3">
-                        <p className="text-sm sm:text-[15px] leading-relaxed text-gray-800 dark:text-gray-200 font-medium">
+                        <p className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 font-normal">
                           {lang === 'bn'
                             ? result.disease_description_bn
                             : result.disease_description_en}
                         </p>
                         {result.disease_stage === 'Advanced' && (
                           <div className="rounded-2xl border border-red-200 bg-red-50/80 p-3.5 dark:border-red-800 dark:bg-red-950/40">
-                            <p className="text-xs sm:text-sm font-bold text-red-700 dark:text-red-300">
+                            <p className="text-xs sm:text-sm font-semibold text-red-700 dark:text-red-300">
                               ⚠️ {lang === 'bn'
                                 ? 'উন্নত পর্যায় সনাক্ত — অবিলম্বে একজন চক্ষুরোগ বিশেষজ্ঞের কাছে যান।'
                                 : 'Advanced stage detected — seek immediate consultation with an ophthalmologist.'}

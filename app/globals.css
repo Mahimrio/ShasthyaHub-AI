@@ -26,9 +26,9 @@
   --color-health-yellow: #f59e0b;
   --color-health-red: #ef4444;
   --color-health-blue: #3b82f6;
-  --font-sans: var(--font-sans), 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  --font-bengali: var(--font-bengali), 'Hind Siliguri', 'Segoe UI', 'Nirmala UI', system-ui, sans-serif;
+  --font-bengali: var(--font-bengali), 'Noto Sans Bengali', 'Anek Bangla', 'Segoe UI', system-ui, sans-serif;
   --radius: 0.75rem;
 }
 
@@ -202,35 +202,40 @@ body {
   }
 }
 
-/* ── Bengali typography optimization ─────────────────────────── */
+/* ── Bilingual (Bengali & English) Typography System ───────────── */
 html[lang="bn"],
 html[lang="bn"] body,
 .font-bengali {
-  font-family: var(--font-bengali), 'Hind Siliguri', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  letter-spacing: 0.01em;
-  font-weight: 500;
+  font-family: var(--font-bengali), var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0;
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
 html[lang="bn"] {
-  line-height: 1.65;
+  line-height: 1.62;
 }
 
 .leading-bengali {
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
-/* Headings and bold weights in Bengali */
+/* Headings and optical weights in Bengali */
 html[lang="bn"] .font-bold,
 .font-bengali .font-bold {
-  font-weight: 700;
+  font-weight: 600;
 }
 
 html[lang="bn"] .font-semibold,
 .font-bengali .font-semibold {
-  font-weight: 600;
+  font-weight: 500;
+}
+
+html[lang="bn"] .font-medium,
+.font-bengali .font-medium {
+  font-weight: 500;
 }
 
 html[lang="bn"] h1,
@@ -241,8 +246,9 @@ html[lang="bn"] h4,
 .font-bengali h2,
 .font-bengali h3,
 .font-bengali h4 {
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
+  line-height: 1.35;
 }
 
 /* Elevate contrast for secondary text in Bengali to keep small conjuncts crystal clear */
@@ -257,6 +263,18 @@ html[lang="bn"] .text-gray-400 {
 }
 .dark html[lang="bn"] .text-gray-400 {
   color: #9ca3af;
+}
+
+/* Tabular figures for medical dosages, numbers, and schedules */
+.tabular-nums,
+[data-tabular-nums="true"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Clinical legibility OpenType features for Latin characters in Inter */
+.font-sans {
+  font-feature-settings: "cv05" 1, "cv08" 1, "zero" 1;
 }
 
 /* ── Simplemorphism Design System ────────────────────────────── */
