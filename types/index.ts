@@ -380,7 +380,7 @@ export interface LokhonAnalysisRow {
 
 // --- Page-scoped AI chat (ScriptGuard / GlycoVision / Lokhon composers) ---
 
-export type ChatAgent = 'scriptguard' | 'glycovision' | 'lokhon'
+export type ChatAgent = 'nayan' | 'scriptguard' | 'glycovision' | 'lokhon'
 export type ChatScope = 'global' | ChatAgent
 
 export interface ScopedChatOptions {
@@ -390,6 +390,20 @@ export interface ScopedChatOptions {
   doctorQuestions: boolean
   /** Inject the user's previous results from the same agent. */
   includeHistory: boolean
+}
+
+export interface NayanChatContext {
+  agent: 'nayan'
+  diagnosis: string
+  severity: Severity
+  confidence_score: number
+  recommendation_en: string
+  urgency_days: number
+  next_steps: string[]
+  specialist_needed: string
+  disease_description_en?: string
+  disease_stage?: string
+  analysis_mode: 'online' | 'offline'
 }
 
 export interface ScriptGuardChatContext {
@@ -438,7 +452,7 @@ export interface LokhonChatContext {
   }
 }
 
-export type ScopedChatContext = ScriptGuardChatContext | GlycoVisionChatContext | LokhonChatContext
+export type ScopedChatContext = NayanChatContext | ScriptGuardChatContext | GlycoVisionChatContext | LokhonChatContext
 
 export const BANGLADESH_DISTRICTS = [
   'Bagerhat', 'Bandarban', 'Barguna', 'Barishal', 'Bhola', 'Bogra', 'Brahmanbaria',

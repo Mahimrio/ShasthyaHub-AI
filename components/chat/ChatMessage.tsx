@@ -1,11 +1,65 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import { HeartPulse, Volume2, Square, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ChatMsg } from '@/hooks/useChat'
 
-/** Minimal formatter: **bold**, *italic*, "- " bullets, newlines. No markdown dependency. */
+// bold | italic | [label](url) | bare URL | standalone helpline number
+const INLINE_TOKEN =
+  /(\*\*[^*]+\*\*|\*[^*\s][^*]*\*|\[[^\]]+\]\([^)\s]+\)|https?:\/\/[^\s)]+|(?<!\d)(?:16463|16263|999)(?!\d))/g
+const HELPLINE = /^(16463|16263|999)$/
+const LINK_CLASS =
+  'font-medium text-sky-600 underline decoration-dotted underline-offset-2 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300'
+
+function isSafeHref(href: string) {
+  return /^(https?:\/\/|tel:)/i.test(href) || (href.startsWith('/') && !href.startsWith('//'))
+}
+
+function renderLink(href: string, label: string, key: number): ReactNode {
+  if (!isSafeHref(href)) return <span key={key}>{label}</span>
+  if (href.startsWith('/')) {
+    return (
+      <Link key={key} href={href} className={LINK_CLASS}>
+        {label}
+      </Link>
+    )
+  }
+  const external = /^https?:/i.test(href)
+  return (
+    <a key={key} href={href} className={LINK_CLASS} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+      {label}
+    </a>
+  )
+}
+
+function renderInline(text: string): ReactNode[] {
+  return text.split(INLINE_TOKEN).map((part, j) => {
+    if (!part) return null
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>
+    }
+    if (part.length > 2 && part.startsWith('*') && part.endsWith('*')) {
+      return <em key={j}>{part.slice(1, -1)}</em>
+    }
+    const md = part.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)
+    if (md) return renderLink(md[2], md[1], j)
+    if (/^https?:\/\//i.test(part)) {
+      const trimmed = part.replace(/[.,;:!?]+$/, '')
+      return (
+        <span key={j}>
+          {renderLink(trimmed, trimmed, j)}
+          {part.slice(trimmed.length)}
+        </span>
+      )
+    }
+    if (HELPLINE.test(part)) return renderLink(`tel:${part}`, part, j)
+    return <span key={j}>{part}</span>
+  })
+}
+
+/** Minimal formatter: **bold**, *italic*, links, helpline numbers, "- " bullets, newlines. */
 export function FormattedText({ text }: { text: string }) {
   const lines = text.split('\n')
   return (
@@ -13,15 +67,7 @@ export function FormattedText({ text }: { text: string }) {
       {lines.map((line, i) => {
         const isBullet = line.trimStart().startsWith('- ')
         const clean = isBullet ? line.trimStart().slice(2) : line
-        const parts = clean.split(/(\*\*[^*]+\*\*|\*[^*\s][^*]*\*)/g).map((part, j) =>
-          part.startsWith('**') && part.endsWith('**') ? (
-            <strong key={j} className="font-semibold">{part.slice(2, -2)}</strong>
-          ) : part.length > 2 && part.startsWith('*') && part.endsWith('*') ? (
-            <em key={j}>{part.slice(1, -1)}</em>
-          ) : (
-            <span key={j}>{part}</span>
-          )
-        )
+        const parts = renderInline(clean)
         return isBullet ? (
           <span key={i} className="flex gap-1.5">
             <span className="shrink-0">•</span>
@@ -52,7 +98,10 @@ export function SpeakButton({ text, lang }: { text: string; lang: 'bn' | 'en' })
     setState('loading')
     try {
       // Send speakable text — markdown markers would be read aloud otherwise.
-      const speakable = text.replace(/\*+/g, '').replace(/^\s*-\s+/gm, '')
+      const speakable = text
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+        .replace(/\*+/g, '')
+        .replace(/^\s*-\s+/gm, '')
       const res = await fetch('/api/scriptguard/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

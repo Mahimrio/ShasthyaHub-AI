@@ -8,6 +8,18 @@ interface Prompt {
 }
 
 const PROMPTS: Record<ChatAgent, Record<ScopedChatMode, Prompt[]>> = {
+  nayan: {
+    idle: [
+      { en: 'Which eye conditions can Nayan AI detect?', bn: 'নয়ন AI কোন কোন চোখের সমস্যা শনাক্ত করতে পারে?' },
+      { en: 'How do I take a clear eye photo?', bn: 'চোখের স্পষ্ট ছবি কীভাবে তুলব?' },
+      { en: 'Is this a real eye examination?', bn: 'এটা কি আসল চোখের পরীক্ষা?' },
+    ],
+    result: [
+      { en: 'Explain this result in simple words', bn: 'এই ফলাফল সহজ ভাষায় বুঝিয়ে দাও' },
+      { en: 'How soon should I see a doctor, and which one?', bn: 'কত তাড়াতাড়ি কোন ডাক্তার দেখাব?' },
+      { en: 'What can I do to protect my eyes now?', bn: 'এখন চোখ সুরক্ষায় কী করতে পারি?' },
+    ],
+  },
   scriptguard: {
     idle: [
       { en: 'What does ScriptGuard check for?', bn: 'স্ক্রিপ্টগার্ড কী কী পরীক্ষা করে?' },

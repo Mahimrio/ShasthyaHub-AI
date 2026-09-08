@@ -11,6 +11,20 @@ import type { ChatAgent, ScopedChatContext } from '@/types'
 const str = (max: number) => z.string().default('').transform((v) => v.trim().slice(0, max))
 const strList = (max: number, itemMax = 200) => z.array(str(itemMax)).max(max).default([])
 
+const nayanSchema = z.object({
+  agent: z.literal('nayan'),
+  diagnosis: str(160),
+  severity: z.enum(['Normal', 'Low', 'Medium', 'High', 'Critical']),
+  confidence_score: z.number().min(0).max(100).catch(0),
+  recommendation_en: str(500),
+  urgency_days: z.number().int().min(0).max(3650).catch(30),
+  next_steps: strList(6, 200),
+  specialist_needed: str(80),
+  disease_description_en: str(600).optional(),
+  disease_stage: str(40).optional(),
+  analysis_mode: z.enum(['online', 'offline']).catch('online'),
+})
+
 const scriptGuardSchema = z.object({
   agent: z.literal('scriptguard'),
   drugs: z
@@ -95,15 +109,17 @@ const lokhonSchema = z.object({
     .optional(),
 })
 
-export const scopedContextSchema = z.discriminatedUnion('agent', [scriptGuardSchema, glycoVisionSchema, lokhonSchema])
+export const scopedContextSchema = z.discriminatedUnion('agent', [nayanSchema, scriptGuardSchema, glycoVisionSchema, lokhonSchema])
 
-export const chatAgentSchema = z.enum(['scriptguard', 'glycovision', 'lokhon'])
+export const chatAgentSchema = z.enum(['nayan', 'scriptguard', 'glycovision', 'lokhon'])
 
 const round = (n: number) => Math.round(n)
 
 /** What the assistant can talk about before any analysis exists on the page. */
 export function describeIdleContext(agent: ChatAgent): string {
   switch (agent) {
+    case 'nayan':
+      return 'No eye photo has been screened on this page yet. Help the user understand what Nayan AI does (screens a close-up eye photo for signs of cataract, diabetic retinopathy, conjunctivitis and other common anterior eye conditions, gives a severity and a specialist recommendation), how to take a sharp, well-lit photo with the iris centred, and that it is a screening aid, not an eye examination. Do not invent a result.'
     case 'scriptguard':
       return 'No prescription has been analysed on this page yet. Help the user understand what ScriptGuard does (reads a prescription photo, maps brand names to generics, builds a daily schedule, and flags drug interactions), how to photograph a prescription clearly, and what the results will show. Do not invent medicines.'
     case 'glycovision':
@@ -115,6 +131,18 @@ export function describeIdleContext(agent: ChatAgent): string {
 
 export function serializeScopedContext(ctx: ScopedChatContext): string {
   switch (ctx.agent) {
+    case 'nayan': {
+      return [
+        `Current eye-photo screening (Nayan AI${ctx.analysis_mode === 'offline' ? ', OFFLINE preliminary model' : ''}):`,
+        `Screening suggests: ${ctx.diagnosis} — severity ${ctx.severity}${ctx.disease_stage ? `, stage ${ctx.disease_stage}` : ''}, confidence ${round(ctx.confidence_score)}%.`,
+        ctx.disease_description_en ? `About the condition: ${ctx.disease_description_en}` : '',
+        `App recommendation: ${ctx.recommendation_en}`,
+        `Specialist to see: ${ctx.specialist_needed}. Urgency: within ${ctx.urgency_days} days.`,
+        ctx.next_steps.length ? `Next steps:\n${ctx.next_steps.map((s) => `- ${s}`).join('\n')}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    }
     case 'scriptguard': {
       const meds = ctx.drugs.map((d, i) => {
         const generic = [d.generic_name, d.drug_class].filter(Boolean).join(', ')
@@ -197,7 +225,18 @@ export async function fetchAgentHistory(
   const day = (iso: string) => iso.slice(0, 10)
   const lines: string[] = []
   try {
-    if (agent === 'scriptguard') {
+    if (agent === 'nayan') {
+      const { data } = await supabase
+        .from('eye_analyses')
+        .select('id, diagnosis, severity, confidence_score, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(4)
+      for (const row of data ?? []) {
+        if (row.id === excludeId) continue
+        lines.push(`- [${day(row.created_at)}] ${row.diagnosis ?? 'unknown'} — severity ${row.severity ?? 'n/a'}${row.confidence_score != null ? `, confidence ${round(row.confidence_score)}%` : ''}`)
+      }
+    } else if (agent === 'scriptguard') {
       const { data } = await supabase
         .from('prescription_analyses')
         .select('id, extracted_drugs, has_dangerous_interactions, created_at')

@@ -2,8 +2,9 @@
 -- Migration 007: Scope chat_messages for page-local AI chat
 -- ShasthyaHub-AI — AUST CSE Carnival 8.0
 -- Adds a per-agent scope + the analysis the conversation is about so the
--- ScriptGuard / GlycoVision / Lokhon composers can reload their own history
--- without leaking into the global Shasthya Bondhu widget.
+-- Nayan AI / ScriptGuard / GlycoVision / Lokhon composers can reload their own
+-- history without leaking into the global Shasthya Bondhu widget.
+-- Safe to re-run.
 -- ============================================================
 
 ALTER TABLE chat_messages
@@ -13,7 +14,7 @@ ALTER TABLE chat_messages
 ALTER TABLE chat_messages DROP CONSTRAINT IF EXISTS chat_messages_scope_check;
 ALTER TABLE chat_messages
   ADD CONSTRAINT chat_messages_scope_check
-  CHECK (scope IN ('global', 'scriptguard', 'glycovision', 'lokhon'));
+  CHECK (scope IN ('global', 'nayan', 'scriptguard', 'glycovision', 'lokhon'));
 
 CREATE INDEX IF NOT EXISTS idx_chat_messages_user_scope_context
   ON chat_messages (user_id, scope, context_id, created_at DESC);
