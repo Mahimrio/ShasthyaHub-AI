@@ -342,18 +342,18 @@ export default function GlycoVisionPage() {
                           ? 'পুরো খাবারের ছবি তুলুন — একক উপাদান নয়'
                           : 'Capture your full plate — not individual items'}
                       </p>
-
-                      {/* Ask GlycoVision — general questions before any analysis */}
-                      {state === 'idle' && (
-                        <PageChat
-                          agent="glycovision"
-                          contextId="general"
-                          getContext={getChatContext}
-                          mode="idle"
-                          onAttachImage={(file) => void handleImageSelect(file)}
-                        />
-                      )}
                     </>
+                  )}
+
+                  {/* Ask GlycoVision — general questions before any analysis (stays mounted under the analyzing overlay) */}
+                  {(state === 'idle' || state === 'processing') && (
+                    <PageChat
+                      agent="glycovision"
+                      contextId="general"
+                      getContext={getChatContext}
+                      mode="idle"
+                      onAttachImage={(file) => void handleImageSelect(file)}
+                    />
                   )}
 
                   {/* Processing state is handled by full-screen AnalyzingAnimation above */}

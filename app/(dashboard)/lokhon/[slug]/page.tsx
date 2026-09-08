@@ -350,20 +350,18 @@ export default function LokhonQuestionnairePage() {
                 </div>
               )}
 
-              {/* Ask Lokhon about this screening while answering */}
-              {!isLoading && (
-                <PageChat
-                  agent="lokhon"
-                  contextId={`${slug}:questionnaire`}
-                  getContext={getChatContext}
-                  mode="idle"
-                  contextLabel={
-                    diseaseName
-                      ? lang === 'bn' ? `${diseaseName} পরীক্ষা · প্রশ্ন ${currentIndex + 1}` : `${diseaseName} screening · question ${currentIndex + 1}`
-                      : undefined
-                  }
-                />
-              )}
+              {/* Ask Lokhon about this screening while answering (stays mounted under the analyzing overlay) */}
+              <PageChat
+                agent="lokhon"
+                contextId={`${slug}:questionnaire`}
+                getContext={getChatContext}
+                mode="idle"
+                contextLabel={
+                  diseaseName
+                    ? lang === 'bn' ? `${diseaseName} পরীক্ষা · প্রশ্ন ${currentIndex + 1}` : `${diseaseName} screening · question ${currentIndex + 1}`
+                    : undefined
+                }
+              />
             </>
           ) : (
             /* Result view */

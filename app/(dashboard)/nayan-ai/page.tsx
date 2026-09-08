@@ -361,16 +361,14 @@ export default function NayanAIPage() {
                   </motion.div>
                 </div>
 
-                {/* Ask Nayan AI — general questions before any screening */}
-                {!isLoading && (
-                  <PageChat
-                    agent="nayan"
-                    contextId="general"
-                    getContext={getChatContext}
-                    mode="idle"
-                    onAttachImage={handleChatAttach}
-                  />
-                )}
+                {/* Ask Nayan AI — general questions before any screening (stays mounted under the analyzing overlay) */}
+                <PageChat
+                  agent="nayan"
+                  contextId="general"
+                  getContext={getChatContext}
+                  mode="idle"
+                  onAttachImage={handleChatAttach}
+                />
               </div>
 
               {/* Right Column (Guidelines & Conditions Screened) */}
