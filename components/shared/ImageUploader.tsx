@@ -11,6 +11,7 @@ interface ImageUploaderProps {
   maxSizeMB?: number
   title?: string
   subtitle?: string
+  readyText?: string
   icon?: React.ReactNode
 }
 
@@ -20,6 +21,7 @@ export function ImageUploader({
   maxSizeMB = 10,
   title,
   subtitle,
+  readyText,
   icon,
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(null)
@@ -140,7 +142,7 @@ export function ImageUploader({
           </div>
 
           <p className="mt-3.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">
-            {lang === 'bn' ? 'চোখের আইরিস ও কর্নিয়া স্পষ্ট রয়েছে' : 'Eye image ready for AI biometric analysis'}
+            {readyText ?? (lang === 'bn' ? 'ছবি বিশ্লেষণের জন্য প্রস্তুত' : 'Image ready for AI analysis')}
           </p>
         </div>
       ) : (
@@ -155,7 +157,7 @@ export function ImageUploader({
 
           <div className="text-center px-4 max-w-sm">
             <p className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100 tracking-tight">
-              {title ?? (lang === 'bn' ? 'চোখের স্পষ্ট ছবি আপলোড করুন' : 'Upload High-Quality Eye Photo')}
+              {title ?? (lang === 'bn' ? 'স্পষ্ট ছবি আপলোড করুন' : 'Upload a Clear Photo')}
             </p>
             <p className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mt-2 leading-relaxed">
               {subtitle ?? (lang === 'bn'

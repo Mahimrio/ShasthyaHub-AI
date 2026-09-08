@@ -31,15 +31,18 @@ export async function GET(request: NextRequest) {
     // Map of matching user IDs to preliminary results
     const foundMap = new Map<string, { id: string; name: string | null; email: string | null; username: string | null; district: string | null }>()
 
-    // 1. Search via Supabase Admin Auth users by Gmail/Email if service role key is available
+    // Profiles are RLS-restricted to self + accepted family (migration 006), so
+    // discovery of new people must go through the service role.
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const adminSupabase = serviceKey && supabaseUrl
+      ? createSupabaseClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+      : null
+    const profileReader = adminSupabase ?? supabase
 
-    if (serviceKey && supabaseUrl) {
+    // 1. Search via Supabase Admin Auth users by Gmail/Email if service role key is available
+    if (adminSupabase) {
       try {
-        const adminSupabase = createSupabaseClient(supabaseUrl, serviceKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        })
         const { data: adminUsersRes } = await adminSupabase.auth.admin.listUsers({ perPage: 100 })
         if (adminUsersRes?.users) {
           for (const u of adminUsersRes.users) {
@@ -65,11 +68,11 @@ export async function GET(request: NextRequest) {
 
     // 2. Search profiles table by username, name, or email
     try {
-      const { data: profiles } = await supabase
+      const { data: profiles } = await profileReader
         .from('profiles')
-        .select('*')
+        .select('id, name, email, username, district')
         .neq('id', user.id)
-        .or(`name.ilike.%${query}%,district.ilike.%${query}%`)
+        .or(`name.ilike.%${query}%,username.ilike.%${query}%,district.ilike.%${query}%`)
         .limit(15)
 
       if (profiles) {
@@ -99,9 +102,9 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      const { data: fetchedProfiles } = await supabase
+      const { data: fetchedProfiles } = await profileReader
         .from('profiles')
-        .select('*')
+        .select('id, name, email, username, district')
         .in('id', allFoundIds)
 
       if (fetchedProfiles) {

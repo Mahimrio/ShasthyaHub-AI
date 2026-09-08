@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Home, Eye, FileText, Utensils, BarChart3, LogOut, Menu, X, ChevronRight, Activity, Bug, HeartPulse, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -37,6 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { profile, isLoading, signOut } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { isOnline } = useNetworkStatus()
+  const reduceMotion = useReducedMotion()
 
   const handleSignOut = async () => {
     await signOut()
@@ -45,11 +46,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
       {/* Mobile header */}
-      <header className="sticky top-0 z-30 md:hidden bg-white/85 dark:bg-gray-900/85 backdrop-blur-lg border-b border-gray-100 dark:border-gray-800 transition-colors">
+      <header className="sticky top-0 z-30 md:hidden glass-panel glass-bar-bottom border-gray-100/90 dark:border-gray-800/80 pt-[env(safe-area-inset-top)] transition-colors duration-200 motion-reduce:transition-none">
         <div className="flex items-center justify-between h-14 px-4">
           <button
+            type="button"
+            aria-label={sidebarOpen ? (lang === 'bn' ? 'মেনু বন্ধ করুন' : 'Close menu') : (lang === 'bn' ? 'মেনু খুলুন' : 'Open menu')}
+            aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 -ml-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="hidden sm:inline-flex p-2 -ml-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/70 transition-colors duration-200 motion-reduce:transition-none"
           >
             {sidebarOpen ? (
               <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -74,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden"
+          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 hidden sm:block md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -82,13 +86,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile sidebar drawer */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full w-66 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 shadow-2xl transform transition-transform duration-300 ease-in-out md:hidden',
+          'fixed top-0 left-0 z-50 h-full w-66 glass-panel glass-bar-right border-gray-100/90 dark:border-gray-800/80 shadow-2xl transform transition-transform duration-300 ease-in-out motion-reduce:transition-none hidden sm:flex md:hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
+        aria-hidden={!sidebarOpen}
       >
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full w-full">
           {/* Mobile Drawer Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+          <div className="flex items-center justify-between p-4 border-b border-gray-100/80 dark:border-gray-800/80 bg-white/40 dark:bg-gray-900/30">
             <Link href="/" onClick={() => setSidebarOpen(false)} className="flex items-center gap-2.5">
               <div className="w-8 h-8 bg-gradient-to-br from-sky-500 via-cyan-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-md shadow-sky-500/10 dark:shadow-sky-400/10">
                 <HeartPulse className="h-4 w-4 text-white" strokeWidth={2.5} />
@@ -108,34 +113,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {lang === 'bn' ? 'মেনু' : 'Menu'}
             </p>
             {sidebarLinks.map((link) => {
-              const isActive = pathname === link.href
+              const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(`${link.href}/`))
               const Icon = link.icon
               return (
                 <Link
                   key={link.href}
                   href={link.href}
+                  aria-current={isActive ? 'page' : undefined}
                   onClick={() => setSidebarOpen(false)}
                   className={cn(
-                    'group relative flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors duration-200',
+                    'group relative isolate flex h-12 items-center gap-3 px-4 rounded-xl text-sm font-semibold transition-colors duration-200 motion-reduce:transition-none',
                     isActive
-                      ? 'text-sky-600 dark:text-sky-400 font-bold'
+                      ? 'text-sky-600 dark:text-sky-400'
                       : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50/80 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
                   )}
                 >
                   {isActive && (
                     <motion.span
+                      aria-hidden="true"
                       layoutId="nav-mobile-pill"
-                      transition={{ type: 'spring', stiffness: 380, damping: 32 }}
-                      className="absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 via-cyan-500/5 to-transparent dark:from-sky-500/20 dark:via-cyan-500/10 ring-1 ring-inset ring-sky-500/15 dark:ring-sky-400/20"
+                      transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 40 }}
+                      className="pointer-events-none absolute inset-0 rounded-xl bg-gradient-to-r from-sky-500/10 via-cyan-500/5 to-transparent dark:from-sky-500/20 dark:via-cyan-500/10 ring-1 ring-inset ring-sky-500/15 dark:ring-sky-400/20"
                     >
                       <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-md bg-gradient-to-b from-sky-500 to-cyan-500" />
                     </motion.span>
                   )}
-                  <Icon className={cn('relative z-10 h-5 w-5 shrink-0 transition-transform duration-200 group-active:scale-90', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
-                  <span className="relative z-10">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
-                  {isActive && (
-                    <ChevronRight className="relative z-10 h-4 w-4 ml-auto text-sky-400 dark:text-sky-500" />
-                  )}
+                  <Icon className={cn('relative z-10 h-5 w-5 shrink-0 transition-colors duration-200 motion-reduce:transition-none', isActive ? 'text-sky-500 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
+                  <span className="relative z-10 min-w-0 flex-1 truncate">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
+                  <ChevronRight aria-hidden="true" className={cn('relative z-10 h-4 w-4 shrink-0 text-sky-400 dark:text-sky-500 transition-opacity duration-200 motion-reduce:transition-none', isActive ? 'opacity-100' : 'opacity-0')} />
                 </Link>
               )
             })}
@@ -179,7 +184,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex md:w-60 xl:w-64 md:fixed md:inset-y-0 md:flex-col glass-panel border-r border-gray-100/90 dark:border-gray-800/80 z-30 transition-all duration-300">
+      <aside className="hidden md:flex md:w-60 xl:w-64 md:fixed md:inset-y-0 md:flex-col glass-panel border-r border-gray-100/90 dark:border-gray-800/80 z-30 transition-colors duration-200 motion-reduce:transition-none">
         {/* Desktop Sidebar Logo Header */}
         <div className="flex items-center justify-between gap-2 p-5 border-b border-gray-100/80 dark:border-gray-800/80">
           <div className="flex items-center gap-2.5">
@@ -202,24 +207,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {lang === 'bn' ? 'মেনু' : 'Menu'}
           </p>
           {sidebarLinks.map((link) => {
-            const isActive = pathname === link.href
+            const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(`${link.href}/`))
             const Icon = link.icon
             return (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={isActive ? 'page' : undefined}
                 className={cn(
-                  'group relative flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-[13.5px] transition-all duration-200',
+                  'group relative isolate flex h-11 items-center gap-3 px-3.5 rounded-2xl border border-transparent text-[13.5px] font-medium transition-colors duration-200 motion-reduce:transition-none',
                   isActive
-                    ? 'text-sky-700 dark:text-sky-300 font-semibold bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200/60 dark:border-sky-800/50 shadow-2xs'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40 font-medium'
+                    ? 'text-sky-700 dark:text-sky-300'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/70 dark:text-gray-400 dark:hover:text-gray-100 dark:hover:bg-gray-800/40'
                 )}
               >
                 {isActive && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-md bg-sky-500" />
+                  <motion.span
+                    aria-hidden="true"
+                    layoutId="nav-desktop-pill"
+                    transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 380, damping: 40 }}
+                    className="pointer-events-none absolute inset-0 rounded-[inherit] border border-sky-200/60 bg-sky-50/80 shadow-2xs dark:border-sky-800/50 dark:bg-sky-950/40"
+                  >
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-md bg-sky-500" />
+                  </motion.span>
                 )}
-                <Icon className={cn('relative z-10 h-4.5 w-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105', isActive ? 'text-sky-600 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
-                <span className="relative z-10">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
+                <Icon className={cn('relative z-10 h-4.5 w-4.5 shrink-0 transition-colors duration-200 motion-reduce:transition-none', isActive ? 'text-sky-600 dark:text-sky-400' : 'text-gray-400 dark:text-gray-500')} />
+                <span className="relative z-10 min-w-0 truncate">{lang === 'bn' ? link.labelBn : link.labelEn}</span>
               </Link>
             )
           })}

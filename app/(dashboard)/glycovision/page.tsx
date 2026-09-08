@@ -14,11 +14,9 @@ import {
   Info,
   Lightbulb,
   Microscope,
-  Play,
   RotateCcw,
   Salad,
   Send,
-  Sparkles,
   Stethoscope,
   Upload,
   Utensils,
@@ -302,39 +300,15 @@ export default function GlycoVisionPage() {
                         onImageSelect={handleImageSelect}
                         acceptedTypes="image/*"
                         maxSizeMB={10}
+                        title={lang === 'bn' ? 'খাবারের স্পষ্ট ছবি আপলোড করুন' : 'Upload or Capture Meal Photo'}
+                        subtitle={lang === 'bn' ? 'ওপর থেকে পুরো প্লেটের ছবি তুলুন যেন সব খাবার দেখা যায় (সর্বোচ্চ 10MB)' : 'Shoot the whole plate from above so every item is visible (max 10MB)'}
+                        readyText={lang === 'bn' ? 'খাবারের ছবি বিশ্লেষণের জন্য প্রস্তুত' : 'Meal photo ready for nutrition analysis'}
                       />
                       <p className="text-center text-xs text-gray-400 dark:text-gray-500">
                         {lang === 'bn'
                           ? 'পুরো খাবারের ছবি তুলুন — একক উপাদান নয়'
                           : 'Capture your full plate — not individual items'}
                       </p>
-
-                      {/* Demo quick-action buttons */}
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <Button
-                          onClick={() => window.open('/demo/glycovision', '_blank')}
-                          variant="outline"
-                          className="flex-1 rounded-xl"
-                        >
-                          <Sparkles className="mr-2 h-4 w-4 text-purple-500" />
-                          {lang === 'bn' ? 'ডেমো দেখুন' : 'View Demo'}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs text-gray-400"
-                          onClick={() => {
-                            if (lang === 'bn') {
-                              setErrorMsg('শীঘ্রই আসছে! আপনি এখন ডেমো পেজ দেখতে পারেন।')
-                            } else {
-                              setErrorMsg('Coming soon! You can try the demo page for now.')
-                            }
-                          }}
-                        >
-                          <Play className="mr-1 h-3 w-3" />
-                          {lang === 'bn' ? 'দ্রুত ডেমো' : 'Quick Demo'}
-                        </Button>
-                      </div>
                     </>
                   )}
 

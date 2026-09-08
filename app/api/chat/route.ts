@@ -169,6 +169,7 @@ export async function POST(request: NextRequest) {
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
         let full = ''
+        let completed = false
         try {
           if (groqStream) {
             for await (const chunk of groqStream) {
@@ -182,14 +183,17 @@ export async function POST(request: NextRequest) {
             full = fallbackText
             controller.enqueue(encoder.encode(fallbackText))
           }
+          completed = true
+          controller.close()
         } catch (streamError) {
           console.error('[chat] stream interrupted:', streamError)
-        } finally {
-          controller.close()
+          // Erroring (not closing) the stream tells the client the reply is
+          // incomplete, so it can show a retry instead of a truncated answer.
+          controller.error(streamError)
         }
 
-        // Persist after the stream ends; tolerate a missing table (003 not run).
-        if (full.trim()) {
+        // Persist only complete exchanges so history never contains cut-off answers.
+        if (completed && full.trim()) {
           const { error: insertError } = await supabase.from('chat_messages').insert([
             { user_id: user.id, role: 'user', content: userContent, lang },
             { user_id: user.id, role: 'assistant', content: full, lang },

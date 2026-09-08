@@ -278,10 +278,10 @@ html[lang="bn"] .text-gray-400 {
 }
 
 /* ── Simplemorphism Design System ────────────────────────────── */
+/* Plain backdrop-filter declarations are dropped by the CSS build; @apply keeps them. */
 .glass-panel {
+  @apply backdrop-blur-[20px];
   background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.75);
   box-shadow: 0 10px 36px -4px rgba(14, 165, 233, 0.07), 0 2px 8px -2px rgba(0, 0, 0, 0.03);
 }
@@ -292,10 +292,14 @@ html[lang="bn"] .text-gray-400 {
   box-shadow: 0 12px 40px -4px rgba(0, 0, 0, 0.4);
 }
 
+/* Edge-attached glass bars: the panel border shorthand would otherwise win over layered border utilities. */
+.glass-panel.glass-bar-top { border-width: 1px 0 0; }
+.glass-panel.glass-bar-bottom { border-width: 0 0 1px; }
+.glass-panel.glass-bar-right { border-width: 0 1px 0 0; }
+
 .glass-card {
+  @apply backdrop-blur-[16px];
   background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.8);
   box-shadow: 0 8px 30px -4px rgba(14, 165, 233, 0.06), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
 }
@@ -307,9 +311,8 @@ html[lang="bn"] .text-gray-400 {
 }
 
 .glass-card-subtle {
+  @apply backdrop-blur-[12px];
   background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.6);
 }
 
@@ -319,9 +322,8 @@ html[lang="bn"] .text-gray-400 {
 }
 
 .glass-pill {
+  @apply backdrop-blur-[10px];
   background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.75);
 }
 

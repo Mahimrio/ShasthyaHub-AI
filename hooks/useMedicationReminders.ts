@@ -31,7 +31,7 @@ export function useMedicationDoses() {
   const query = useQuery<DosesResponse>({
     queryKey: [...MEDICATION_DOSES_KEY, user?.id ?? 'anon'],
     queryFn: async () => {
-      const res = await fetch('/api/medications/logs')
+      const res = await fetch(`/api/medications/logs?tz_offset=${new Date().getTimezoneOffset()}`)
       const json = await res.json()
       if (!res.ok || !json.success) {
         throw new Error(json.error || 'Failed to fetch medication doses')
@@ -117,6 +117,7 @@ export function useRecordDoseAction() {
           scheduled_time,
           notes,
           snooze_minutes,
+          tz_offset: new Date().getTimezoneOffset(),
         }),
       })
       const json = await res.json()
