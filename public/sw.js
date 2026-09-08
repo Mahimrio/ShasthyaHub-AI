@@ -446,6 +446,7 @@ self.addEventListener('notificationclick', (event) => {
           schedule_id: data.scheduleId,
           status: 'taken',
           notes: 'Marked from background notification action',
+          tz_offset: new Date().getTimezoneOffset(),
         }),
       }).catch(() => {})
     )

@@ -40,7 +40,7 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO profiles (id, name, preferred_language)
+  INSERT INTO public.profiles (id, name, preferred_language)
   VALUES (
     NEW.id,
     NEW.raw_user_meta_data->>'name',
