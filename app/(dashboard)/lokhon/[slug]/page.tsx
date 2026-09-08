@@ -11,10 +11,11 @@ import { AnalyzingAnimation } from '@/components/shared/AnalyzingAnimation'
 import { LikertScale } from '@/components/features/lokhon/LikertScale'
 import { QuestionProgress } from '@/components/features/lokhon/QuestionProgress'
 import { LokhonResultCard } from '@/components/features/lokhon/LokhonResultCard'
+import { PageChat } from '@/components/chat/scoped/PageChat'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { AlertTriangle } from 'lucide-react'
-import type { LokhonQuestion, LokhonDisease, LokhonAnswer } from '@/types'
+import type { LokhonQuestion, LokhonDisease, LokhonAnswer, ScopedChatContext } from '@/types'
 
 const LOKHON_STAGES = [
   { en: 'Processing your answers...', bn: 'আপনার উত্তর প্রক্রিয়াকরণ করা হচ্ছে...', icon: ClipboardList },
@@ -120,6 +121,39 @@ export default function LokhonQuestionnairePage() {
   }, [reset])
 
   const allAnswered = questions.length > 0 && questions.every((q) => answers[q.id] !== undefined)
+
+  const getChatContext = useCallback((): ScopedChatContext | null => {
+    if (!disease && questions.length === 0) return null
+    const base = {
+      agent: 'lokhon' as const,
+      disease_slug: slug,
+      disease_name_en: disease?.name_en ?? slug,
+      disease_description_en: disease?.description_en ?? null,
+    }
+    if (result) {
+      return {
+        ...base,
+        result: {
+          risk_band: result.riskBand,
+          // The UI hides the score for depression; keep the assistant consistent.
+          risk_percentage: result.diseaseSlug === 'depression' ? undefined : result.riskPercentage,
+          is_red_flag: result.isRedFlag,
+          advice_en: result.advice.advice_en,
+          doctor_type_en: result.advice.doctor_type_en,
+          urgency: result.advice.urgency,
+          top_symptoms_en: result.topSymptoms.map((s) => s.text_en),
+          requires_immediate_support: Boolean(result.requiresImmediateSupport),
+        },
+      }
+    }
+    return {
+      ...base,
+      current_question_en: currentQuestion?.text_en,
+      questions_en: questions.map((q) => q.text_en),
+    }
+  }, [disease, questions, slug, result, currentQuestion])
+
+  const diseaseName = lang === 'bn' ? disease?.name_bn : disease?.name_en
 
   if (loadingDisease) {
     return (
@@ -315,11 +349,39 @@ export default function LokhonQuestionnairePage() {
                   })}
                 </div>
               )}
+
+              {/* Ask Lokhon about this screening while answering */}
+              {!isLoading && (
+                <PageChat
+                  agent="lokhon"
+                  contextId={`${slug}:questionnaire`}
+                  getContext={getChatContext}
+                  mode="idle"
+                  contextLabel={
+                    diseaseName
+                      ? lang === 'bn' ? `${diseaseName} পরীক্ষা · প্রশ্ন ${currentIndex + 1}` : `${diseaseName} screening · question ${currentIndex + 1}`
+                      : undefined
+                  }
+                />
+              )}
             </>
           ) : (
             /* Result view */
             <>
               <LokhonResultCard result={result} lang={lang} />
+
+              {/* Ask Lokhon about this result */}
+              <PageChat
+                agent="lokhon"
+                contextId={result.id}
+                getContext={getChatContext}
+                mode="result"
+                contextLabel={
+                  lang === 'bn'
+                    ? `${result.diseaseNameBn} · ঝুঁকি: ${result.riskBand}`
+                    : `${result.diseaseNameEn} · risk band: ${result.riskBand}`
+                }
+              />
 
               <div className="flex gap-3">
                 <Button

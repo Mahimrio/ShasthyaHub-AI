@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { MessageCircle, X, Trash2, Send, Square, HeartPulse, WifiOff, ShieldAlert } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { usePageChatPresence } from '@/contexts/PageChatPresenceContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useChat } from '@/hooks/useChat'
 import { ChatMessage } from './ChatMessage'
@@ -33,6 +34,7 @@ function TypingDots() {
 export function ChatWidget() {
   const { lang } = useLanguage()
   const { isOnline } = useNetworkStatus()
+  const { hasPageChat } = usePageChatPresence()
   const { messages, send, stop, clear, isStreaming, redFlag, error } = useChat()
   const reduceMotion = useReducedMotion()
   const [open, setOpen] = useState(false)
@@ -44,6 +46,9 @@ export function ChatWidget() {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, isStreaming, open])
+
+  // A page-scoped composer owns the conversation on that page.
+  if (hasPageChat) return null
 
   const submit = () => {
     if (!input.trim() || isStreaming || !isOnline) return

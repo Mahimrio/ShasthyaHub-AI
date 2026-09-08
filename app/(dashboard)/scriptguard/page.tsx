@@ -33,8 +33,9 @@ import { MyMedicinesCabinet } from '@/components/features/scriptguard/MyMedicine
 import { EditMedicationModal } from '@/components/features/scriptguard/EditMedicationModal'
 import { AddMissingMedicationModal } from '@/components/features/scriptguard/AddMissingMedicationModal'
 import { SaveToCabinetModal } from '@/components/features/scriptguard/SaveToCabinetModal'
+import { PageChat } from '@/components/chat/scoped/PageChat'
 import { buildScheduleLocally } from '@/lib/services/schedule'
-import type { ExtractedMedication, MealTimingType, DrugInteraction } from '@/types'
+import type { ExtractedMedication, MealTimingType, DrugInteraction, ScopedChatContext } from '@/types'
 
 const DISCLAIMER_KEY = 'scriptguard_disclaimer_seen'
 
@@ -93,6 +94,60 @@ export default function ScriptGuardPage() {
     setIsAddModalOpen(false)
     setSaveSuccessMsg(null)
   }, [reset])
+
+  // Paperclip in the chat composer: swap the prescription and analyse straight away.
+  const handleChatAttach = useCallback(
+    (file: File) => {
+      setSelectedFile(file)
+      setSaveSuccessMsg(null)
+      const seen = typeof window !== 'undefined' && localStorage.getItem(DISCLAIMER_KEY)
+      if (!seen) {
+        setShowDisclaimer(true)
+        return
+      }
+      void analyze(file)
+    },
+    [analyze]
+  )
+
+  // Read at send time so edits made in the HITL table reach the assistant.
+  const getChatContext = useCallback((): ScopedChatContext | null => {
+    if (!result) return null
+    const slotNames = (slots: { drug_en: string }[]) => slots.map((s) => s.drug_en)
+    return {
+      agent: 'scriptguard',
+      drugs: result.extracted_drugs.map((d) => ({
+        brand_name: d.brand_name ?? '',
+        generic_name: d.generic_name ?? '',
+        drug_class: d.drug_class ?? '',
+        dosage: d.dosage ?? '',
+        frequency: d.frequency ?? '',
+        duration: d.duration ?? '',
+        instructions: d.instructions ?? '',
+      })),
+      interactions: result.interaction_warnings.map((w) => ({
+        drugs_involved: w.drugs_involved,
+        severity: w.severity,
+        risk_en: w.risk_en ?? '',
+        recommendation_en: w.recommendation_en ?? '',
+      })),
+      has_dangerous_interactions: result.has_dangerous_interactions,
+      schedule: {
+        morning: slotNames(result.schedule.morning),
+        afternoon: slotNames(result.schedule.afternoon),
+        evening: slotNames(result.schedule.evening),
+        night: slotNames(result.schedule.night),
+      },
+      duration_days: result.duration_days,
+      special_instructions_en: result.special_instructions_en ?? [],
+    }
+  }, [result])
+
+  const chatContextLabel = result
+    ? isBn
+      ? `${result.extracted_drugs.length} টি ওষুধ · ${result.interaction_warnings.length} টি মিথস্ক্রিয়া`
+      : `${result.extracted_drugs.length} medicines · ${result.interaction_warnings.length} interactions`
+    : undefined
 
   // ── HITL Handlers ──────────────────────────────────────────
 
@@ -363,6 +418,17 @@ export default function ScriptGuardPage() {
                 </motion.div>
               )}
 
+              {/* Ask ScriptGuard — general questions before any analysis */}
+              {!result && !isLoading && (
+                <PageChat
+                  agent="scriptguard"
+                  contextId="general"
+                  getContext={getChatContext}
+                  mode="idle"
+                  onAttachImage={handleChatAttach}
+                />
+              )}
+
               {/* Error state */}
               {isError && (
                 <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
@@ -458,6 +524,16 @@ export default function ScriptGuardPage() {
                   <AudioGuide
                     audioScriptBn={result.audio_script_bn}
                     lang={lang}
+                  />
+
+                  {/* 5. Ask ScriptGuard about this prescription */}
+                  <PageChat
+                    agent="scriptguard"
+                    contextId={result.id}
+                    getContext={getChatContext}
+                    mode="result"
+                    contextLabel={chatContextLabel}
+                    onAttachImage={handleChatAttach}
                   />
 
                   {/* Reset / Scan Another */}
