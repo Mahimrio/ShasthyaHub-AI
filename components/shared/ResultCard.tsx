@@ -27,7 +27,7 @@ export function ResultCard({ title, badge, icon, children, defaultExpanded = tru
       >
         <div className="flex items-center gap-2.5">
           {icon && <span className="text-sky-500 shrink-0">{icon}</span>}
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+          <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">{title}</h3>
           {badge && (
             <Badge variant={badge.variant || 'default'}>{badge.label}</Badge>
           )}

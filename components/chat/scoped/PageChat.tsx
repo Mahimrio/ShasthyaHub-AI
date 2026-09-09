@@ -199,7 +199,7 @@ function ConversationPane({
             <Sparkles className="h-4 w-4" strokeWidth={2.2} />
           </span>
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {isBn ? `${name}-কে জিজ্ঞাসা করুন` : `Ask ${name}`}
             </h3>
             <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{subtitle}</p>
