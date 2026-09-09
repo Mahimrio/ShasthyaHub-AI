@@ -56,7 +56,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             aria-label={sidebarOpen ? (lang === 'bn' ? 'মেনু বন্ধ করুন' : 'Close menu') : (lang === 'bn' ? 'মেনু খুলুন' : 'Open menu')}
             aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="hidden sm:inline-flex p-2 -ml-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/70 transition-colors duration-200 motion-reduce:transition-none"
+            className="inline-flex p-2 -ml-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-gray-800/70 transition-colors duration-200 motion-reduce:transition-none cursor-pointer"
           >
             {sidebarOpen ? (
               <X className="h-5 w-5 text-gray-600 dark:text-gray-400" />
@@ -74,6 +74,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <MedicationNotificationDrawer />
             <ThemeToggle />
             <LanguageToggle />
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              aria-label={lang === 'bn' ? 'প্রোফাইল ও সাইন আউট' : 'Profile & Sign Out'}
+              title={lang === 'bn' ? 'প্রোফাইল ও সাইন আউট' : 'Profile & Sign Out'}
+              className="w-7 h-7 rounded-full bg-gradient-to-br from-sky-400 via-cyan-400 to-emerald-400 flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-xs ml-0.5 hover:ring-2 hover:ring-sky-400 transition-all active:scale-95 cursor-pointer"
+            >
+              {profile?.name?.[0]?.toUpperCase() || 'U'}
+            </button>
           </div>
         </div>
       </header>
@@ -81,7 +90,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 hidden sm:block md:hidden"
+          className="fixed inset-0 bg-black/40 dark:bg-black/60 z-40 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -89,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Mobile sidebar drawer */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-full w-66 glass-panel glass-bar-right border-gray-100/90 dark:border-gray-800/80 shadow-2xl transform transition-transform duration-300 ease-in-out motion-reduce:transition-none hidden sm:flex md:hidden',
+          'fixed top-0 left-0 z-50 h-full w-72 max-w-[85vw] glass-panel glass-bar-right border-gray-100/90 dark:border-gray-800/80 shadow-2xl transform transition-transform duration-300 ease-in-out motion-reduce:transition-none flex md:hidden',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
         aria-hidden={!sidebarOpen}

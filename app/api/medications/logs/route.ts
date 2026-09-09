@@ -6,7 +6,13 @@ import {
   saveLocalDoseLog,
   getLocalSettings,
 } from '@/lib/medications/store'
-import { formatTimeDisplay, generateMissedDoseAdvice } from '@/lib/services/medication-reminder'
+import {
+  formatTimeDisplay,
+  generateMissedDoseAdvice,
+  parseTzOffset,
+  clientClock,
+  scheduledInstant,
+} from '@/lib/services/medication-reminder'
 import type {
   ActiveDoseWithStatus,
   DoseLog,
@@ -17,34 +23,6 @@ import type {
 } from '@/types'
 
 const VALID_STATUSES: DoseStatus[] = ['pending', 'taken', 'snoozed', 'missed', 'skipped']
-
-// Server clocks (Vercel = UTC) differ from patients' clocks, so all "today"
-// and "HH:mm" math runs in the client's offset, sent via ?tz_offset=<minutes>
-// (JS getTimezoneOffset semantics, e.g. -360 for Asia/Dhaka). Default: Dhaka.
-const DEFAULT_TZ_OFFSET_MINUTES = -360
-
-function parseTzOffset(raw: string | null): number {
-  const n = raw === null ? NaN : Number(raw)
-  return Number.isFinite(n) && Math.abs(n) <= 14 * 60 ? n : DEFAULT_TZ_OFFSET_MINUTES
-}
-
-/** Wall-clock components of `date` in the client's timezone. */
-function clientClock(date: Date, tzOffset: number) {
-  const shifted = new Date(date.getTime() - tzOffset * 60_000)
-  return {
-    dateKey: shifted.toISOString().slice(0, 10),
-    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
-  }
-}
-
-/** Absolute instant of `HH:mm` on the client's current calendar day. */
-function scheduledInstant(scheduledTime: string, now: Date, tzOffset: number): Date {
-  const [hStr, mStr] = scheduledTime.split(':')
-  const { dateKey } = clientClock(now, tzOffset)
-  const [y, mo, d] = dateKey.split('-').map(Number)
-  const utcMillis = Date.UTC(y, mo - 1, d, parseInt(hStr, 10) || 0, parseInt(mStr || '0', 10) || 0)
-  return new Date(utcMillis + tzOffset * 60_000)
-}
 
 function isActiveToday(schedule: MedicationScheduleItem, today: string): boolean {
   if (!schedule.is_active || schedule.is_archived) return false
