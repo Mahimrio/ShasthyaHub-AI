@@ -46,9 +46,17 @@ const INSTRUCTIONS = [
     step: 1,
     stepBn: '১',
     titleEn: 'Hold phone 15cm',
-    titleBn: 'ফোন ১৫ সেমি দূরত্বে রাখুন',
+    titleBn: (
+      <>
+        ফোন <span className="font-['Nirmala_UI',_'Segoe_UI',_'Noto_Sans_Bengali',_sans-serif]">১৫</span> সেমি (৬ ইঞ্চি) দূরত্বে রাখুন
+      </>
+    ),
     descEn: 'Hold phone steady, 15cm from the eye',
-    descBn: 'ফোনটি চোখ থেকে ১৫ সেমি দূরত্বে স্থির রাখুন',
+    descBn: (
+      <>
+        ফোনটি চোখ থেকে <span className="font-['Nirmala_UI',_'Segoe_UI',_'Noto_Sans_Bengali',_sans-serif]">১৫</span> সেমি (প্রায় এক বিঘত) দূরত্বে স্থির রাখুন
+      </>
+    ),
   },
   {
     step: 2,
@@ -222,7 +230,7 @@ export default function NayanAIPage() {
               </div>
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
+                  <h1 className="text-2xl sm:text-3xl font-medium sm:font-semibold text-gray-900 dark:text-gray-100 tracking-tight">
                     {lang === 'bn' ? 'নয়ন AI — চোখের স্ক্রিনিং' : 'Nayan AI — Eye Screening'}
                   </h1>
                   <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium bg-sky-100/80 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 border border-sky-300/50 dark:border-sky-800/40 shadow-xs">
@@ -261,7 +269,7 @@ export default function NayanAIPage() {
                   <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3.5">
                     <div className="flex items-center gap-2">
                       <Scan className="h-4 w-4 text-sky-500" />
-                      <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+                      <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">
                         {lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যানার' : 'Biometric Ocular Console'}
                       </h3>
                     </div>
@@ -378,7 +386,7 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-4">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <Lightbulb className="h-4 w-4 text-amber-500" />
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
+                    <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
                       {lang === 'bn' ? 'কীভাবে সঠিক ছবি তুলবেন' : 'Image Capture Guidelines'}
                     </h3>
                   </div>
@@ -386,11 +394,11 @@ export default function NayanAIPage() {
                   <div className="space-y-4">
                     {INSTRUCTIONS.map((item) => (
                       <div key={item.step} className="flex items-start gap-3.5">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs sm:text-sm font-semibold shadow-xs">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-500 to-cyan-600 text-white text-xs sm:text-sm font-medium shadow-xs font-['Nirmala_UI',_'Segoe_UI',_'Noto_Sans_Bengali',_sans-serif]">
                           {lang === 'bn' ? item.stepBn : item.step}
                         </span>
                         <div className="space-y-0.5">
-                          <h4 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
+                          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100">
                             {lang === 'bn' ? item.titleBn : item.titleEn}
                           </h4>
                           <p className="text-xs sm:text-sm leading-relaxed text-gray-600 dark:text-gray-400 font-normal">
@@ -412,7 +420,7 @@ export default function NayanAIPage() {
                 <div className="glass-card rounded-3xl p-6 space-y-3.5">
                   <div className="flex items-center gap-2 pb-2 border-b border-gray-100/80 dark:border-gray-800/80">
                     <CheckCircle className="h-4 w-4 text-emerald-500" />
-                    <h3 className="text-base sm:text-lg font-semibold text-gray-800 dark:text-gray-100">
+                    <h3 className="text-base font-medium text-gray-900 dark:text-gray-100">
                       {lang === 'bn' ? 'যা যা শনাক্তকরণে সাহায্য করে' : 'Screened Eye Conditions'}
                     </h3>
                   </div>
@@ -451,7 +459,7 @@ export default function NayanAIPage() {
                     <div className="flex items-center justify-between border-b border-gray-100/80 dark:border-gray-800/80 pb-3.5">
                       <div className="flex items-center gap-2">
                         <Scan className="h-4 w-4 text-sky-500" />
-                        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                        <h3 className="text-sm font-medium text-gray-800 dark:text-gray-100">
                           {lang === 'bn' ? 'বায়োমেট্রিক অপটিক্যাল স্ক্যানার' : 'Biometric Ocular Console'}
                         </h3>
                       </div>
@@ -509,7 +517,7 @@ export default function NayanAIPage() {
                         </div>
                       </div>
 
-                      <p className="mt-3.5 text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200">
+                      <p className="mt-3 text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300">
                         {lang === 'bn'
                           ? 'বায়োমেট্রিক দৃষ্টি বিশ্লেষণ সফলভাবে সম্পন্ন হয়েছে'
                           : 'Ocular biometric scan completed successfully'}
@@ -518,7 +526,7 @@ export default function NayanAIPage() {
 
                     <Button
                       onClick={handleReset}
-                      className="w-full rounded-2xl h-12 bg-sky-500 hover:bg-sky-600 text-white font-semibold text-sm sm:text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
+                      className="w-full rounded-2xl h-12 bg-sky-500 hover:bg-sky-600 text-white font-medium text-sm sm:text-base shadow-md hover:shadow-lg active:scale-[0.99] transition-all cursor-pointer"
                     >
                       <RotateCcw className="mr-2 h-4 w-4" />
                       <span>{lang === 'bn' ? 'অন্য একটি ছবি স্ক্যান করুন' : 'Scan Another Photo'}</span>
@@ -626,7 +634,7 @@ export default function NayanAIPage() {
                   <div className="p-1.5 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
                     <ShieldAlert className="h-4 w-4" />
                   </div>
-                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  <h4 className="text-sm font-medium text-gray-800 dark:text-gray-200">
                     {lang === 'bn' ? 'ক্লিনিক্যাল নির্দেশিকা ও আইনগত সতর্কবার্তা' : 'Clinical Regulatory & Safety Advisory'}
                   </h4>
                 </div>
@@ -698,7 +706,7 @@ function PastAnalyses({ history, isLoading, lang, onSelect }: PastAnalysesProps)
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <History className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <h3 className="text-sm font-medium text-gray-800 dark:text-gray-200">
             {lang === 'bn' ? 'পূর্ববর্তী স্ক্রিনিং ইতিহাস' : 'Recent Eye Screenings'}
           </h3>
         </div>
@@ -729,7 +737,7 @@ function PastAnalyses({ history, isLoading, lang, onSelect }: PastAnalysesProps)
               className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3 hover:shadow-md hover:border-sky-300 dark:hover:border-sky-700 transition-all cursor-pointer group active:scale-[0.99] focus:outline-hidden focus:ring-2 focus:ring-sky-400"
             >
               <div className="min-w-0 space-y-0.5">
-                <p className="truncate text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                <p className="truncate text-sm font-medium text-gray-900 dark:text-gray-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                   {localized?.title ?? (lang === 'bn' ? 'অজানা ফলাফল' : 'Unknown')}
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
@@ -743,7 +751,7 @@ function PastAnalyses({ history, isLoading, lang, onSelect }: PastAnalysesProps)
                   </Badge>
                 )}
                 {item.confidence_score !== null && (
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+                  <span className="text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-800 px-2 py-0.5 rounded-md">
                     {lang === 'bn'
                       ? `${toBengaliDigits(Math.round(item.confidence_score))}%`
                       : `${Math.round(item.confidence_score)}%`}

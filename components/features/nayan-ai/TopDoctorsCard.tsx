@@ -40,7 +40,7 @@ export function TopDoctorsCard({ doctors, isLoading, layout = 'column', classNam
   if (isLoading) {
     return (
       <div className={`glass-card rounded-3xl p-6 space-y-4 ${className}`}>
-        <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-gray-100">
+        <h3 className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100">
           {lang === 'bn' ? 'নিকটবর্তী বিশেষজ্ঞ চিকিৎসক' : 'Top Specialists Nearby'}
         </h3>
         <DoctorSkeleton />
@@ -84,7 +84,7 @@ export function TopDoctorsCard({ doctors, isLoading, layout = 'column', classNam
   return (
     <div className={`glass-card rounded-3xl p-5 sm:p-6 space-y-4 transition-all duration-300 ${className}`}>
       <div className="flex items-center justify-between pb-3 border-b border-gray-100/80 dark:border-gray-800/80">
-        <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+        <h3 className="flex items-center gap-2 text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100">
           <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
           <span>
             {lang === 'bn' ? 'প্রস্তাবিত বিশেষজ্ঞ চিকিৎসক ও হাসপাতাল' : 'Recommended Specialists & Eye Centers'}
@@ -116,11 +116,11 @@ export function TopDoctorsCard({ doctors, isLoading, layout = 'column', classNam
 
               <div className="min-w-0 flex-1 space-y-0.5">
                 <div className="flex items-start justify-between gap-1.5">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                     {lang === 'bn' && doctor.name_bn ? doctor.name_bn : doctor.name}
                   </p>
                   {doctor.rating !== null && (
-                    <p className="flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400 shrink-0">
+                    <p className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400 shrink-0">
                       <Star className="h-3 w-3 fill-amber-500 text-amber-500" />
                       {doctor.rating.toFixed(1)}
                     </p>

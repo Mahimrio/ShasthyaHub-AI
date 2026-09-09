@@ -28,7 +28,7 @@
   --color-health-blue: #3b82f6;
   --font-sans: var(--font-sans), 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
-  --font-bengali: var(--font-bengali), 'Hind Siliguri', 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
+  --font-bengali: 'BengaliNumerals', var(--font-bengali), 'Nirmala UI', 'Noto Sans Bengali', 'Segoe UI', system-ui, sans-serif;
   --radius: 0.75rem;
 }
 
@@ -220,11 +220,23 @@ h4 {
   }
 }
 
+/* ── Bengali Numerals Font Fix ──────────────────────────────────
+   Hind Siliguri has a documented bug in weights 400, 500, 600 where
+   Bengali Digit One ('১' - U+09E7) is malformed.
+   This rule delegates Bengali digits (U+09E6-09EF) to Nirmala UI / Noto Sans / Segoe UI. */
+@font-face {
+  font-family: 'BengaliNumerals';
+  src: local('Nirmala UI'), local('Noto Sans Bengali'), local('Segoe UI'), local('Vrinda'), local('Shonar Bangla');
+  font-weight: 100 900;
+  font-style: normal;
+  unicode-range: U+09E6-09EF;
+}
+
 /* ── Bilingual (Bengali & English) Typography System ───────────── */
 html[lang="bn"],
 html[lang="bn"] body,
 .font-bengali {
-  font-family: var(--font-bengali), var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'BengaliNumerals', var(--font-bengali), var(--font-sans), 'Nirmala UI', 'Segoe UI', sans-serif;
   letter-spacing: 0;
   font-weight: 400;
   -webkit-font-smoothing: antialiased;
@@ -260,20 +272,14 @@ html[lang="bn"] .font-medium,
   font-weight: 500;
 }
 
-html[lang="bn"] h1,
-html[lang="bn"] h2,
-.font-bengali h1,
-.font-bengali h2 {
-  font-weight: 700;
+:where(html[lang="bn"], .font-bengali) :where(h1, h2) {
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.35;
 }
 
-html[lang="bn"] h3,
-html[lang="bn"] h4,
-.font-bengali h3,
-.font-bengali h4 {
-  font-weight: 600;
+:where(html[lang="bn"], .font-bengali) :where(h3, h4) {
+  font-weight: 500;
   letter-spacing: 0;
   line-height: 1.4;
 }

@@ -230,7 +230,7 @@ export function EyeResultCard({
             <div className="p-1.5 rounded-lg bg-sky-500/10 dark:bg-sky-400/15 text-sky-600 dark:text-sky-400">
               <ClipboardList className="h-4 w-4" />
             </div>
-            <h3 className="text-sm sm:text-base font-semibold text-gray-800 dark:text-gray-100">
+            <h3 className="text-sm sm:text-base font-medium text-gray-800 dark:text-gray-100">
               {lang === 'bn' ? 'ক্লিনিক্যাল নির্দেশনা ও করণীয় পদক্ষেপ' : 'Clinical Guidance & Next Steps'}
             </h3>
           </div>
@@ -271,7 +271,7 @@ export function EyeResultCard({
                   key={i}
                   className="flex items-start gap-3 p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-800/50 border border-gray-200/70 dark:border-gray-700/60 shadow-2xs"
                 >
-                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-700 dark:text-sky-300 text-xs sm:text-sm font-semibold">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-sky-700 dark:text-sky-300 text-xs sm:text-sm font-medium">
                     {lang === 'bn' ? toBengaliDigits(i + 1) : i + 1}
                   </span>
                   <span className="text-sm leading-relaxed text-gray-700 dark:text-gray-300 pt-0.5 font-normal">
@@ -293,7 +293,7 @@ export function EyeResultCard({
               <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
                 {lang === 'bn' ? 'পরামর্শিত বিশেষজ্ঞ চিকিৎসক' : 'Recommended Specialist'}
               </p>
-              <p className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-100">
+              <p className="text-sm sm:text-base font-medium text-gray-900 dark:text-gray-100">
                 {localizeSpecialist(result.specialist_needed, lang)}
               </p>
             </div>
@@ -351,7 +351,7 @@ export function EyeResultCard({
 
       {/* Header section with Severity Badge and Scan ID */}
       <motion.div variants={item} className="flex items-center justify-between gap-3">
-        <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider ${style.bg} ${style.text} border border-black/5 dark:border-white/10 shadow-sm`}>
+        <span className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-medium uppercase tracking-wider ${style.bg} ${style.text} border border-black/5 dark:border-white/10 shadow-sm`}>
           <span className={`h-2 w-2 rounded-full ${style.dot} animate-pulse`} />
           <span>
             {lang === 'bn'
@@ -366,13 +366,13 @@ export function EyeResultCard({
 
       {/* Diagnosis Title & Medical Badge */}
       <motion.div variants={item} className="space-y-2">
-        <h2 className="text-xl sm:text-2xl font-semibold tracking-tight leading-snug text-gray-900 dark:text-gray-100">
+        <h2 className="text-xl sm:text-2xl font-medium sm:font-semibold tracking-tight leading-snug text-gray-900 dark:text-gray-100">
           {diagnosisInfo.title}
         </h2>
         {diagnosisInfo.medicalBadge && (
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-sky-50 text-sky-700 dark:bg-sky-950/70 dark:text-sky-300 border border-sky-200/80 dark:border-sky-800/60 shadow-xs">
-              <span className="text-[10px] uppercase font-semibold text-sky-600 dark:text-sky-400">Medical:</span>
+              <span className="text-[10px] uppercase font-medium text-sky-600 dark:text-sky-400">Medical:</span>
               <span>{diagnosisInfo.medicalBadge}</span>
             </span>
           </div>
@@ -385,9 +385,9 @@ export function EyeResultCard({
           <span className="uppercase">
             {lang === 'bn' ? 'এআই নির্ভরযোগ্যতা স্কোর' : 'AI Confidence Score'}
           </span>
-          <span className="text-lg sm:text-xl font-bold tabular-nums text-gray-900 dark:text-gray-100">
+          <span className="text-lg sm:text-xl font-semibold tabular-nums text-gray-900 dark:text-gray-100">
             {lang === 'bn' ? (
-              <span className="font-bengali font-semibold">{toBengaliDigits(confidence)}%</span>
+              <span className="font-bengali font-medium">{toBengaliDigits(confidence)}%</span>
             ) : (
               <span><AnimatedCounter value={confidence} duration={1} />%</span>
             )}
@@ -525,7 +525,7 @@ export function EyeResultCard({
           className="flex items-center justify-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 pt-1"
         >
           <CheckCircle2 className="h-4 w-4" />
-          <span className="text-xs font-semibold">
+          <span className="text-xs font-medium">
             {lang === 'bn'
               ? 'আপনার চোখে কোনো গুরুতর অসঙ্গতি পাওয়া যায়নি। চোখ সুস্থ রাখুন।'
               : 'No serious ocular abnormality detected. Maintain healthy eye care.'}
