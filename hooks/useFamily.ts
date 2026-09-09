@@ -246,7 +246,8 @@ export function useFamilyMemberMedications(memberId: string | null) {
     refetchInterval: 30_000, // auto-refresh every 30s
     queryFn: async () => {
       if (!memberId) return null
-      const res = await fetch(`/api/family/medications?member_id=${memberId}`)
+      const tzOffset = typeof window !== 'undefined' ? new Date().getTimezoneOffset() : -360
+      const res = await fetch(`/api/family/medications?member_id=${memberId}&tz_offset=${tzOffset}`)
       const json = await res.json()
       if (!res.ok || !json.success) {
         return null
@@ -285,7 +286,8 @@ export function useCaregiverAlerts() {
     enabled: !!user,
     refetchInterval: 25_000, // refresh every 25s for real-time alerts
     queryFn: async () => {
-      const res = await fetch('/api/family/caregiver-alerts')
+      const tzOffset = typeof window !== 'undefined' ? new Date().getTimezoneOffset() : -360
+      const res = await fetch(`/api/family/caregiver-alerts?tz_offset=${tzOffset}`)
       const json = await res.json()
       if (!res.ok || !json.success) {
         return {

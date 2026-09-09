@@ -6,7 +6,12 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getLocalConnections } from '@/lib/family/store'
 import { getLocalSchedules, getLocalDoseLogs } from '@/lib/medications/store'
-import { inferPillAvatar } from '@/lib/services/medication-reminder'
+import {
+  inferPillAvatar,
+  parseTzOffset,
+  clientClock,
+  scheduledInstant,
+} from '@/lib/services/medication-reminder'
 import type { DoseLog, PillShapeType, MedicationScheduleItem } from '@/types'
 
 const isServerless = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME)
@@ -88,8 +93,11 @@ export interface CaregiverMemberAlert {
   isSubscribed: boolean
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const tzOffset = parseTzOffset(searchParams.get('tz_offset'))
+
     let currentUserId = 'anon'
     let dbConns: Array<{ requester_id: string; target_id: string; relation_type: string; reverse_relation_type: string }> = []
     let hasSupabaseUser = false
@@ -125,10 +133,39 @@ export async function GET() {
     const subscriptions = getSubscriptions(currentUserId)
 
     const now = new Date()
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
-    const today = now.toISOString().split('T')[0]
+    const { dateKey: today, minutes: nowMinutes } = clientClock(now, tzOffset)
+    const dayStart = scheduledInstant('00:00', now, tzOffset)
 
     const alerts: CaregiverMemberAlert[] = []
+
+    const memberIds = Array.from(
+      new Set(
+        rawConns.map((conn) =>
+          conn.requester_id === currentUserId ? conn.target_id : conn.requester_id
+        )
+      )
+    )
+
+    // Pre-fetch member profile names
+    const memberNames: Record<string, string> = {}
+    if (hasSupabaseUser && currentUserId !== 'anon' && memberIds.length > 0) {
+      try {
+        const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const client = serviceKey && supabaseUrl
+          ? createSupabaseClient(supabaseUrl, serviceKey, { auth: { autoRefreshToken: false, persistSession: false } })
+          : await createServerSupabaseClient()
+
+        const { data: profs } = await client.from('profiles').select('id, name').in('id', memberIds)
+        if (profs) {
+          for (const p of profs) {
+            if (p.name) memberNames[p.id] = p.name
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
 
     for (const conn of rawConns) {
       const memberId = conn.requester_id === currentUserId ? conn.target_id : conn.requester_id
@@ -148,7 +185,7 @@ export async function GET() {
 
           const [schedRes, logRes] = await Promise.all([
             client.from('medication_schedules').select('*').eq('user_id', memberId).eq('is_active', true),
-            client.from('dose_logs').select('*').eq('user_id', memberId).gte('scheduled_for', `${today}T00:00:00.000Z`)
+            client.from('dose_logs').select('*').eq('user_id', memberId).gte('scheduled_for', dayStart.toISOString())
           ])
           if (schedRes.data && schedRes.data.length > 0) schedules = schedRes.data
           if (logRes.data && logRes.data.length > 0) logs = logRes.data
@@ -161,20 +198,27 @@ export async function GET() {
         schedules = getLocalSchedules(memberId).filter((s) => s.is_active && !s.is_archived)
       }
       if (logs.length === 0) {
-        logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today))
+        logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today) || new Date(l.scheduled_for) >= dayStart)
       }
 
       const missedDoses: CaregiverMissedDoseItem[] = []
 
       for (const schedule of schedules) {
+        if (!schedule.is_active || schedule.is_archived) continue
+        if (schedule.start_date && schedule.start_date > today) continue
+        if (schedule.end_date && schedule.end_date < today) continue
+
         const log = logs.find((l: DoseLog) => l.schedule_id === schedule.id)
         const isTaken = log?.status === 'taken'
+        const isExplicitlyMissed = log?.status === 'missed'
+        const isSkipped = log?.status === 'skipped'
 
         const [hStr, mStr] = schedule.scheduled_time.split(':')
         const targetMins = parseInt(hStr, 10) * 60 + parseInt(mStr || '0', 10)
 
-        // Past scheduled time + 45-minute grace period
-        const isMissed = targetMins + 45 < nowMinutes && !isTaken
+        // Missed if explicitly marked missed, or if 45 min past scheduled time and neither taken nor skipped
+        const isPastGrace = targetMins + 45 <= nowMinutes && !isTaken && !isSkipped
+        const isMissed = isExplicitlyMissed || isPastGrace
 
         if (isMissed) {
           const avatar = inferPillAvatar(schedule.drug_name_en, schedule.dosage)
@@ -192,18 +236,16 @@ export async function GET() {
         }
       }
 
-      // If user hasn't explicitly set subscription, default to true for direct parents/grandparents
-      const defaultSubscribed =
-        ['Father', 'Mother', 'Grandfather', 'Grandmother', 'Child'].includes(relation)
+      // Default to subscribed (true) unless explicitly toggled off by user
       const isSubscribed =
         subscriptions[memberId] !== undefined
           ? subscriptions[memberId]
-          : defaultSubscribed
+          : true
 
       if (missedDoses.length > 0 || isSubscribed) {
         alerts.push({
           memberId,
-          memberName: relation,
+          memberName: memberNames[memberId] || relation,
           relation,
           missedDoses,
           totalActiveDrugs: schedules.length,

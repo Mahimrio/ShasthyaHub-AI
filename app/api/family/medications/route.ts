@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { getLocalSchedules, getLocalDoseLogs } from '@/lib/medications/store'
-import { inferPillAvatar } from '@/lib/services/medication-reminder'
+import {
+  inferPillAvatar,
+  parseTzOffset,
+  clientClock,
+  scheduledInstant,
+} from '@/lib/services/medication-reminder'
 import { getAcceptedFamilyLink } from '@/lib/family/authorize'
 import { saveLocalNudge } from '@/lib/family/nudges'
 import type { FamilyMemberMedicationStatus, DoseLog, MedicationScheduleItem } from '@/types'
@@ -11,6 +16,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const memberId = searchParams.get('member_id')
+    const tzOffset = parseTzOffset(searchParams.get('tz_offset'))
 
     if (!memberId) {
       return NextResponse.json({ success: false, error: 'Missing member_id' }, { status: 400 })
@@ -33,7 +39,10 @@ export async function GET(request: Request) {
       }
     }
 
-    const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const { dateKey: today, minutes: nowMinutes } = clientClock(now, tzOffset)
+    const dayStart = scheduledInstant('00:00', now, tzOffset)
+
     let schedules: MedicationScheduleItem[] = []
     let logs: DoseLog[] = []
 
@@ -47,7 +56,7 @@ export async function GET(request: Request) {
 
       const [schedRes, logRes] = await Promise.all([
         client.from('medication_schedules').select('*').eq('user_id', memberId).eq('is_active', true),
-        client.from('dose_logs').select('*').eq('user_id', memberId).gte('scheduled_for', `${today}T00:00:00.000Z`)
+        client.from('dose_logs').select('*').eq('user_id', memberId).gte('scheduled_for', dayStart.toISOString())
       ])
 
       if (schedRes.data && schedRes.data.length > 0) schedules = schedRes.data
@@ -60,7 +69,7 @@ export async function GET(request: Request) {
       schedules = getLocalSchedules(memberId).filter((s) => s.is_active && !s.is_archived)
     }
     if (logs.length === 0) {
-      logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today))
+      logs = getLocalDoseLogs(memberId).filter((l: DoseLog) => l.scheduled_for.startsWith(today) || new Date(l.scheduled_for) >= dayStart)
     }
 
     const totalMeds = new Set(schedules.map((s) => s.drug_name_en.toLowerCase())).size
@@ -68,20 +77,22 @@ export async function GET(request: Request) {
 
     let takenCount = 0
     let missedCount = 0
-
-    const now = new Date()
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
     let nextDoseTime: string | undefined
 
     const activePills = schedules.map((s) => {
       const log = logs.find((l: DoseLog) => l.schedule_id === s.id)
       const status = log ? log.status : 'pending'
 
-      if (status === 'taken') takenCount++
-      if (status === 'missed') missedCount++
-
       const [hStr, mStr] = s.scheduled_time.split(':')
       const targetMins = parseInt(hStr, 10) * 60 + parseInt(mStr || '0', 10)
+
+      const isExplicitlyMissed = status === 'missed'
+      const isPastGrace = targetMins + 45 <= nowMinutes && status !== 'taken' && status !== 'skipped'
+      const isMissed = isExplicitlyMissed || isPastGrace
+
+      if (status === 'taken') takenCount++
+      if (isMissed) missedCount++
+
       const isDueNow = targetMins <= nowMinutes && status !== 'taken'
 
       if (targetMins > nowMinutes && !nextDoseTime) {

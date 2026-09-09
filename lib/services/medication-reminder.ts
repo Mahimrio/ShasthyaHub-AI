@@ -569,3 +569,38 @@ export function generateMissedDoseAdvice(
     reason_bn: 'নিরাপদ চিকিৎসা সময়ের মধ্যে রয়েছে।',
   }
 }
+
+// ── 8. Timezone & Wall-Clock Math Helpers ─────────────────────
+
+/**
+ * Server clocks (Vercel = UTC) differ from patients' clocks.
+ * Default: Asia/Dhaka (-360 minutes, UTC+6).
+ */
+export const DEFAULT_TZ_OFFSET_MINUTES = -360
+
+export function parseTzOffset(raw: string | null): number {
+  const n = raw === null ? NaN : Number(raw)
+  return Number.isFinite(n) && Math.abs(n) <= 14 * 60 ? n : DEFAULT_TZ_OFFSET_MINUTES
+}
+
+/** Wall-clock components of `date` in the client's timezone. */
+export function clientClock(date: Date, tzOffset: number = DEFAULT_TZ_OFFSET_MINUTES) {
+  const shifted = new Date(date.getTime() - tzOffset * 60_000)
+  return {
+    dateKey: shifted.toISOString().slice(0, 10),
+    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
+  }
+}
+
+/** Absolute instant of `HH:mm` on the client's current calendar day. */
+export function scheduledInstant(
+  scheduledTime: string,
+  now: Date,
+  tzOffset: number = DEFAULT_TZ_OFFSET_MINUTES
+): Date {
+  const [hStr, mStr] = scheduledTime.split(':')
+  const { dateKey } = clientClock(now, tzOffset)
+  const [y, mo, d] = dateKey.split('-').map(Number)
+  const utcMillis = Date.UTC(y, mo - 1, d, parseInt(hStr, 10) || 0, parseInt(mStr || '0', 10) || 0)
+  return new Date(utcMillis + tzOffset * 60_000)
+}
